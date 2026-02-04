@@ -3,7 +3,10 @@ package com.foo.excel.validation;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelCompositeUnique;
 import com.foo.excel.annotation.ExcelUnique;
+import com.foo.excel.dto.TariffExemptionDto;
+import com.foo.excel.repository.TariffExemptionRepository;
 import com.foo.excel.util.ExcelColumnUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +15,10 @@ import java.util.*;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class UniqueConstraintValidator {
+
+    private final TariffExemptionRepository tariffExemptionRepository;
 
     public <T> List<RowError> checkWithinFileUniqueness(List<T> rows, Class<T> dtoClass, int dataStartRow) {
         List<RowError> errors = new ArrayList<>();
@@ -137,10 +143,48 @@ public class UniqueConstraintValidator {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public <T> List<RowError> checkDatabaseUniqueness(List<T> rows, Class<T> dtoClass, int dataStartRow) {
-        // TODO: Implement real database uniqueness check when JPA entities are available
-        log.debug("Database uniqueness check placeholder - returning empty list");
+        if (dtoClass == TariffExemptionDto.class) {
+            return checkTariffExemptionDbUniqueness((List<TariffExemptionDto>) rows, dataStartRow);
+        }
         return Collections.emptyList();
+    }
+
+    private List<RowError> checkTariffExemptionDbUniqueness(List<TariffExemptionDto> rows, int dataStartRow) {
+        List<RowError> errors = new ArrayList<>();
+
+        try {
+            Field itemNameField = TariffExemptionDto.class.getDeclaredField("itemName");
+            ExcelColumn excelColumn = itemNameField.getAnnotation(ExcelColumn.class);
+
+            for (int i = 0; i < rows.size(); i++) {
+                TariffExemptionDto dto = rows.get(i);
+                if (dto.getItemName() == null) {
+                    continue;
+                }
+
+                boolean exists = tariffExemptionRepository.existsByItemNameAndSpecificationAndHsCode(
+                        dto.getItemName(), dto.getSpecification(), dto.getHsCode());
+
+                if (exists) {
+                    int currentRowNum = dataStartRow + i;
+                    CellError cellError = CellError.builder()
+                            .fieldName("itemName")
+                            .headerName(excelColumn != null ? excelColumn.header() : "itemName")
+                            .columnIndex(excelColumn != null ? resolveColumnIndex(excelColumn) : -1)
+                            .columnLetter(excelColumn != null ? resolveColumnLetter(excelColumn) : "?")
+                            .rejectedValue(dto.getItemName())
+                            .message("이미 등록된 데이터입니다 (물품명 + 규격 + HSK 조합)")
+                            .build();
+                    addErrorToRow(errors, currentRowNum, cellError);
+                }
+            }
+        } catch (NoSuchFieldException e) {
+            log.error("Failed to resolve itemName field for DB uniqueness check", e);
+        }
+
+        return errors;
     }
 
     private void addErrorToRow(List<RowError> errors, int rowNumber, CellError cellError) {

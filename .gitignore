@@ -2,7 +2,6 @@ HELP.md
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
 !**/src/test/**/build/
 
 src/main/resources/static/assets/node_modules/
@@ -40,6 +39,5 @@ out/
 ### VS Code ###
 .vscode/
 /src/main/webapp/
-/src/test/
 /src/main/resources/backups2/**
 /src/main/resources/backups/**

@@ -28,6 +28,7 @@ public class ExcelImportOrchestrator {
     private final ExcelValidationService validationService;
     private final ExcelErrorReportService errorReportService;
     private final ExcelImportProperties properties;
+    private final TariffExemptionService tariffExemptionService;
 
     private static final Map<String, Class<? extends ExcelImportConfig>> TEMPLATE_REGISTRY = Map.of(
             "tariff-exemption", TariffExemptionDto.class
@@ -92,16 +93,24 @@ public class ExcelImportOrchestrator {
                     config.getDataStartRow());
 
             if (validationResult.isValid()) {
-                // 7. Upsert (placeholder)
+                // 7. Upsert
                 int rowCount = parseResult.getRows().size();
-                log.info("Upsert placeholder: {} rows would be processed for template '{}'",
-                        rowCount, templateType);
+
+                int rowsCreated = rowCount;
+                int rowsUpdated = 0;
+
+                if (dtoClass == TariffExemptionDto.class) {
+                    TariffExemptionService.SaveResult saveResult =
+                            tariffExemptionService.saveAll((java.util.List<TariffExemptionDto>) parseResult.getRows());
+                    rowsCreated = saveResult.created();
+                    rowsUpdated = saveResult.updated();
+                }
 
                 return ImportResult.builder()
                         .success(true)
                         .rowsProcessed(rowCount)
-                        .rowsCreated(rowCount)
-                        .rowsUpdated(0)
+                        .rowsCreated(rowsCreated)
+                        .rowsUpdated(rowsUpdated)
                         .message("데이터 업로드 완료")
                         .build();
             } else {
