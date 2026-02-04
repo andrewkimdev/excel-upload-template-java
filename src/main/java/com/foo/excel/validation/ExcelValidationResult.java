@@ -42,4 +42,27 @@ public class ExcelValidationResult {
                 .rowErrors(rowErrors)
                 .build();
     }
+
+    public void merge(List<RowError> additionalErrors) {
+        for (RowError srcError : additionalErrors) {
+            RowError existing = rowErrors.stream()
+                    .filter(r -> r.getRowNumber() == srcError.getRowNumber())
+                    .findFirst()
+                    .orElse(null);
+
+            if (existing != null) {
+                existing.getCellErrors().addAll(srcError.getCellErrors());
+            } else {
+                rowErrors.add(srcError);
+            }
+        }
+
+        if (!rowErrors.isEmpty()) {
+            this.valid = false;
+            this.errorRowCount = rowErrors.size();
+            this.totalErrorCount = rowErrors.stream()
+                    .mapToInt(r -> r.getCellErrors().size())
+                    .sum();
+        }
+    }
 }

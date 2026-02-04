@@ -13,12 +13,11 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class TariffExemptionService {
+public class TariffExemptionService implements PersistenceHandler<TariffExemptionDto> {
 
     private final TariffExemptionRepository repository;
 
-    public record SaveResult(int created, int updated) {}
-
+    @Override
     @Transactional
     public SaveResult saveAll(List<TariffExemptionDto> dtos) {
         int created = 0;

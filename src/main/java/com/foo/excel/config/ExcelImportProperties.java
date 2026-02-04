@@ -20,7 +20,6 @@ public class ExcelImportProperties {
     private int retentionDays = 30;
     private String tempDirectory = System.getProperty("java.io.tmpdir") + "/excel-imports";
     private String errorColumnName = "_ERRORS";
-    private String errorCellColor = "#FFCCCC";
 
     @PostConstruct
     public void init() throws IOException {

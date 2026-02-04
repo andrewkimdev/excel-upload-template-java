@@ -20,13 +20,14 @@ public class ExcelValidationService {
     private final Validator validator;
     private final UniqueConstraintValidator uniqueConstraintValidator;
 
-    public <T> ExcelValidationResult validate(List<T> rows, Class<T> dtoClass, int dataStartRow) {
+    public <T> ExcelValidationResult validate(List<T> rows, Class<T> dtoClass,
+                                              List<Integer> sourceRowNumbers) {
         List<RowError> allErrors = new ArrayList<>();
 
         // Pass 1: JSR-380 validation
         for (int i = 0; i < rows.size(); i++) {
             T row = rows.get(i);
-            int rowNumber = dataStartRow + i;
+            int rowNumber = sourceRowNumbers.get(i);
 
             Set<ConstraintViolation<T>> violations = validator.validate(row);
             if (!violations.isEmpty()) {
@@ -47,13 +48,8 @@ public class ExcelValidationService {
 
         // Pass 2: Within-file uniqueness
         List<RowError> uniqueErrors = uniqueConstraintValidator.checkWithinFileUniqueness(
-                rows, dtoClass, dataStartRow);
+                rows, dtoClass, sourceRowNumbers);
         mergeErrors(allErrors, uniqueErrors);
-
-        // Pass 3: Database uniqueness (placeholder)
-        List<RowError> dbErrors = uniqueConstraintValidator.checkDatabaseUniqueness(
-                rows, dtoClass, dataStartRow);
-        mergeErrors(allErrors, dbErrors);
 
         if (allErrors.isEmpty()) {
             return ExcelValidationResult.success(rows.size());
@@ -98,12 +94,16 @@ public class ExcelValidationService {
     }
 
     private ExcelColumn findExcelColumn(String fieldName, Class<?> dtoClass) {
-        try {
-            Field field = dtoClass.getDeclaredField(fieldName);
-            return field.getAnnotation(ExcelColumn.class);
-        } catch (NoSuchFieldException e) {
-            return null;
+        Class<?> current = dtoClass;
+        while (current != null && current != Object.class) {
+            try {
+                Field field = current.getDeclaredField(fieldName);
+                return field.getAnnotation(ExcelColumn.class);
+            } catch (NoSuchFieldException e) {
+                current = current.getSuperclass();
+            }
         }
+        return null;
     }
 
     private void mergeErrors(List<RowError> target, List<RowError> source) {

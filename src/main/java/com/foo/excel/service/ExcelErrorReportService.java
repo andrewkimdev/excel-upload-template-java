@@ -49,7 +49,7 @@ public class ExcelErrorReportService {
 
             // Create red background style for error cells
             CellStyle errorCellStyle = workbook.createCellStyle();
-            errorCellStyle.setFillForegroundColor(parseColor(workbook, properties.getErrorCellColor()));
+            errorCellStyle.setFillForegroundColor(IndexedColors.ROSE.getIndex());
             errorCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
             // Write errors for each row
@@ -89,11 +89,5 @@ public class ExcelErrorReportService {
             log.info("Error report generated: {}", errorFilePath);
             return errorFilePath;
         }
-    }
-
-    private short parseColor(Workbook workbook, String hexColor) {
-        // Use IndexedColors for simplicity; POI's custom color support varies by format
-        // #FFCCCC is close to ROSE
-        return IndexedColors.ROSE.getIndex();
     }
 }

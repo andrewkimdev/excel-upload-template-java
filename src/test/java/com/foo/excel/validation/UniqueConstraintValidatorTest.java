@@ -5,6 +5,7 @@ import com.foo.excel.annotation.ExcelCompositeUnique;
 import com.foo.excel.annotation.ExcelUnique;
 import com.foo.excel.dto.TariffExemptionDto;
 import com.foo.excel.repository.TariffExemptionRepository;
+import com.foo.excel.service.TariffExemptionDbUniquenessChecker;
 import lombok.Data;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -26,10 +28,12 @@ class UniqueConstraintValidatorTest {
     private TariffExemptionRepository tariffExemptionRepository;
 
     private UniqueConstraintValidator validator;
+    private TariffExemptionDbUniquenessChecker dbChecker;
 
     @BeforeEach
     void setUp() {
-        validator = new UniqueConstraintValidator(tariffExemptionRepository);
+        validator = new UniqueConstraintValidator();
+        dbChecker = new TariffExemptionDbUniquenessChecker(tariffExemptionRepository);
     }
 
     // ===== @ExcelUnique single field tests =====
@@ -42,7 +46,7 @@ class UniqueConstraintValidatorTest {
         dto2.setCode("ABC");  // duplicate
 
         List<RowError> errors = validator.checkWithinFileUniqueness(
-                List.of(dto1, dto2), UniqueTestDto.class, 7);
+                List.of(dto1, dto2), UniqueTestDto.class, List.of(7, 8));
 
         assertThat(errors).isNotEmpty();
         assertThat(errors.get(0).getCellErrors().get(0).getMessage())
@@ -57,7 +61,7 @@ class UniqueConstraintValidatorTest {
         dto2.setCode("DEF");
 
         List<RowError> errors = validator.checkWithinFileUniqueness(
-                List.of(dto1, dto2), UniqueTestDto.class, 7);
+                List.of(dto1, dto2), UniqueTestDto.class, List.of(7, 8));
 
         assertThat(errors).isEmpty();
     }
@@ -70,7 +74,7 @@ class UniqueConstraintValidatorTest {
         dto2.setCode(null);
 
         List<RowError> errors = validator.checkWithinFileUniqueness(
-                List.of(dto1, dto2), UniqueTestDto.class, 7);
+                List.of(dto1, dto2), UniqueTestDto.class, List.of(7, 8));
 
         assertThat(errors).isEmpty();
     }
@@ -83,7 +87,7 @@ class UniqueConstraintValidatorTest {
         TariffExemptionDto dto2 = createDto("Item1", "Spec1", "8481.80-2000");  // same combo
 
         List<RowError> errors = validator.checkWithinFileUniqueness(
-                List.of(dto1, dto2), TariffExemptionDto.class, 7);
+                List.of(dto1, dto2), TariffExemptionDto.class, List.of(7, 8));
 
         assertThat(errors).isNotEmpty();
         assertThat(errors.get(0).getCellErrors().get(0).getMessage())
@@ -96,7 +100,7 @@ class UniqueConstraintValidatorTest {
         TariffExemptionDto dto2 = createDto("Item2", "Spec1", "8481.80-2000");  // different itemName
 
         List<RowError> errors = validator.checkWithinFileUniqueness(
-                List.of(dto1, dto2), TariffExemptionDto.class, 7);
+                List.of(dto1, dto2), TariffExemptionDto.class, List.of(7, 8));
 
         assertThat(errors).isEmpty();
     }
@@ -106,11 +110,10 @@ class UniqueConstraintValidatorTest {
         TariffExemptionDto dto1 = createDto("Item1", null, "8481.80-2000");
         TariffExemptionDto dto2 = createDto("Item1", null, "8481.80-2000");  // same with null
 
-        // Null values generate "NULL" key which will match — this IS a duplicate
         List<RowError> errors = validator.checkWithinFileUniqueness(
-                List.of(dto1, dto2), TariffExemptionDto.class, 7);
+                List.of(dto1, dto2), TariffExemptionDto.class, List.of(7, 8));
 
-        // With null specification, the composite key is "Item1|NULL|8481.80-2000|"
+        // With null specification, the composite key is [Item1, null, 8481.80-2000]
         // which matches, so this is correctly detected as duplicate
         assertThat(errors).isNotEmpty();
     }
@@ -122,8 +125,8 @@ class UniqueConstraintValidatorTest {
 
         TariffExemptionDto dto = createDto("Item1", "Spec1", "8481.80-2000");
 
-        List<RowError> errors = validator.checkDatabaseUniqueness(
-                List.of(dto), TariffExemptionDto.class, 7);
+        List<RowError> errors = dbChecker.check(
+                List.of(dto), TariffExemptionDto.class, List.of(7));
 
         assertThat(errors).isEmpty();
     }
@@ -135,8 +138,8 @@ class UniqueConstraintValidatorTest {
 
         TariffExemptionDto dto = createDto("Item1", "Spec1", "8481.80-2000");
 
-        List<RowError> errors = validator.checkDatabaseUniqueness(
-                List.of(dto), TariffExemptionDto.class, 7);
+        List<RowError> errors = dbChecker.check(
+                List.of(dto), TariffExemptionDto.class, List.of(7));
 
         assertThat(errors).hasSize(1);
         assertThat(errors.get(0).getCellErrors().get(0).getMessage())

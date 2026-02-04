@@ -1,29 +1,20 @@
 package com.foo.excel.service;
 
 import com.foo.excel.dto.TariffExemptionDto;
-import com.foo.excel.repository.TariffExemptionRepository;
 import com.foo.excel.validation.ExcelValidationResult;
-import com.foo.excel.validation.RowError;
 import com.foo.excel.validation.UniqueConstraintValidator;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
 class ExcelValidationServiceTest {
-
-    @Mock
-    private TariffExemptionRepository tariffExemptionRepository;
 
     private ExcelValidationService validationService;
 
@@ -31,7 +22,7 @@ class ExcelValidationServiceTest {
     void setUp() {
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
-        UniqueConstraintValidator uniqueValidator = new UniqueConstraintValidator(tariffExemptionRepository);
+        UniqueConstraintValidator uniqueValidator = new UniqueConstraintValidator();
         validationService = new ExcelValidationService(validator, uniqueValidator);
     }
 
@@ -40,7 +31,8 @@ class ExcelValidationServiceTest {
         TariffExemptionDto dto = createValidDto();
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isTrue();
         assertThat(result.getTotalErrorCount()).isEqualTo(0);
@@ -52,7 +44,8 @@ class ExcelValidationServiceTest {
         dto.setItemName("");  // blank
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isFalse();
         assertThat(result.getRowErrors()).isNotEmpty();
@@ -66,7 +59,8 @@ class ExcelValidationServiceTest {
         dto.setItemName("a".repeat(101));
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isFalse();
         assertThat(findErrorMessage(result, "itemName"))
@@ -79,7 +73,8 @@ class ExcelValidationServiceTest {
         dto.setHsCode("1234.56-7890");
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isTrue();
     }
@@ -90,7 +85,8 @@ class ExcelValidationServiceTest {
         dto.setHsCode("invalid");
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isFalse();
         assertThat(findErrorMessage(result, "hsCode"))
@@ -103,7 +99,8 @@ class ExcelValidationServiceTest {
         dto.setTariffRate(new BigDecimal("-1"));
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isFalse();
         assertThat(findErrorMessage(result, "tariffRate"))
@@ -116,7 +113,8 @@ class ExcelValidationServiceTest {
         dto.setTariffRate(new BigDecimal("101"));
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isFalse();
         assertThat(findErrorMessage(result, "tariffRate"))
@@ -129,7 +127,8 @@ class ExcelValidationServiceTest {
         dto.setTariffRate(BigDecimal.ZERO);
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isTrue();
     }
@@ -140,7 +139,8 @@ class ExcelValidationServiceTest {
         dto.setTariffRate(new BigDecimal("100"));
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isTrue();
     }
@@ -151,7 +151,8 @@ class ExcelValidationServiceTest {
         dto.setItemName(null);
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isFalse();
     }
@@ -164,7 +165,8 @@ class ExcelValidationServiceTest {
         dto.setTariffRate(new BigDecimal("-5"));
         List<TariffExemptionDto> rows = List.of(dto);
 
-        ExcelValidationResult result = validationService.validate(rows, TariffExemptionDto.class, 7);
+        ExcelValidationResult result = validationService.validate(
+                rows, TariffExemptionDto.class, List.of(7));
 
         assertThat(result.isValid()).isFalse();
         List<String> allMessages = result.getRowErrors().stream()

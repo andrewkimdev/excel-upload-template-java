@@ -30,11 +30,6 @@ public @interface ExcelColumn {
     int index() default -1;
 
     /**
-     * Whether this field is required (non-null, non-blank for strings).
-     */
-    boolean required() default false;
-
-    /**
      * Date/DateTime format pattern.
      */
     String dateFormat() default "yyyy-MM-dd";

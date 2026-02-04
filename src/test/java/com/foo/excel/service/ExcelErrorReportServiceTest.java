@@ -33,7 +33,6 @@ class ExcelErrorReportServiceTest {
     void setUp() throws IOException {
         ExcelImportProperties properties = new ExcelImportProperties();
         properties.setTempDirectory(tempDir.toString());
-        properties.setErrorCellColor("#FFCCCC");
         // Create the errors subdirectory
         Files.createDirectories(tempDir.resolve("errors"));
         errorReportService = new ExcelErrorReportService(properties);

@@ -3,7 +3,6 @@ package com.foo.excel.dto;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelCompositeUnique;
 import com.foo.excel.annotation.HeaderMatchMode;
-import com.foo.excel.config.ExcelImportConfig;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -13,21 +12,20 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.util.Set;
 
 @Data
 @ExcelCompositeUnique(
     fields = {"itemName", "specification", "hsCode"},
     message = "물품명 + 규격 + HSK 조합이 중복됩니다"
 )
-public class TariffExemptionDto implements ExcelImportConfig {
+public class TariffExemptionDto {
 
     // Column B: 순번
     @ExcelColumn(header = "순번", column = "B")
     private Integer sequenceNo;
 
     // Column C: 물품명
-    @ExcelColumn(header = "물품명", column = "C", required = true)
+    @ExcelColumn(header = "물품명", column = "C")
     @NotBlank(message = "물품명은 필수 입력 항목입니다")
     @Size(max = 100, message = "물품명은 100자 이내로 입력하세요")
     private String itemName;
@@ -81,31 +79,4 @@ public class TariffExemptionDto implements ExcelImportConfig {
     @ExcelColumn(header = "연간 예상소요량", column = "Q", matchMode = HeaderMatchMode.CONTAINS)
     @Min(value = 0, message = "연간 예상소요량은 0 이상이어야 합니다")
     private Integer annualExpectedQty;
-
-    // ========== ExcelImportConfig Implementation ==========
-
-    @Override
-    public int getHeaderRow() {
-        return 4;  // Row 4 contains primary column headers
-    }
-
-    @Override
-    public int getDataStartRow() {
-        return 7;  // Data starts at row 7
-    }
-
-    @Override
-    public Set<String> getSkipColumns() {
-        return Set.of("A", "G", "K", "M", "P");  // Decorative + merged slave columns
-    }
-
-    @Override
-    public String getFooterMarker() {
-        return "※";
-    }
-
-    @Override
-    public String[] getNaturalKeyFields() {
-        return new String[]{"itemName", "specification", "hsCode"};
-    }
 }

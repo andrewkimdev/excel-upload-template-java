@@ -21,16 +21,8 @@ public interface ExcelImportConfig {
     default int getSheetIndex() { return 0; }
 
     /**
-     * Columns to skip during parsing (0-indexed).
-     * Default skips column A (index 0) as it's typically decorative.
-     */
-    default Set<Integer> getSkipColumnIndices() {
-        return Set.of(0);
-    }
-
-    /**
-     * Alternative: columns to skip using letter notation.
-     * Override this for better readability.
+     * Columns to skip using letter notation (e.g., "A", "G").
+     * Default skips column A as it's typically decorative.
      */
     default Set<String> getSkipColumns() {
         return Set.of("A");

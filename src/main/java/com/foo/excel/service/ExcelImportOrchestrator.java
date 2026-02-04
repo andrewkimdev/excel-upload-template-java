@@ -2,12 +2,11 @@ package com.foo.excel.service;
 
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.dto.TariffExemptionDto;
 import com.foo.excel.validation.ExcelValidationResult;
+import com.foo.excel.validation.RowError;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,12 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ExcelImportOrchestrator {
 
     private final ExcelConversionService conversionService;
@@ -28,11 +26,21 @@ public class ExcelImportOrchestrator {
     private final ExcelValidationService validationService;
     private final ExcelErrorReportService errorReportService;
     private final ExcelImportProperties properties;
-    private final TariffExemptionService tariffExemptionService;
+    private final List<TemplateDefinition<?>> templateDefinitions;
 
-    private static final Map<String, Class<? extends ExcelImportConfig>> TEMPLATE_REGISTRY = Map.of(
-            "tariff-exemption", TariffExemptionDto.class
-    );
+    public ExcelImportOrchestrator(ExcelConversionService conversionService,
+                                   ExcelParserService parserService,
+                                   ExcelValidationService validationService,
+                                   ExcelErrorReportService errorReportService,
+                                   ExcelImportProperties properties,
+                                   List<TemplateDefinition<?>> templateDefinitions) {
+        this.conversionService = conversionService;
+        this.parserService = parserService;
+        this.validationService = validationService;
+        this.errorReportService = errorReportService;
+        this.properties = properties;
+        this.templateDefinitions = templateDefinitions;
+    }
 
     @Data
     @Builder
@@ -49,27 +57,38 @@ public class ExcelImportOrchestrator {
         private String message;
     }
 
-    @SuppressWarnings("unchecked")
     public ImportResult processUpload(MultipartFile file, String templateType) throws IOException {
-        // 1. Resolve DTO class
-        Class<? extends ExcelImportConfig> dtoClass = TEMPLATE_REGISTRY.get(templateType);
-        if (dtoClass == null) {
-            throw new IllegalArgumentException("Unknown template type: " + templateType);
-        }
+        TemplateDefinition<?> template = findTemplate(templateType);
+        return doProcess(template, file);
+    }
 
-        // 2. Create UUID-based temp subdirectory
+    private TemplateDefinition<?> findTemplate(String templateType) {
+        return templateDefinitions.stream()
+                .filter(t -> t.getTemplateType().equals(templateType))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unknown template type: " + templateType));
+    }
+
+    private <T> ImportResult doProcess(TemplateDefinition<T> template, MultipartFile file)
+            throws IOException {
+
+        ExcelImportConfig config = template.getConfig();
+
+        // 1. Create UUID-based temp subdirectory
         String uploadId = UUID.randomUUID().toString();
         Path tempSubDir = properties.getTempDirectoryPath().resolve(uploadId);
         Files.createDirectories(tempSubDir);
 
         try {
-            // 3. Convert to xlsx if needed
+            // 2. Convert to xlsx if needed
             Path xlsxFile = conversionService.ensureXlsxFormat(file, tempSubDir);
 
-            // 4. Parse
-            ExcelParserService.ParseResult<?> parseResult = parserService.parse(xlsxFile, dtoClass);
+            // 3. Parse
+            ExcelParserService.ParseResult<T> parseResult =
+                    parserService.parse(xlsxFile, template.getDtoClass(), config);
 
-            // 5. Check max rows
+            // 4. Check max rows
             if (parseResult.getRows().size() > properties.getMaxRows()) {
                 return ImportResult.builder()
                         .success(false)
@@ -79,42 +98,33 @@ public class ExcelImportOrchestrator {
                         .build();
             }
 
-            // 6. Validate
-            ExcelImportConfig config;
-            try {
-                config = dtoClass.getDeclaredConstructor().newInstance();
-            } catch (Exception e) {
-                throw new RuntimeException("Cannot instantiate config", e);
-            }
-
+            // 5. Validate (JSR-380 + within-file uniqueness)
             ExcelValidationResult validationResult = validationService.validate(
-                    (java.util.List) parseResult.getRows(),
-                    (Class) dtoClass,
-                    config.getDataStartRow());
+                    parseResult.getRows(), template.getDtoClass(),
+                    parseResult.getSourceRowNumbers());
+
+            // 6. DB uniqueness check
+            List<RowError> dbErrors = template.checkDbUniqueness(
+                    parseResult.getRows(), parseResult.getSourceRowNumbers());
+            validationResult.merge(dbErrors);
+
+            // 7. Merge parse errors
+            validationResult.merge(parseResult.getParseErrors());
 
             if (validationResult.isValid()) {
-                // 7. Upsert
-                int rowCount = parseResult.getRows().size();
-
-                int rowsCreated = rowCount;
-                int rowsUpdated = 0;
-
-                if (dtoClass == TariffExemptionDto.class) {
-                    TariffExemptionService.SaveResult saveResult =
-                            tariffExemptionService.saveAll((java.util.List<TariffExemptionDto>) parseResult.getRows());
-                    rowsCreated = saveResult.created();
-                    rowsUpdated = saveResult.updated();
-                }
+                // 8. Persist
+                PersistenceHandler.SaveResult saveResult =
+                        template.getPersistenceHandler().saveAll(parseResult.getRows());
 
                 return ImportResult.builder()
                         .success(true)
-                        .rowsProcessed(rowCount)
-                        .rowsCreated(rowsCreated)
-                        .rowsUpdated(rowsUpdated)
+                        .rowsProcessed(parseResult.getRows().size())
+                        .rowsCreated(saveResult.created())
+                        .rowsUpdated(saveResult.updated())
                         .message("데이터 업로드 완료")
                         .build();
             } else {
-                // 8. Generate error report
+                // 9. Generate error report
                 Path errorFile = errorReportService.generateErrorReport(
                         xlsxFile, validationResult, parseResult.getColumnMappings(), config);
 

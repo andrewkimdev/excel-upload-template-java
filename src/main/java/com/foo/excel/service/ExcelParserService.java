@@ -4,6 +4,8 @@ import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.util.ExcelColumnUtil;
+import com.foo.excel.validation.CellError;
+import com.foo.excel.validation.RowError;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,8 @@ import java.util.regex.Pattern;
 @Service
 public class ExcelParserService {
 
+    private static final DataFormatter DATA_FORMATTER = new DataFormatter();
+
     @Data
     @AllArgsConstructor
     public static class ColumnMapping {
@@ -38,41 +42,34 @@ public class ExcelParserService {
     @AllArgsConstructor
     public static class ParseResult<T> {
         private List<T> rows;
+        private List<Integer> sourceRowNumbers;
         private List<ColumnMapping> columnMappings;
+        private List<RowError> parseErrors;
     }
 
-    public <T extends ExcelImportConfig> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass)
+    public <T> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config)
             throws IOException {
 
-        T configInstance;
-        try {
-            configInstance = dtoClass.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Cannot instantiate DTO class: " + dtoClass.getName(), e);
-        }
-
-        int headerRowNum = configInstance.getHeaderRow() - 1;   // Convert to 0-based
-        int dataStartRowNum = configInstance.getDataStartRow() - 1;
-        int sheetIndex = configInstance.getSheetIndex();
-        String footerMarker = configInstance.getFooterMarker();
-
-        Set<Integer> skipColumnIndices = new HashSet<>();
-        for (String col : configInstance.getSkipColumns()) {
-            skipColumnIndices.add(ExcelColumnUtil.letterToIndex(col));
-        }
+        int headerRowNum = config.getHeaderRow() - 1;   // Convert to 0-based
+        int dataStartRowNum = config.getDataStartRow() - 1;
+        int sheetIndex = config.getSheetIndex();
+        String footerMarker = config.getFooterMarker();
 
         try (Workbook workbook = WorkbookFactory.create(xlsxFile.toFile())) {
             Sheet sheet = workbook.getSheetAt(sheetIndex);
             Row headerRow = sheet.getRow(headerRowNum);
 
             if (headerRow == null) {
-                throw new IllegalStateException("Header row " + configInstance.getHeaderRow() + " is empty");
+                throw new IllegalStateException("Header row " + config.getHeaderRow() + " is empty");
             }
 
             List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, headerRow, sheet);
-            List<T> rows = parseDataRows(sheet, dtoClass, columnMappings, dataStartRowNum, footerMarker);
+            List<RowError> parseErrors = new ArrayList<>();
+            List<Integer> sourceRowNumbers = new ArrayList<>();
+            List<T> rows = parseDataRows(sheet, dtoClass, columnMappings, dataStartRowNum,
+                    footerMarker, parseErrors, sourceRowNumbers);
 
-            return new ParseResult<>(rows, columnMappings);
+            return new ParseResult<>(rows, sourceRowNumbers, columnMappings, parseErrors);
         }
     }
 
@@ -146,8 +143,9 @@ public class ExcelParserService {
         };
     }
 
-    private <T extends ExcelImportConfig> List<T> parseDataRows(Sheet sheet, Class<T> dtoClass,
-            List<ColumnMapping> columnMappings, int dataStartRowNum, String footerMarker) {
+    private <T> List<T> parseDataRows(Sheet sheet, Class<T> dtoClass,
+            List<ColumnMapping> columnMappings, int dataStartRowNum, String footerMarker,
+            List<RowError> parseErrors, List<Integer> sourceRowNumbers) {
 
         List<T> rows = new ArrayList<>();
         int lastRowNum = sheet.getLastRowNum();
@@ -176,13 +174,16 @@ public class ExcelParserService {
                 throw new RuntimeException("Cannot instantiate DTO", e);
             }
 
+            int excelRowNumber = i + 1; // 1-based
+            List<CellError> cellErrors = new ArrayList<>();
+
             for (ColumnMapping mapping : columnMappings) {
                 Cell cell = row.getCell(mapping.getResolvedColumnIndex());
                 if (cell == null) {
                     cell = resolveMergedCell(sheet, i, mapping.getResolvedColumnIndex());
                 }
 
-                Object value = getCellValue(cell, mapping.getField(), mapping.getAnnotation(), sheet);
+                Object value = getCellValue(cell, mapping, sheet, cellErrors);
                 try {
                     mapping.getField().set(dto, value);
                 } catch (IllegalAccessException e) {
@@ -190,6 +191,14 @@ public class ExcelParserService {
                 }
             }
 
+            if (!cellErrors.isEmpty()) {
+                parseErrors.add(RowError.builder()
+                        .rowNumber(excelRowNumber)
+                        .cellErrors(cellErrors)
+                        .build());
+            }
+
+            sourceRowNumbers.add(excelRowNumber);
             rows.add(dto);
         }
 
@@ -221,33 +230,47 @@ public class ExcelParserService {
         return true;
     }
 
-    private Object getCellValue(Cell cell, Field field, ExcelColumn annotation, Sheet sheet) {
+    private Object getCellValue(Cell cell, ColumnMapping mapping, Sheet sheet,
+                                List<CellError> parseErrors) {
         if (cell == null) {
             return null;
         }
 
-        Class<?> fieldType = field.getType();
+        Class<?> fieldType = mapping.getField().getType();
+        String dateFormat = mapping.getAnnotation().dateFormat();
 
-        if (fieldType == String.class) {
+        try {
+            if (fieldType == String.class) {
+                return getStringValue(cell);
+            } else if (fieldType == Integer.class || fieldType == int.class) {
+                return getIntegerValue(cell);
+            } else if (fieldType == BigDecimal.class) {
+                return getBigDecimalValue(cell);
+            } else if (fieldType == LocalDate.class) {
+                return getLocalDateValue(cell, dateFormat);
+            } else if (fieldType == LocalDateTime.class) {
+                return getLocalDateTimeValue(cell, dateFormat);
+            } else if (fieldType == Boolean.class || fieldType == boolean.class) {
+                return getBooleanValue(cell);
+            }
             return getStringValue(cell);
-        } else if (fieldType == Integer.class || fieldType == int.class) {
-            return getIntegerValue(cell);
-        } else if (fieldType == BigDecimal.class) {
-            return getBigDecimalValue(cell);
-        } else if (fieldType == LocalDate.class) {
-            return getLocalDateValue(cell, annotation.dateFormat());
-        } else if (fieldType == LocalDateTime.class) {
-            return getLocalDateTimeValue(cell, annotation.dateFormat());
-        } else if (fieldType == Boolean.class || fieldType == boolean.class) {
-            return getBooleanValue(cell);
+        } catch (Exception e) {
+            String rawValue = getCellStringValue(cell);
+            parseErrors.add(CellError.builder()
+                    .columnIndex(mapping.getResolvedColumnIndex())
+                    .columnLetter(mapping.getResolvedColumnLetter())
+                    .fieldName(mapping.getField().getName())
+                    .headerName(mapping.getAnnotation().header())
+                    .rejectedValue(rawValue)
+                    .message("'" + rawValue + "' 값을 " + fieldType.getSimpleName()
+                            + " 타입으로 변환할 수 없습니다")
+                    .build());
+            return null;
         }
-
-        return getStringValue(cell);
     }
 
     private String getStringValue(Cell cell) {
-        DataFormatter formatter = new DataFormatter();
-        String value = formatter.formatCellValue(cell);
+        String value = DATA_FORMATTER.formatCellValue(cell);
         return value != null ? value.trim() : null;
     }
 
@@ -259,11 +282,7 @@ public class ExcelParserService {
         if (value == null || value.isBlank()) {
             return null;
         }
-        try {
-            return Integer.parseInt(value.replaceAll("[,\\s]", ""));
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        return Integer.parseInt(value.replaceAll("[,\\s]", ""));
     }
 
     private BigDecimal getBigDecimalValue(Cell cell) {
@@ -274,11 +293,7 @@ public class ExcelParserService {
         if (value == null || value.isBlank()) {
             return null;
         }
-        try {
-            return new BigDecimal(value.replaceAll("[,\\s]", ""));
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        return new BigDecimal(value.replaceAll("[,\\s]", ""));
     }
 
     private LocalDate getLocalDateValue(Cell cell, String dateFormat) {
@@ -289,11 +304,7 @@ public class ExcelParserService {
         if (value == null || value.isBlank()) {
             return null;
         }
-        try {
-            return LocalDate.parse(value, DateTimeFormatter.ofPattern(dateFormat));
-        } catch (Exception e) {
-            return null;
-        }
+        return LocalDate.parse(value, DateTimeFormatter.ofPattern(dateFormat));
     }
 
     private LocalDateTime getLocalDateTimeValue(Cell cell, String dateFormat) {
@@ -304,11 +315,7 @@ public class ExcelParserService {
         if (value == null || value.isBlank()) {
             return null;
         }
-        try {
-            return LocalDateTime.parse(value, DateTimeFormatter.ofPattern(dateFormat));
-        } catch (Exception e) {
-            return null;
-        }
+        return LocalDateTime.parse(value, DateTimeFormatter.ofPattern(dateFormat));
     }
 
     private Boolean getBooleanValue(Cell cell) {
@@ -338,8 +345,7 @@ public class ExcelParserService {
         if (cell == null) {
             return null;
         }
-        DataFormatter formatter = new DataFormatter();
-        return formatter.formatCellValue(cell).trim();
+        return DATA_FORMATTER.formatCellValue(cell).trim();
     }
 
     private List<Field> getAllFields(Class<?> clazz) {

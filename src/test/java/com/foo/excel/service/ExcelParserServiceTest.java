@@ -3,6 +3,7 @@ package com.foo.excel.service;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
 import com.foo.excel.config.ExcelImportConfig;
+import com.foo.excel.config.TariffExemptionImportConfig;
 import com.foo.excel.dto.TariffExemptionDto;
 import lombok.Data;
 import org.apache.poi.ss.usermodel.*;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.*;
 class ExcelParserServiceTest {
 
     private ExcelParserService parserService;
+    private ExcelImportConfig tariffConfig;
 
     @TempDir
     Path tempDir;
@@ -32,6 +34,7 @@ class ExcelParserServiceTest {
     @BeforeEach
     void setUp() {
         parserService = new ExcelParserService();
+        tariffConfig = new TariffExemptionImportConfig();
     }
 
     @Test
@@ -39,9 +42,10 @@ class ExcelParserServiceTest {
         Path file = createTariffExemptionFile(3, false, false);
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         assertThat(result.getRows()).hasSize(3);
+        assertThat(result.getSourceRowNumbers()).hasSize(3);
     }
 
     @Test
@@ -49,7 +53,7 @@ class ExcelParserServiceTest {
         Path file = createTariffExemptionFile(3, true, false);
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         // Footer after 3 data rows means only 3 rows read
         assertThat(result.getRows()).hasSize(3);
@@ -60,7 +64,7 @@ class ExcelParserServiceTest {
         Path file = createTariffExemptionFile(3, false, true);
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         // 3 data rows + 1 blank row inserted = only 3 parsed
         assertThat(result.getRows()).hasSize(3);
@@ -72,7 +76,7 @@ class ExcelParserServiceTest {
         Path file = createFileWithMergedCells();
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         assertThat(result.getRows()).isNotEmpty();
         // The merged cell value should be readable from column F
@@ -84,7 +88,7 @@ class ExcelParserServiceTest {
         Path file = createTariffExemptionFile(1, false, false);
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         assertThat(result.getRows().get(0).getItemName()).isEqualTo("TestItem1");
     }
@@ -94,7 +98,7 @@ class ExcelParserServiceTest {
         Path file = createTariffExemptionFile(1, false, false);
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         assertThat(result.getRows().get(0).getSequenceNo()).isEqualTo(1);
     }
@@ -104,7 +108,7 @@ class ExcelParserServiceTest {
         Path file = createTariffExemptionFile(1, false, false);
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         assertThat(result.getRows().get(0).getTariffRate()).isNotNull();
         assertThat(result.getRows().get(0).getTariffRate().doubleValue()).isCloseTo(8.0, within(0.01));
@@ -113,9 +117,10 @@ class ExcelParserServiceTest {
     @Test
     void parse_headerMatchMode_exact_and_contains_and_startsWith() throws IOException {
         Path file = createFileWithAnnotatedHeaders();
+        ExcelImportConfig simpleConfig = new SimpleConfig();
 
         ExcelParserService.ParseResult<SimpleDto> result =
-                parserService.parse(file, SimpleDto.class);
+                parserService.parse(file, SimpleDto.class, simpleConfig);
 
         assertThat(result.getRows()).hasSize(1);
         assertThat(result.getRows().get(0).getExactField()).isEqualTo("exactVal");
@@ -128,7 +133,7 @@ class ExcelParserServiceTest {
         Path file = createTariffExemptionFile(1, false, false);
 
         ExcelParserService.ParseResult<TariffExemptionDto> result =
-                parserService.parse(file, TariffExemptionDto.class);
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         // Column A is decorative — the parser skips it, so no field maps to column A
         // Verify that column mappings don't include column A (index 0)
@@ -139,9 +144,10 @@ class ExcelParserServiceTest {
     @Test
     void parse_typeCoercion_boolean_Y_true_blank_false() throws IOException {
         Path file = createFileWithBooleanColumn();
+        ExcelImportConfig boolConfig = new SimpleConfig();
 
         ExcelParserService.ParseResult<BooleanDto> result =
-                parserService.parse(file, BooleanDto.class);
+                parserService.parse(file, BooleanDto.class, boolConfig);
 
         assertThat(result.getRows()).hasSize(2);
         assertThat(result.getRows().get(0).getActive()).isTrue();
@@ -151,51 +157,65 @@ class ExcelParserServiceTest {
     @Test
     void parse_typeCoercion_localDate() throws IOException {
         Path file = createFileWithDateColumn();
+        ExcelImportConfig dateConfig = new SimpleConfig();
 
         ExcelParserService.ParseResult<DateDto> result =
-                parserService.parse(file, DateDto.class);
+                parserService.parse(file, DateDto.class, dateConfig);
 
         assertThat(result.getRows()).hasSize(1);
         assertThat(result.getRows().get(0).getDate()).isEqualTo(LocalDate.of(2024, 1, 15));
     }
 
+    @Test
+    void parse_parseErrors_reportedForInvalidTypes() throws IOException {
+        Path file = createFileWithInvalidTypeData();
+        ExcelImportConfig simpleConfig = new SimpleConfig();
+
+        ExcelParserService.ParseResult<IntegerDto> result =
+                parserService.parse(file, IntegerDto.class, simpleConfig);
+
+        assertThat(result.getRows()).hasSize(1);
+        assertThat(result.getRows().get(0).getCount()).isNull();
+        assertThat(result.getParseErrors()).hasSize(1);
+        assertThat(result.getParseErrors().get(0).getCellErrors().get(0).getMessage())
+                .contains("Integer");
+    }
+
     // ===== Helper DTOs =====
 
     @Data
-    public static class SimpleDto implements ExcelImportConfig {
+    public static class SimpleDto {
         @ExcelColumn(header = "ExactHeader", column = "B", matchMode = HeaderMatchMode.EXACT)
         private String exactField;
         @ExcelColumn(header = "Contains", column = "C", matchMode = HeaderMatchMode.CONTAINS)
         private String containsField;
         @ExcelColumn(header = "Starts", column = "D", matchMode = HeaderMatchMode.STARTS_WITH)
         private String startsWithField;
-
-        @Override public int getHeaderRow() { return 1; }
-        @Override public int getDataStartRow() { return 2; }
-        @Override public Set<String> getSkipColumns() { return Set.of("A"); }
-        @Override public String[] getNaturalKeyFields() { return new String[]{"exactField"}; }
     }
 
     @Data
-    public static class BooleanDto implements ExcelImportConfig {
+    public static class BooleanDto {
         @ExcelColumn(header = "Active", column = "B")
         private Boolean active;
-
-        @Override public int getHeaderRow() { return 1; }
-        @Override public int getDataStartRow() { return 2; }
-        @Override public Set<String> getSkipColumns() { return Set.of("A"); }
-        @Override public String[] getNaturalKeyFields() { return new String[]{"active"}; }
     }
 
     @Data
-    public static class DateDto implements ExcelImportConfig {
+    public static class DateDto {
         @ExcelColumn(header = "Date", column = "B")
         private LocalDate date;
+    }
 
+    @Data
+    public static class IntegerDto {
+        @ExcelColumn(header = "Count", column = "B")
+        private Integer count;
+    }
+
+    static class SimpleConfig implements ExcelImportConfig {
         @Override public int getHeaderRow() { return 1; }
         @Override public int getDataStartRow() { return 2; }
         @Override public Set<String> getSkipColumns() { return Set.of("A"); }
-        @Override public String[] getNaturalKeyFields() { return new String[]{"date"}; }
+        @Override public String[] getNaturalKeyFields() { return new String[]{""}; }
     }
 
     // ===== File creation helpers =====
@@ -372,6 +392,26 @@ class ExcelParserServiceTest {
             dataRow.createCell(1).setCellValue("2024-01-15");
 
             Path file = tempDir.resolve("date_test.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createFileWithInvalidTypeData() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Deco");
+            headerRow.createCell(1).setCellValue("Count");
+
+            Row dataRow = sheet.createRow(1);
+            dataRow.createCell(0).setCellValue(1);
+            dataRow.createCell(1).setCellValue("not-a-number");
+
+            Path file = tempDir.resolve("invalid_type_test.xlsx");
             try (OutputStream os = Files.newOutputStream(file)) {
                 wb.write(os);
             }

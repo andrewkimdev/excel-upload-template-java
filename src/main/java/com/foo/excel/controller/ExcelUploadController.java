@@ -42,12 +42,11 @@ public class ExcelUploadController {
             @RequestParam("file") MultipartFile file) {
 
         try {
-            // Check file size limit
-            long maxBytes = (long) properties.getMaxFileSizeMb() * 1024 * 1024;
-            if (file.getSize() > maxBytes) {
+            ImportResult fileSizeError = checkFileSize(file);
+            if (fileSizeError != null) {
                 Map<String, Object> error = Map.of(
                         "success", false,
-                        "message", "파일 크기가 " + properties.getMaxFileSizeMb() + "MB를 초과했습니다"
+                        "message", fileSizeError.getMessage()
                 );
                 return ResponseEntity.badRequest().body(error);
             }
@@ -132,13 +131,9 @@ public class ExcelUploadController {
             Model model) {
 
         try {
-            // Check file size limit
-            long maxBytes = (long) properties.getMaxFileSizeMb() * 1024 * 1024;
-            if (file.getSize() > maxBytes) {
-                model.addAttribute("result", ImportResult.builder()
-                        .success(false)
-                        .message("파일 크기가 " + properties.getMaxFileSizeMb() + "MB를 초과했습니다")
-                        .build());
+            ImportResult fileSizeError = checkFileSize(file);
+            if (fileSizeError != null) {
+                model.addAttribute("result", fileSizeError);
                 return "result";
             }
 
@@ -158,5 +153,16 @@ public class ExcelUploadController {
         }
 
         return "result";
+    }
+
+    private ImportResult checkFileSize(MultipartFile file) {
+        long maxBytes = (long) properties.getMaxFileSizeMb() * 1024 * 1024;
+        if (file.getSize() > maxBytes) {
+            return ImportResult.builder()
+                    .success(false)
+                    .message("파일 크기가 " + properties.getMaxFileSizeMb() + "MB를 초과했습니다")
+                    .build();
+        }
+        return null;
     }
 }
