@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Result</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+    <div class="container">
+        <h1>Upload Result</h1>
+
+        <div th:if="${result.success}" class="alert alert-success">
+            <h2>Success</h2>
+            <p th:text="${result.message}"></p>
+            <ul>
+                <li>Rows Processed: <span th:text="${result.rowsProcessed}"></span></li>
+                <li>Rows Created: <span th:text="${result.rowsCreated}"></span></li>
+                <li>Rows Updated: <span th:text="${result.rowsUpdated}"></span></li>
+            </ul>
+        </div>
+
+        <div th:if="${!result.success}" class="alert alert-error">
+            <h2>Errors Found</h2>
+            <p th:text="${result.message}"></p>
+            <ul th:if="${result.rowsProcessed > 0}">
+                <li>Total Rows: <span th:text="${result.rowsProcessed}"></span></li>
+                <li>Error Rows: <span th:text="${result.errorRows}"></span></li>
+                <li>Total Errors: <span th:text="${result.errorCount}"></span></li>
+            </ul>
+            <p th:if="${result.downloadUrl}">
+                <a th:href="${result.downloadUrl}" class="download-link">Download Error Report</a>
+            </p>
+        </div>
+
+        <a href="/" class="back-link">Back to Upload</a>
+    </div>
+</body>
+</html>

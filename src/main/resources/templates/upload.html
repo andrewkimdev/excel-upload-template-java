@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Upload</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+</head>
+<body>
+    <div class="container">
+        <h1>Excel File Upload</h1>
+
+        <form method="post" th:action="@{/upload}" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="templateType">Template Type</label>
+                <select id="templateType" name="templateType" required>
+                    <option value="tariff-exemption">Tariff Exemption (관세면제)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="file">Excel File (.xls / .xlsx)</label>
+                <input type="file" id="file" name="file" accept=".xls,.xlsx" required>
+            </div>
+
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+</body>
+</html>
