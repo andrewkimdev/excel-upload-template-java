@@ -103,3 +103,19 @@ ul {
 li {
     margin-bottom: 4px;
 }
+
+.h2-console-btn {
+    background-color: #6c757d;
+    width: 100%;
+}
+
+.h2-console-btn:hover {
+    background-color: #545b62;
+}
+
+.h2-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+}

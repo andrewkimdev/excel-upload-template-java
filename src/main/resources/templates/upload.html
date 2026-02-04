@@ -25,6 +25,56 @@
 
             <button type="submit">Upload</button>
         </form>
+
+        <hr style="margin-top:2rem;">
+        <button type="button" onclick="openH2Console()" class="h2-console-btn">
+            Open H2 Database Console
+        </button>
+        <p class="h2-hint">
+            JDBC URL: <code>jdbc:h2:mem:testdb</code> &nbsp;|&nbsp; User: <code>sa</code> &nbsp;|&nbsp; Password: <em>(empty)</em>
+        </p>
     </div>
+
+    <script>
+        function openH2Console() {
+            // Step 1: GET /h2-console/ to establish a session and obtain jsessionid
+            fetch('/h2-console/')
+                .then(function (resp) { return resp.text(); })
+                .then(function (html) {
+                    var match = html.match(/jsessionid=([a-f0-9]+)/);
+                    if (!match) { window.open('/h2-console', 'h2console'); return; }
+                    var sid = match[1];
+
+                    // Step 2: POST login credentials using that session
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/h2-console/login.do?jsessionid=' + sid;
+                    form.target = 'h2console';
+
+                    var fields = {
+                        language: 'en',
+                        setting: 'Generic H2 (Embedded)',
+                        name: 'Generic H2 (Embedded)',
+                        driver: 'org.h2.Driver',
+                        url: 'jdbc:h2:mem:testdb',
+                        user: 'sa',
+                        password: ''
+                    };
+
+                    for (var key in fields) {
+                        var input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = fields[key];
+                        form.appendChild(input);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    document.body.removeChild(form);
+                })
+                .catch(function () { window.open('/h2-console', 'h2console'); });
+        }
+    </script>
 </body>
 </html>
