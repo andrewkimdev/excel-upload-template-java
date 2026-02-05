@@ -19,22 +19,21 @@ Uses Gradle 8+, Lombok, Apache POI 5.4.1, H2 (dev), Thymeleaf.
 
 ## Java 17 Rules
 
-### Use `Path.of()` instead of `Paths.get()`
-`Path.of()` is the preferred API since Java 11. `Paths.get()` is effectively deprecated.
+### MUST use `Path.of()` — never `Paths.get()`
+`Paths.get()` is effectively deprecated since Java 11. Always use `Path.of()`.
 ```java
-// WRONG
+// WRONG — do not introduce this
 Path tempDir = Paths.get(tempDirectory);
 // RIGHT
 Path tempDir = Path.of(tempDirectory);
 ```
 
-### Use records for immutable value carriers
-When a class is a read-only data carrier (no mutation after construction), prefer Java 16+ records.
+### MUST use records for immutable value carriers
+When a class is a read-only data carrier (no mutation after construction), use Java 16+ records.
 Static inner DTOs like `ParseResult`, `ColumnMapping`, and API response objects are good candidates.
-**Exception:** Classes that require Lombok `@Builder` or mutable state (e.g., `ExcelValidationResult.merge()`) should remain as classes.
+**Only exception:** Classes that require Lombok `@Builder` or mutable state (e.g., `ExcelValidationResult.merge()`) remain as classes.
 
-### Use switch expressions (already in use)
-The project already uses Java 14+ switch expressions with arrow syntax. Continue this style:
+### MUST use switch expressions with arrow syntax
 ```java
 return switch (mode) {
     case EXACT -> trimmedCell.equalsIgnoreCase(trimmedExpected);
@@ -43,51 +42,49 @@ return switch (mode) {
 };
 ```
 
-### Use `var` for local variables where the type is obvious
-The project uses `var` in loops (e.g., `for (var hssfSheet : ...)`). Continue using it when the type is clear from context. Do NOT use `var` when the type is ambiguous.
+### MUST use `var` for local variables where the type is obvious
+Use `var` when the type is clear from context (e.g., `for (var hssfSheet : ...)`). Do NOT use `var` when the type is ambiguous.
 
-### Use text blocks for multi-line strings
-When constructing multi-line strings (error messages, SQL, etc.), prefer text blocks (`"""..."""`).
+### MUST use text blocks for multi-line strings
+When constructing multi-line strings (error messages, SQL, etc.), use text blocks (`"""..."""`).
 
 ---
 
 ## Spring Boot 3.3.4 Rules
 
-### Jakarta namespace (NOT javax)
-Spring Boot 3.x requires `jakarta.*` packages. Never use `javax.persistence`, `javax.validation`, etc.
+### MUST use Jakarta namespace — NEVER javax
+Spring Boot 3.x requires `jakarta.*` packages. Any use of `javax.persistence`, `javax.validation`, etc. is a build-breaking error.
 ```java
-// WRONG: import javax.validation.constraints.NotBlank;
-// RIGHT:
+// WRONG — will not compile
+import javax.validation.constraints.NotBlank;
+// RIGHT
 import jakarta.validation.constraints.NotBlank;
 ```
 
-### Constructor injection: use `@RequiredArgsConstructor` consistently
-All Spring-managed beans should use Lombok `@RequiredArgsConstructor` with `private final` fields.
-Do NOT write explicit constructors unless there is a specific reason (e.g., custom initialization logic beyond field assignment).
+### MUST use `@RequiredArgsConstructor` for constructor injection
+All `@Service`, `@Component`, `@Controller`, and `@Configuration` beans MUST use Lombok `@RequiredArgsConstructor` with `private final` fields. Do NOT write explicit constructors unless custom initialization logic beyond field assignment is required.
 ```java
-// Standard pattern for all @Service, @Component, @Controller classes:
 @Service
 @RequiredArgsConstructor
 public class MyService {
     private final SomeDependency dependency;
 }
 ```
-**Known inconsistency:** `ExcelImportOrchestrator` uses an explicit constructor where `@RequiredArgsConstructor` would suffice.
 
 ### `@ConfigurationProperties` binding
-The project uses `@Component` + `@ConfigurationProperties` on `ExcelImportProperties`. This works, but the preferred Spring Boot 3.x pattern is `@EnableConfigurationProperties` or `@ConfigurationPropertiesScan`. For new config classes, prefer the newer approach.
+`ExcelImportProperties` uses `@Component` + `@ConfigurationProperties`. For any new config classes, MUST use `@EnableConfigurationProperties` or `@ConfigurationPropertiesScan` instead.
 
-### Multipart properties use `spring.servlet.multipart.*` prefix
-Spring Boot 3.x uses the `spring.servlet.multipart` prefix. Never use the legacy `spring.http.multipart` prefix.
+### MUST use `spring.servlet.multipart.*` prefix
+Spring Boot 3.x uses `spring.servlet.multipart`. Never use the removed `spring.http.multipart` prefix.
 
 ---
 
 ## JPA / Entity Rules
 
 ### NEVER use `@Data` on JPA `@Entity` classes
-Lombok `@Data` generates `equals()`/`hashCode()` using ALL fields (including `@Id`), which breaks JPA identity semantics and can cause issues with detached entities, collections, and lazy loading.
+Lombok `@Data` generates `equals()`/`hashCode()` using ALL fields (including `@Id`), which breaks JPA identity semantics and causes issues with detached entities, collections, and lazy loading. This rule has zero exceptions.
 
-For entities, use:
+For entities, ALWAYS use:
 ```java
 @Getter
 @Setter
@@ -96,33 +93,58 @@ For entities, use:
 @Builder
 @Entity
 public class MyEntity {
-    // Override equals/hashCode using business key or @Id only
+    // MUST override equals/hashCode using business key or @Id only
 }
 ```
-**Known inconsistency:** `TariffExemption.java` uses `@Data` on a JPA `@Entity`.
 
-### Entity identity: use business key or `@Id` for equals/hashCode
-Never include all fields. Either use the `@Id` field or the natural business key fields.
+### MUST use business key or `@Id` for equals/hashCode
+Never include all fields. Use either the `@Id` field or the natural business key fields.
 
 ---
 
 ## Thread Safety Rules
 
 ### Apache POI `DataFormatter` is NOT thread-safe
-Do not use a shared static `DataFormatter` instance in a singleton Spring `@Service`.
-Either create a new instance per method call, or use `ThreadLocal<DataFormatter>`.
+NEVER use a shared static `DataFormatter` instance. In a singleton Spring `@Service`, this causes data corruption under concurrent requests.
 ```java
-// WRONG (current code in ExcelParserService):
+// WRONG — NEVER do this
 private static final DataFormatter DATA_FORMATTER = new DataFormatter();
 
 // RIGHT — option 1: local variable
 DataFormatter formatter = new DataFormatter();
 
-// RIGHT — option 2: ThreadLocal
+// RIGHT — option 2: ThreadLocal (used in this project)
 private static final ThreadLocal<DataFormatter> DATA_FORMATTER =
     ThreadLocal.withInitial(DataFormatter::new);
 ```
-**Known inconsistency:** `ExcelParserService` uses a shared static `DataFormatter`.
+
+### General rule for non-thread-safe POI classes
+Any POI class that is not documented as thread-safe MUST be used as a local variable or via `ThreadLocal`. Never store as a shared static field in a Spring singleton.
+
+---
+
+## Security Rules
+
+### NEVER expose internal details to users
+Controllers MUST catch all exceptions and return generic Korean error messages. Log full error details at `error` level but NEVER return exception messages, stack traces, or file paths to the user.
+```java
+catch (Exception e) {
+    log.error("Upload failed", e);
+    // NEVER: return e.getMessage()
+    // ALWAYS: return generic message
+    return "파일 처리 중 오류가 발생했습니다. 관리자에게 문의하세요.";
+}
+```
+
+### MUST use `SecureExcelUtils` for all file operations
+- Open workbooks via `SecureExcelUtils.createWorkbook()` — NEVER via raw `WorkbookFactory.create()`
+- Sanitize user-provided filenames via `SecureExcelUtils.sanitizeFilename()`
+- Validate file content (magic bytes) via `SecureExcelUtils.validateFileContent()`
+- Sanitize cell values written to error reports via `SecureExcelUtils.sanitizeForExcelCell()`
+
+### Thymeleaf security
+- ALWAYS use `th:text` (auto-escapes HTML). NEVER use `th:utext` with user data.
+- For URLs, MUST use Thymeleaf URL expressions: `th:href="@{/api/excel/download/{id}(id=${result.errorFileId})}"` — NEVER use raw `th:href="${...}"`.
 
 ---
 
@@ -141,9 +163,9 @@ com.foo.excel/
     └── tariffexemption/ # Entity, DTO, Config, Service, Repository, Checker
 ```
 
-### New templates go under `templates/`
+### New templates MUST go under `templates/`
 When adding a new Excel template type, create a subpackage under `com.foo.excel.templates` containing:
-1. `*Dto.java` — DTO with `@ExcelColumn` + JSR-380 annotations
+1. `*Dto.java` — DTO with `@ExcelColumn` + JSR-380 annotations. MUST NOT implement `ExcelImportConfig`.
 2. `*ImportConfig.java` — implements `ExcelImportConfig`
 3. `*Entity.java` — JPA entity (if persistence needed)
 4. `*Repository.java` — Spring Data JPA repository
@@ -152,49 +174,18 @@ When adding a new Excel template type, create a subpackage under `com.foo.excel.
 7. `*TemplateConfig.java` — `@Configuration` class producing `TemplateDefinition<Dto>` bean
 
 ### Logging
-Use Lombok `@Slf4j` on all classes that need logging. Use SLF4J placeholder syntax:
+MUST use Lombok `@Slf4j` on all classes that need logging. MUST use SLF4J placeholder syntax:
 ```java
 log.info("Processed {} rows", count);     // RIGHT
-log.info("Processed " + count + " rows"); // WRONG
+log.info("Processed " + count + " rows"); // WRONG — string concatenation in log calls
 ```
 
 ### Error messages
-User-facing error messages should be in Korean. Internal log messages should be in English.
+User-facing error messages MUST be in Korean. Internal log messages MUST be in English.
 ```java
 throw new IllegalArgumentException("물품명은 필수 입력 항목입니다");  // User-facing
 log.error("Failed to parse Excel file", e);                           // Internal
 ```
-
-### Security — never expose internal details to users
-Controllers must catch exceptions and return generic Korean error messages.
-Log full error details at `error` level but return only safe messages.
-```java
-catch (Exception e) {
-    log.error("Upload failed", e);
-    // Do NOT: return e.getMessage()
-    // DO: return generic message
-    return "파일 처리 중 오류가 발생했습니다. 관리자에게 문의하세요.";
-}
-```
-
-### Thymeleaf security
-- Always use `th:text` (auto-escapes HTML). Never use `th:utext` with user data.
-- For URLs, prefer Thymeleaf URL expressions: `th:href="@{/api/excel/download/{id}(id=${result.errorFileId})}"` instead of raw `th:href="${result.downloadUrl}"`.
-
----
-
-## Resolved Issues (2026-02-05)
-
-All previously tracked technical debt has been resolved:
-
-1. `TariffExemption.java` — replaced `@Data` with `@Getter/@Setter` + business-key equals/hashCode
-2. `ExcelParserService` — replaced static `DataFormatter` with `ThreadLocal<DataFormatter>`
-3. `ExcelImportProperties` — replaced `Paths.get()` with `Path.of()`
-4. `ExcelImportOrchestrator` — replaced explicit constructor with `@RequiredArgsConstructor`
-5. `ExcelImportConfig` — removed dead `getSkipColumns()` method (never used by parser)
-6. `result.html` — replaced raw `th:href` with Thymeleaf URL-built `@{...}` expression
-7. `ExcelImportOrchestrator.doProcess()` — added `@SuppressWarnings("unchecked")` for inherent generic cast
-8. `README.md` — updated architecture tree to match actual package structure
 
 ---
 
@@ -202,6 +193,6 @@ All previously tracked technical debt has been resolved:
 
 - Unit tests: `*Test.java` in matching package under `src/test/java`
 - Integration tests: in `com.foo.excel.integration` package
-- Use `@SpringBootTest` + `MockMvc` for full integration tests
+- MUST use `@SpringBootTest` + `MockMvc` for full integration tests
 - Component-level tests create POI workbooks in-memory for test data
-- Test class names match the class under test: `FooService` → `FooServiceTest`
+- Test class names MUST match the class under test: `FooService` → `FooServiceTest`
