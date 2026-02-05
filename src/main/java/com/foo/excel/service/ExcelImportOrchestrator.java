@@ -7,6 +7,7 @@ import com.foo.excel.validation.RowError;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +20,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ExcelImportOrchestrator {
 
     private final ExcelConversionService conversionService;
@@ -27,20 +29,6 @@ public class ExcelImportOrchestrator {
     private final ExcelErrorReportService errorReportService;
     private final ExcelImportProperties properties;
     private final List<TemplateDefinition<?>> templateDefinitions;
-
-    public ExcelImportOrchestrator(ExcelConversionService conversionService,
-                                   ExcelParserService parserService,
-                                   ExcelValidationService validationService,
-                                   ExcelErrorReportService errorReportService,
-                                   ExcelImportProperties properties,
-                                   List<TemplateDefinition<?>> templateDefinitions) {
-        this.conversionService = conversionService;
-        this.parserService = parserService;
-        this.validationService = validationService;
-        this.errorReportService = errorReportService;
-        this.properties = properties;
-        this.templateDefinitions = templateDefinitions;
-    }
 
     @Data
     @Builder
@@ -70,6 +58,7 @@ public class ExcelImportOrchestrator {
                         "Unknown template type: " + templateType));
     }
 
+    @SuppressWarnings("unchecked")
     private <T> ImportResult doProcess(TemplateDefinition<T> template, MultipartFile file)
             throws IOException {
 

@@ -9,12 +9,15 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -63,4 +66,19 @@ public class TariffExemption {
 
     @Column(name = "annual_expected_qty")
     private Integer annualExpectedQty;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TariffExemption that = (TariffExemption) o;
+        return Objects.equals(itemName, that.itemName)
+                && Objects.equals(specification, that.specification)
+                && Objects.equals(hsCode, that.hsCode);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(itemName, specification, hsCode);
+    }
 }

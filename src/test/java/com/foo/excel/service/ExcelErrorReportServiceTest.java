@@ -18,7 +18,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -206,7 +205,6 @@ class ExcelErrorReportServiceTest {
     static class TestConfig implements ExcelImportConfig {
         @Override public int getHeaderRow() { return 1; }
         @Override public int getDataStartRow() { return 2; }
-        @Override public Set<String> getSkipColumns() { return Set.of("A"); }
         @Override public String[] getNaturalKeyFields() { return new String[]{"name"}; }
     }
 

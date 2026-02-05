@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -214,7 +213,6 @@ class ExcelParserServiceTest {
     static class SimpleConfig implements ExcelImportConfig {
         @Override public int getHeaderRow() { return 1; }
         @Override public int getDataStartRow() { return 2; }
-        @Override public Set<String> getSkipColumns() { return Set.of("A"); }
         @Override public String[] getNaturalKeyFields() { return new String[]{""}; }
     }
 

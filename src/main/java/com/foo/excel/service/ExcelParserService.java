@@ -28,7 +28,8 @@ import java.util.regex.Pattern;
 @Service
 public class ExcelParserService {
 
-    private static final DataFormatter DATA_FORMATTER = new DataFormatter();
+    private static final ThreadLocal<DataFormatter> DATA_FORMATTER =
+            ThreadLocal.withInitial(DataFormatter::new);
 
     @Data
     @AllArgsConstructor
@@ -273,7 +274,7 @@ public class ExcelParserService {
     }
 
     private String getStringValue(Cell cell) {
-        String value = DATA_FORMATTER.formatCellValue(cell);
+        String value = DATA_FORMATTER.get().formatCellValue(cell);
         return value != null ? value.trim() : null;
     }
 
@@ -348,7 +349,7 @@ public class ExcelParserService {
         if (cell == null) {
             return null;
         }
-        return DATA_FORMATTER.formatCellValue(cell).trim();
+        return DATA_FORMATTER.get().formatCellValue(cell).trim();
     }
 
     private List<Field> getAllFields(Class<?> clazz) {

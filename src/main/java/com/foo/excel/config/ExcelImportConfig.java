@@ -1,7 +1,5 @@
 package com.foo.excel.config;
 
-import java.util.Set;
-
 public interface ExcelImportConfig {
 
     /**
@@ -19,14 +17,6 @@ public interface ExcelImportConfig {
      * Sheet index to read (0-indexed).
      */
     default int getSheetIndex() { return 0; }
-
-    /**
-     * Columns to skip using letter notation (e.g., "A", "G").
-     * Default skips column A as it's typically decorative.
-     */
-    default Set<String> getSkipColumns() {
-        return Set.of("A");
-    }
 
     /**
      * Marker string that indicates start of footer/notes section.

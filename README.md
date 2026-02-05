@@ -57,12 +57,9 @@ src/main/java/com/foo/excel/
 ├── ExcelUploadApplication.java
 ├── annotation/          # @ExcelColumn, @ExcelUnique, @ExcelCompositeUnique, HeaderMatchMode
 ├── config/
-│   ├── ExcelImportConfig.java               # Template layout interface (header row, data start, skip columns)
-│   ├── ExcelImportProperties.java           # Global properties (file size, max rows, temp dir)
-│   ├── TariffExemptionImportConfig.java     # Example: config for tariff exemption template
-│   └── TariffExemptionTemplateConfig.java   # Example: wires the TemplateDefinition bean
+│   ├── ExcelImportConfig.java               # Template layout interface (header row, data start row, footer marker)
+│   └── ExcelImportProperties.java           # Global properties (file size, max rows, temp dir)
 ├── controller/          # ExcelUploadController (REST + Thymeleaf)
-├── dto/                 # TariffExemptionDto (example template DTO)
 ├── service/
 │   ├── ExcelConversionService.java                # .xls -> .xlsx auto-conversion (with security checks)
 │   ├── ExcelParserService.java                    # Excel -> List<DTO> with type coercion
@@ -72,9 +69,15 @@ src/main/java/com/foo/excel/
 │   ├── TemplateDefinition.java                    # Type-safe bundle: DTO class + config + handlers
 │   ├── PersistenceHandler.java                    # Strategy interface for saving parsed rows
 │   ├── DatabaseUniquenessChecker.java             # Strategy interface for DB-level duplicate checks
-│   ├── TempFileCleanupService.java                # Scheduled cleanup of expired temp/error files
-│   ├── TariffExemptionService.java                # Example: implements PersistenceHandler
-│   └── TariffExemptionDbUniquenessChecker.java    # Example: implements DatabaseUniquenessChecker
+│   └── TempFileCleanupService.java                # Scheduled cleanup of expired temp/error files
+├── templates/samples/tariffexemption/             # Example template implementation
+│   ├── TariffExemptionDto.java                    # DTO with @ExcelColumn + JSR-380 annotations
+│   ├── TariffExemptionImportConfig.java           # ExcelImportConfig for tariff exemption
+│   ├── TariffExemption.java                       # JPA entity
+│   ├── TariffExemptionRepository.java             # Spring Data JPA repository
+│   ├── TariffExemptionService.java                # Implements PersistenceHandler
+│   ├── TariffExemptionDbUniquenessChecker.java    # Implements DatabaseUniquenessChecker
+│   └── TariffExemptionTemplateConfig.java         # Wires the TemplateDefinition bean
 ├── util/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
 │   └── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)

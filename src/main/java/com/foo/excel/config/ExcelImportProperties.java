@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @Data
 @Component
@@ -23,13 +22,13 @@ public class ExcelImportProperties {
 
     @PostConstruct
     public void init() throws IOException {
-        Path tempDir = Paths.get(tempDirectory);
+        Path tempDir = Path.of(tempDirectory);
         if (!Files.exists(tempDir)) {
             Files.createDirectories(tempDir);
         }
     }
 
     public Path getTempDirectoryPath() {
-        return Paths.get(tempDirectory);
+        return Path.of(tempDirectory);
     }
 }

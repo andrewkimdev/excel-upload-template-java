@@ -35,17 +35,18 @@
             <!--
             SECURITY NOTE: Download URL Handling
             =====================================
-            The downloadUrl is constructed server-side using only UUID values,
-            which are validated by the controller before file access.
+            The download URL is constructed using Thymeleaf's URL expression @{...}
+            with a path variable bound to errorFileId (a UUID generated server-side).
+            The controller validates the UUID format before file access.
 
             If you modify URL construction:
             1. Never include user-controlled data in URLs without validation
             2. Validate that URLs point only to allowed paths
-            3. Consider using th:href="@{/api/excel/download/{id}(id=${result.errorFileId})}"
-               for safer URL construction with Thymeleaf's URL building
+            3. Always use th:href="@{...}" (Thymeleaf URL building) instead of
+               raw th:href="${...}" to get proper context-path handling and encoding
             -->
-            <p th:if="${result.downloadUrl}">
-                <a th:href="${result.downloadUrl}" class="download-link">Download Error Report</a>
+            <p th:if="${result.errorFileId}">
+                <a th:href="@{/api/excel/download/{id}(id=${result.errorFileId})}" class="download-link">Download Error Report</a>
             </p>
         </div>
 
