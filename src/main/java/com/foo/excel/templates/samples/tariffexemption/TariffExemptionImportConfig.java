@@ -1,4 +1,6 @@
-package com.foo.excel.config;
+package com.foo.excel.templates.samples.tariffexemption;
+
+import com.foo.excel.config.ExcelImportConfig;
 
 import java.util.Set;
 

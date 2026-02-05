@@ -1,4 +1,4 @@
-package com.foo.excel.entity;
+package com.foo.excel.templates.samples.tariffexemption;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

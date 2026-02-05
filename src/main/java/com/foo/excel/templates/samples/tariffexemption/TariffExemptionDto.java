@@ -1,4 +1,4 @@
-package com.foo.excel.dto;
+package com.foo.excel.templates.samples.tariffexemption;
 
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelCompositeUnique;

@@ -1,8 +1,5 @@
-package com.foo.excel.config;
+package com.foo.excel.templates.samples.tariffexemption;
 
-import com.foo.excel.dto.TariffExemptionDto;
-import com.foo.excel.service.TariffExemptionDbUniquenessChecker;
-import com.foo.excel.service.TariffExemptionService;
 import com.foo.excel.service.TemplateDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

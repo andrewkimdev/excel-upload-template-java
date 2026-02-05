@@ -1,6 +1,6 @@
 package com.foo.excel.service;
 
-import com.foo.excel.dto.TariffExemptionDto;
+import com.foo.excel.templates.samples.tariffexemption.TariffExemptionDto;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.UniqueConstraintValidator;
 import jakarta.validation.Validation;

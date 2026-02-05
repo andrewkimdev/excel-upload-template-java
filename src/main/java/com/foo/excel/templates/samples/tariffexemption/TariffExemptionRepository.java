@@ -1,6 +1,5 @@
-package com.foo.excel.repository;
+package com.foo.excel.templates.samples.tariffexemption;
 
-import com.foo.excel.entity.TariffExemption;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
