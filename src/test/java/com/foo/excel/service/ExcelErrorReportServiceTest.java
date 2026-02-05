@@ -126,6 +126,81 @@ class ExcelErrorReportServiceTest {
         }
     }
 
+    @Test
+    void errorReport_messageWithFormulaContent_isSafelyFormatted() throws IOException {
+        // The formatted message includes "[B] " prefix from the column letter,
+        // so even if the error message contains formula-like content,
+        // the final cell value starts with "[" which doesn't trigger Excel formula interpretation.
+        Path originalFile = createSimpleXlsx();
+        ExcelValidationResult validationResult = createValidationResultWithFormulaInjection();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config);
+
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            Row dataRow = sheet.getRow(1);
+            int lastCol = sheet.getRow(0).getLastCellNum();
+            Cell errMsgCell = dataRow.getCell(lastCol - 1);
+
+            assertThat(errMsgCell).isNotNull();
+            String cellValue = errMsgCell.getStringCellValue();
+            // The formatted message starts with "[B]" which is safe
+            assertThat(cellValue).startsWith("[");
+            // Verify the formula content is still present (not stripped)
+            assertThat(cellValue).contains("SUM");
+        }
+    }
+
+    @Test
+    void errorReport_errorMessagePreserved_inFormattedOutput() throws IOException {
+        Path originalFile = createSimpleXlsx();
+        ExcelValidationResult validationResult = createValidationResultWithAtSign();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config);
+
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            Row dataRow = sheet.getRow(1);
+            int lastCol = sheet.getRow(0).getLastCellNum();
+            Cell errMsgCell = dataRow.getCell(lastCol - 1);
+
+            assertThat(errMsgCell).isNotNull();
+            String cellValue = errMsgCell.getStringCellValue();
+            // The formatted message includes the column letter prefix
+            assertThat(cellValue).startsWith("[B]");
+        }
+    }
+
+    @Test
+    void errorReport_normalErrorMessage_preservedCorrectly() throws IOException {
+        Path originalFile = createSimpleXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config);
+
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            Row dataRow = sheet.getRow(1);
+            int lastCol = sheet.getRow(0).getLastCellNum();
+            Cell errMsgCell = dataRow.getCell(lastCol - 1);
+
+            assertThat(errMsgCell).isNotNull();
+            String cellValue = errMsgCell.getStringCellValue();
+            // Normal messages should be formatted with column prefix
+            assertThat(cellValue).startsWith("[B]");
+            assertThat(cellValue).contains("필수 입력 항목입니다");
+        }
+    }
+
     // ===== Helpers =====
 
     static class TestConfig implements ExcelImportConfig {
@@ -201,6 +276,45 @@ class ExcelErrorReportServiceTest {
         RowError rowError = RowError.builder()
                 .rowNumber(2)
                 .cellErrors(new ArrayList<>(List.of(cellError1, cellError2)))
+                .build();
+
+        return ExcelValidationResult.failure(2, List.of(rowError));
+    }
+
+    private ExcelValidationResult createValidationResultWithFormulaInjection() {
+        // Simulate a malicious user submitting data that could trigger formula injection
+        // when written to the error report
+        CellError cellError = CellError.builder()
+                .columnIndex(1)
+                .columnLetter("B")
+                .fieldName("name")
+                .headerName("Name")
+                .rejectedValue("=cmd|'/C calc'!A0")
+                .message("=SUM(A1:A10)")  // Attacker's payload as error message
+                .build();
+
+        RowError rowError = RowError.builder()
+                .rowNumber(2)
+                .cellErrors(new ArrayList<>(List.of(cellError)))
+                .build();
+
+        return ExcelValidationResult.failure(2, List.of(rowError));
+    }
+
+    private ExcelValidationResult createValidationResultWithAtSign() {
+        // @ is another formula injection vector in Excel
+        CellError cellError = CellError.builder()
+                .columnIndex(1)
+                .columnLetter("B")
+                .fieldName("name")
+                .headerName("Name")
+                .rejectedValue("@attack")
+                .message("@SUM(A1:A10)")
+                .build();
+
+        RowError rowError = RowError.builder()
+                .rowNumber(2)
+                .cellErrors(new ArrayList<>(List.of(cellError)))
                 .build();
 
         return ExcelValidationResult.failure(2, List.of(rowError));

@@ -27,8 +27,11 @@ public class ExcelErrorReportService {
     public Path generateErrorReport(Path originalXlsx, ExcelValidationResult validationResult,
             List<ExcelParserService.ColumnMapping> columnMappings, ExcelImportConfig config) throws IOException {
 
-        // SECURITY: Use SecureExcelUtils to protect against XXE and Zip Bomb attacks
-        try (Workbook workbook = SecureExcelUtils.createWorkbook(originalXlsx)) {
+        // SECURITY: Validate file content before opening.
+        // We use validateFileContent() + WorkbookFactory.create() instead of SecureExcelUtils.createWorkbook()
+        // because we need write access to add the error column to the workbook.
+        SecureExcelUtils.validateFileContent(originalXlsx);
+        try (Workbook workbook = WorkbookFactory.create(originalXlsx.toFile())) {
             Sheet sheet = workbook.getSheetAt(config.getSheetIndex());
 
             // Find last column

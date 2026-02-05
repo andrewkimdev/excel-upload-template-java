@@ -108,6 +108,105 @@ class ExcelConversionServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    // ===== Security tests =====
+
+    @Test
+    void pathTraversalFilename_isSanitized_xlsxSavedWithCleanName() throws IOException {
+        byte[] xlsxBytes = createXlsxBytes("TestValue");
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "../../../etc/passwd.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        // The path should be within tempDir, not escaping it
+        assertThat(result.getParent()).isEqualTo(tempDir);
+        assertThat(result.getFileName().toString()).doesNotContain("..");
+        assertThat(result.getFileName().toString()).doesNotContain("/");
+    }
+
+    @Test
+    void windowsPathTraversalFilename_isSanitized() throws IOException {
+        byte[] xlsxBytes = createXlsxBytes("TestValue");
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "..\\..\\Windows\\System32\\data.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        assertThat(result.getParent()).isEqualTo(tempDir);
+        assertThat(result.getFileName().toString()).doesNotContain("..");
+        assertThat(result.getFileName().toString()).doesNotContain("\\");
+    }
+
+    @Test
+    void xlsxFile_withWrongMagicBytes_throwsSecurityException() {
+        // File claims to be XLSX but contains PDF magic bytes
+        byte[] pdfBytes = {0x25, 0x50, 0x44, 0x46, 0x2D};  // %PDF-
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "malicious.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                pdfBytes);
+
+        assertThatThrownBy(() -> conversionService.ensureXlsxFormat(file, tempDir))
+                .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void xlsFile_withWrongMagicBytes_throwsSecurityException() {
+        // File claims to be XLS but contains text
+        byte[] textBytes = "This is not an Excel file".getBytes();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "malicious.xls",
+                "application/vnd.ms-excel",
+                textBytes);
+
+        assertThatThrownBy(() -> conversionService.ensureXlsxFormat(file, tempDir))
+                .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void xlsFile_withXlsxContent_throwsSecurityException() {
+        // File has .xls extension but contains XLSX magic bytes (PK/ZIP)
+        byte[] xlsxMagic = {0x50, 0x4B, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00};
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "wrong_format.xls",
+                "application/vnd.ms-excel",
+                xlsxMagic);
+
+        assertThatThrownBy(() -> conversionService.ensureXlsxFormat(file, tempDir))
+                .isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void filenameWithNullByte_isSanitized() throws IOException {
+        byte[] xlsxBytes = createXlsxBytes("TestValue");
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test\u0000.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        assertThat(result.getFileName().toString()).doesNotContain("\u0000");
+    }
+
+    @Test
+    void absolutePathFilename_extractsOnlyFilename() throws IOException {
+        byte[] xlsxBytes = createXlsxBytes("TestValue");
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "/var/tmp/uploads/secret.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        assertThat(result.getFileName().toString()).isEqualTo("secret.xlsx");
+        assertThat(result.getParent()).isEqualTo(tempDir);
+    }
+
     // ===== Helper methods =====
 
     private byte[] createXlsxBytes(String value) throws IOException {
