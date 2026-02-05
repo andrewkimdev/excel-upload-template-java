@@ -12,6 +12,10 @@
 
         <div th:if="${result.success}" class="alert alert-success">
             <h2>Success</h2>
+            <!--
+            SECURITY: th:text automatically escapes HTML to prevent XSS attacks.
+            Never use th:utext with user-controlled data.
+            -->
             <p th:text="${result.message}"></p>
             <ul>
                 <li>Rows Processed: <span th:text="${result.rowsProcessed}"></span></li>
@@ -28,6 +32,18 @@
                 <li>Error Rows: <span th:text="${result.errorRows}"></span></li>
                 <li>Total Errors: <span th:text="${result.errorCount}"></span></li>
             </ul>
+            <!--
+            SECURITY NOTE: Download URL Handling
+            =====================================
+            The downloadUrl is constructed server-side using only UUID values,
+            which are validated by the controller before file access.
+
+            If you modify URL construction:
+            1. Never include user-controlled data in URLs without validation
+            2. Validate that URLs point only to allowed paths
+            3. Consider using th:href="@{/api/excel/download/{id}(id=${result.errorFileId})}"
+               for safer URL construction with Thymeleaf's URL building
+            -->
             <p th:if="${result.downloadUrl}">
                 <a th:href="${result.downloadUrl}" class="download-link">Download Error Report</a>
             </p>

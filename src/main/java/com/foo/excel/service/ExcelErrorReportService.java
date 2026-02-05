@@ -2,6 +2,7 @@ package com.foo.excel.service;
 
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
+import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.RowError;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,8 @@ public class ExcelErrorReportService {
     public Path generateErrorReport(Path originalXlsx, ExcelValidationResult validationResult,
             List<ExcelParserService.ColumnMapping> columnMappings, ExcelImportConfig config) throws IOException {
 
-        try (Workbook workbook = WorkbookFactory.create(originalXlsx.toFile())) {
+        // SECURITY: Use SecureExcelUtils to protect against XXE and Zip Bomb attacks
+        try (Workbook workbook = SecureExcelUtils.createWorkbook(originalXlsx)) {
             Sheet sheet = workbook.getSheetAt(config.getSheetIndex());
 
             // Find last column
@@ -72,8 +74,12 @@ public class ExcelErrorReportService {
                 }
 
                 // Write concatenated error messages in error column
+                // SECURITY: Sanitize error messages to prevent Excel formula injection.
+                // Error messages may contain user-supplied data (e.g., rejected values).
                 Cell errorCell = row.createCell(errorColIndex);
-                errorCell.setCellValue(rowError.getFormattedMessage());
+                String sanitizedMessage = SecureExcelUtils.sanitizeForExcelCell(
+                        rowError.getFormattedMessage());
+                errorCell.setCellValue(sanitizedMessage);
             }
 
             // Save to temp directory

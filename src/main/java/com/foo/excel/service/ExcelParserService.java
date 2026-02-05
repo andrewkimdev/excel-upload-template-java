@@ -4,6 +4,7 @@ import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.util.ExcelColumnUtil;
+import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.RowError;
 import lombok.AllArgsConstructor;
@@ -55,7 +56,9 @@ public class ExcelParserService {
         int sheetIndex = config.getSheetIndex();
         String footerMarker = config.getFooterMarker();
 
-        try (Workbook workbook = WorkbookFactory.create(xlsxFile.toFile())) {
+        // SECURITY: Use SecureExcelUtils to protect against XXE and Zip Bomb attacks.
+        // See SecureExcelUtils for configured limits and protections.
+        try (Workbook workbook = SecureExcelUtils.createWorkbook(xlsxFile)) {
             Sheet sheet = workbook.getSheetAt(sheetIndex);
             Row headerRow = sheet.getRow(headerRowNum);
 

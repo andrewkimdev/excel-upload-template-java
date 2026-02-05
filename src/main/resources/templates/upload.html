@@ -10,6 +10,19 @@
     <div class="container">
         <h1>Excel File Upload</h1>
 
+        <!--
+        SECURITY NOTES FOR CONSUMERS:
+        =============================
+        1. CSRF Protection: When integrating Spring Security, add a CSRF token:
+           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+        2. Authentication: This form should only be accessible to authenticated users.
+           Add Spring Security and configure access control for this endpoint.
+
+        3. File Validation: The backend validates file content (magic bytes), but
+           client-side validation with 'accept' attribute provides UX improvement only.
+           Never rely solely on client-side validation for security.
+        -->
         <form method="post" th:action="@{/upload}" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="templateType">Template Type</label>
@@ -20,12 +33,32 @@
 
             <div class="form-group">
                 <label for="file">Excel File (.xls / .xlsx)</label>
+                <!--
+                SECURITY: The 'accept' attribute is for UX only and can be bypassed.
+                Server-side validation (magic bytes check) provides actual security.
+                -->
                 <input type="file" id="file" name="file" accept=".xls,.xlsx" required>
             </div>
 
             <button type="submit">Upload</button>
         </form>
 
+        <!--
+        SECURITY WARNING: H2 Console Section
+        =====================================
+        The H2 console and auto-login functionality below are for DEVELOPMENT ONLY.
+        Before deploying to production:
+        1. Remove this entire section (lines 46-80)
+        2. Disable H2 console in application.properties: spring.h2.console.enabled=false
+        3. Use a production database with proper credentials
+
+        The H2 console provides full SQL access and can be used to:
+        - Read/modify/delete all data
+        - Execute arbitrary SQL including system commands via RUNSCRIPT
+        - Potentially achieve remote code execution
+
+        NEVER expose H2 console in production environments.
+        -->
         <hr style="margin-top:2rem;">
         <button type="button" onclick="openH2Console()" class="h2-console-btn">
             Open H2 Database Console
@@ -36,6 +69,8 @@
     </div>
 
     <script>
+        // SECURITY WARNING: This auto-login script is for DEVELOPMENT ONLY.
+        // It exposes database credentials and should be removed for production.
         function openH2Console() {
             // Step 1: GET /h2-console/ to establish a session and obtain jsessionid
             fetch('/h2-console/')
