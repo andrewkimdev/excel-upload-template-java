@@ -40,6 +40,7 @@ MUST use Lombok `@RequiredArgsConstructor` with `private final` fields for all S
 NEVER use `@Data` on JPA `@Entity` classes — it breaks JPA identity semantics. Zero exceptions.
 
 For entities, ALWAYS use `@Getter`/`@Setter` and override `equals()`/`hashCode()` using business key or `@Id` only:
+
 ```java
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
@@ -47,6 +48,14 @@ public class MyEntity {
     // equals/hashCode on business key or @Id only
 }
 ```
+
+---
+
+## Apache POI / Excel Guidelines
+
+- SXSSFWorkbook does NOT support reading/cloning styles from existing workbooks the same way XSSFWorkbook does
+- HSSF font index mapping differs from XSSF — always test cross-format operations separately
+- When preserving formatting, handle HSSF and XSSF/SXSSF as separate code paths
 
 ---
 
@@ -59,15 +68,18 @@ Spring Boot processes requests concurrently. Non-thread-safe POI objects (e.g., 
 ## Security Rules
 
 ### NEVER expose internal details to users
+
 Controllers MUST catch all exceptions and return generic Korean error messages. NEVER return `e.getMessage()`, stack traces, or file paths.
 
 ### MUST use `SecureExcelUtils` for all file operations
+
 - Open workbooks via `SecureExcelUtils.createWorkbook()` — NEVER via raw `WorkbookFactory.create()`
 - Sanitize filenames via `SecureExcelUtils.sanitizeFilename()`
 - Validate file content (magic bytes) via `SecureExcelUtils.validateFileContent()`
 - Sanitize cell values for error reports via `SecureExcelUtils.sanitizeForExcelCell()`
 
 ### Thymeleaf
+
 - ALWAYS use `th:text`. NEVER use `th:utext` with user data.
 - MUST use Thymeleaf URL expressions (`@{...}`) — NEVER raw `th:href="${...}"`.
 
@@ -76,6 +88,7 @@ Controllers MUST catch all exceptions and return generic Korean error messages. 
 ## Code Conventions
 
 ### Package structure
+
 ```
 com.foo.excel/
 ├── annotation/          # @ExcelColumn, @ExcelUnique, etc.
@@ -89,7 +102,9 @@ com.foo.excel/
 ```
 
 ### New templates MUST go under `templates/`
+
 Create a subpackage under `com.foo.excel.templates` containing:
+
 1. `*Dto.java` — `@ExcelColumn` + JSR-380 annotations. MUST NOT implement `ExcelImportConfig`.
 2. `*ImportConfig.java` — implements `ExcelImportConfig`
 3. `*Entity.java` — JPA entity (if persistence needed)
@@ -99,9 +114,11 @@ Create a subpackage under `com.foo.excel.templates` containing:
 7. `*TemplateConfig.java` — `@Configuration` producing `TemplateDefinition<Dto>` bean
 
 ### Logging
+
 MUST use `@Slf4j` and SLF4J placeholder syntax (`log.info("x={}", x)`). No string concatenation in log calls.
 
 ### Error messages
+
 User-facing messages MUST be in Korean. Internal log messages MUST be in English.
 
 ---
@@ -113,3 +130,18 @@ User-facing messages MUST be in Korean. Internal log messages MUST be in English
 - MUST use `@SpringBootTest` + `MockMvc` for full integration tests
 - Component-level tests create POI workbooks in-memory
 - Test class names MUST match: `FooService` → `FooServiceTest`
+
+---
+
+## Testing Rules
+
+- Always add `throws Exception` to test methods when working with checked exceptions
+- After any code change, run the relevant test suite before committing
+- When using assertion libraries, prefer explicit typed assertions to avoid ambiguous overload issues (e.g., use `assertEquals(expected, actual)` with matching types)
+
+---
+
+## Session Management
+
+- For multi-phase implementation plans, commit after each phase is complete and tests pass
+- Break large tasks into explicit phases and confirm each before proceeding
