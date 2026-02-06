@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "/home/codespace/.claude/usage-data"
+    ]
+  },
+  "postEdit": {
+    "command": "cd $(git rev-parse --show-toplevel) && ./mvnw test -pl . -Dtest='*Test' -Dsurefire.failIfNoSpecifiedTests=false -q 2>&1 | tail -5",
+    "description": "Run tests after code edits to catch issues early"
+  }
+}
