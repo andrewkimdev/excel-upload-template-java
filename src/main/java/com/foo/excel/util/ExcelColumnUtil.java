@@ -49,24 +49,4 @@ public final class ExcelColumnUtil {
 
         return sb.toString();
     }
-
-    /**
-     * Parse column reference - accepts both letter and numeric string.
-     * "C" → 2, "3" → 3, "AA" → 26
-     */
-    public static int parseColumnReference(String ref) {
-        if (ref == null || ref.isBlank()) {
-            return -1;
-        }
-
-        String trimmed = ref.trim();
-
-        // Check if purely numeric
-        if (trimmed.matches("\\d+")) {
-            return Integer.parseInt(trimmed);
-        }
-
-        // Otherwise treat as letter notation
-        return letterToIndex(trimmed);
-    }
 }

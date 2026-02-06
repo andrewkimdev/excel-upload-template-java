@@ -49,13 +49,14 @@
 
 ## Column Reference System
 
-Both **numeric index** (0-based) and **Excel letter notation** (A, B, ..., Z, AA, AB, ...) are supported.
+**Excel letter notation** (A, B, ..., Z, AA, AB, ...) is the only supported column reference format.
 
 ```java
-// These are equivalent:
-@ExcelColumn(header = "물품명", index = 2)      // Numeric: 0-indexed
-@ExcelColumn(header = "물품명", column = "C")   // Letter: Excel notation (preferred)
+@ExcelColumn(header = "물품명", column = "C")   // Letter: Excel notation
 ```
+
+When `column` is set, the parser **verifies** that the actual header at that position matches `header` using `matchMode`.
+When `column` is omitted, the parser **auto-detects** the column by scanning the header row.
 
 ### Column Letter Utility Class
 
@@ -66,7 +67,6 @@ public final class ExcelColumnUtil {
     private ExcelColumnUtil() {}
     public static int letterToIndex(String column) { ... }     // A=0, B=1, ..., AA=26
     public static String indexToLetter(int index) { ... }      // 0=A, 1=B, ..., 26=AA
-    public static int parseColumnReference(String ref) { ... } // "C"→2, "3"→3, "AA"→26
 }
 ```
 
@@ -94,17 +94,18 @@ public final class ExcelColumnUtil {
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ExcelColumn {
-    String header();                                          // Expected header text
-    String column() default "";                               // Letter notation ("C"), takes precedence over index
-    int index() default -1;                                   // 0-based index, used if column() is empty
+    String header();                                          // Header text (verification + display name)
+    String column() default "";                               // Letter notation ("C"); verified against header
     String dateFormat() default "yyyy-MM-dd";                 // Date/DateTime format pattern
-    HeaderMatchMode matchMode() default HeaderMatchMode.CONTAINS;  // Header matching strategy
+    HeaderMatchMode matchMode() default HeaderMatchMode.CONTAINS;  // Header matching/verification strategy
     String errorPrefix() default "";                          // Custom error message prefix
+    boolean required() default true;                          // Fail-fast if column unresolvable
 }
 ```
 
-> **Note:** There is no `required()` attribute. Required-field enforcement is handled
-> entirely via JSR-380 annotations (`@NotBlank`, `@NotNull`, etc.) on the DTO fields.
+> **`required` vs JSR-380:** `required` controls whether the **column must exist** in the template.
+> JSR-380 annotations (`@NotBlank`, etc.) control whether the **cell value must be present** in each row.
+> These are orthogonal concerns.
 
 ### HeaderMatchMode
 
@@ -257,15 +258,15 @@ public class TariffExemptionDto {
     @Size(max = 100, message = "물품명은 100자 이내로 입력하세요")
     private String itemName;
 
-    @ExcelColumn(header = "규격", column = "D", matchMode = HeaderMatchMode.STARTS_WITH)
+    @ExcelColumn(header = "규격", column = "D", matchMode = STARTS_WITH)
     @Size(max = 200, message = "규격은 200자 이내로 입력하세요")
     private String specification;
 
-    @ExcelColumn(header = "모델명", column = "E", matchMode = HeaderMatchMode.STARTS_WITH)
+    @ExcelColumn(header = "모델명", column = "E", matchMode = STARTS_WITH)
     @Size(max = 100, message = "모델명은 100자 이내로 입력하세요")
     private String modelName;
 
-    @ExcelColumn(header = "HSK", column = "F", matchMode = HeaderMatchMode.CONTAINS)
+    @ExcelColumn(header = "HSK", column = "F")
     @Pattern(regexp = "^\\d{4}\\.\\d{2}-\\d{4}$", message = "HSK 형식이 올바르지 않습니다 (예: 8481.80-2000)")
     private String hsCode;
 
@@ -273,26 +274,26 @@ public class TariffExemptionDto {
     @DecimalMin(value = "0") @DecimalMax(value = "100")
     private BigDecimal tariffRate;
 
-    @ExcelColumn(header = "단가", column = "I", matchMode = HeaderMatchMode.CONTAINS)
+    @ExcelColumn(header = "단가", column = "I")
     @DecimalMin(value = "0")
     private BigDecimal unitPrice;
 
-    @ExcelColumn(header = "제조용", column = "J", matchMode = HeaderMatchMode.CONTAINS)
+    @ExcelColumn(header = "제조용", column = "J")
     @Min(value = 0)
     private Integer qtyForManufacturing;
 
-    @ExcelColumn(header = "수리용", column = "L", matchMode = HeaderMatchMode.CONTAINS)
+    @ExcelColumn(header = "수리용", column = "L")
     @Min(value = 0)
     private Integer qtyForRepair;
 
-    @ExcelColumn(header = "연간수입", column = "N", matchMode = HeaderMatchMode.CONTAINS)
+    @ExcelColumn(header = "연간수입", column = "N")
     @DecimalMin(value = "0")
     private BigDecimal annualImportEstimate;
 
-    @ExcelColumn(header = "심의결과", column = "O")
+    @ExcelColumn(header = "심의결과", column = "O", required = false)
     private String reviewResult;
 
-    @ExcelColumn(header = "연간 예상소요량", column = "Q", matchMode = HeaderMatchMode.CONTAINS)
+    @ExcelColumn(header = "연간 예상소요량", column = "Q")
     @Min(value = 0)
     private Integer annualExpectedQty;
 }
@@ -337,7 +338,8 @@ User uploads .xls/.xlsx
          ▼
 ┌─────────────────┐
 │ Parser           │  SecureExcelUtils.createWorkbook() (XXE/Zip Bomb protection)
-│ parse()          │  Header matching via @ExcelColumn + HeaderMatchMode
+│ parse()          │  Header verification: actual headers vs @ExcelColumn expectations
+│                  │  Fail-fast on required column mismatch (ColumnResolutionBatchException)
 │                  │  ThreadLocal<DataFormatter> for thread safety
 │                  │  Footer marker detection stops reading
 │                  │  Returns ParseResult<T> (rows, sourceRowNumbers, columnMappings, parseErrors)
@@ -484,6 +486,8 @@ src/main/java/com/foo/excel/
 │   ├── ExcelErrorReportService.java     # Generates error-annotated Excel files
 │   ├── ExcelImportOrchestrator.java     # Orchestrates full upload → persist/error flow
 │   ├── ExcelParserService.java          # POI workbook → List<DTO> parsing
+│   ├── ColumnResolutionException.java   # Column header mismatch error
+│   ├── ColumnResolutionBatchException.java  # Aggregated column resolution errors
 │   ├── ExcelValidationService.java      # JSR-380 + within-file uniqueness
 │   ├── PersistenceHandler.java          # SPI: save/upsert logic
 │   ├── TempFileCleanupService.java      # Scheduled cleanup of expired temp files
@@ -538,7 +542,7 @@ The orchestrator auto-discovers templates via `List<TemplateDefinition<?>>` inje
 
 | # | Area | Original Spec | Actual Implementation | Reason |
 |---|------|---------------|----------------------|--------|
-| 1 | `@ExcelColumn.required()` | Present | **Removed** | Redundant — JSR-380 annotations (`@NotBlank`, etc.) handle required-field enforcement |
+| 1 | `@ExcelColumn.required()` | Present | **Restored** | Controls whether the column must exist in the template; orthogonal to JSR-380 cell-value validation |
 | 2 | `ExcelImportConfig.getSkipColumnIndices()` | Present | **Removed** | Parser reads only `@ExcelColumn`-annotated columns, making skip lists unnecessary |
 | 3 | `ExcelImportConfig.getSkipColumns()` | Present | **Removed** | Same as above |
 | 4 | DTO implements `ExcelImportConfig` | Yes | **No** — separate config class | Cleaner separation of concerns: DTO is a pure data carrier |

@@ -99,7 +99,7 @@ Then visit `http://localhost:8080`, upload a valid file, upload an invalid one, 
 ## Things to watch for as you read
 
 - **The orchestrator is the spine.** If you only read one file deeply, make it `ExcelImportOrchestrator.java`. It shows the full parse → validate → persist → report flow in one place.
-- **SPEC.md drift.** Your spec mentions `required()` on `@ExcelColumn` and `getSkipColumnIndices()` on the config interface — the implementation diverged from these. Worth noting whether you want to update the spec or the code.
+- **SPEC.md drift.** The original spec mentioned `getSkipColumnIndices()` on the config interface — the implementation removed it (parser reads only `@ExcelColumn`-annotated columns). `required()` on `@ExcelColumn` has been restored with column-existence semantics (orthogonal to JSR-380 cell-value validation).
 - **Generic type erasure.** The orchestrator has a `@SuppressWarnings("unchecked")` cast that's inherent to how `TemplateDefinition<T>` works with Spring's bean registry. Understand why it's unavoidable.
 - **Security surface.** `SecureExcelUtils` is 236 lines of defense (zip bombs, XXE, macro detection, path traversal). Worth understanding what threats are covered and whether there are gaps for your use case.
 - **WorkbookCopyUtils and cross-format copying.** POI's `cloneStyleFrom()` does not support HSSF→XSSF. `WorkbookCopyUtils` handles this via manual property copying with font index mapping. Understand the `isCrossFormat` branch.

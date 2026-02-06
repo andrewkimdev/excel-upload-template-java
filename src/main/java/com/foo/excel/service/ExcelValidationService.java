@@ -72,9 +72,6 @@ public class ExcelValidationService {
             if (!excelColumn.column().isEmpty()) {
                 columnIndex = ExcelColumnUtil.letterToIndex(excelColumn.column());
                 columnLetter = excelColumn.column();
-            } else if (excelColumn.index() >= 0) {
-                columnIndex = excelColumn.index();
-                columnLetter = ExcelColumnUtil.indexToLetter(excelColumn.index());
             }
         }
 

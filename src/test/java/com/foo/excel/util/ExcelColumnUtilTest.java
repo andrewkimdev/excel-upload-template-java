@@ -69,25 +69,4 @@ class ExcelColumnUtilTest {
         }
     }
 
-    // ===== parseColumnReference =====
-
-    @ParameterizedTest
-    @CsvSource({
-        "C, 2",
-        "3, 3",
-        "AA, 26"
-    })
-    void parseColumnReference_validRefs(String ref, int expected) {
-        assertThat(ExcelColumnUtil.parseColumnReference(ref)).isEqualTo(expected);
-    }
-
-    @Test
-    void parseColumnReference_null_returnsNegative() {
-        assertThat(ExcelColumnUtil.parseColumnReference(null)).isEqualTo(-1);
-    }
-
-    @Test
-    void parseColumnReference_blank_returnsNegative() {
-        assertThat(ExcelColumnUtil.parseColumnReference("")).isEqualTo(-1);
-    }
 }

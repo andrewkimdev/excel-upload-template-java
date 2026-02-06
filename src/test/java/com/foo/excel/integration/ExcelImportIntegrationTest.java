@@ -148,6 +148,20 @@ class ExcelImportIntegrationTest {
                 .andExpect(status().is4xxClientError());
     }
 
+    @Test
+    void upload_wrongTemplate_returnsColumnMismatchError() throws Exception {
+        byte[] xlsxBytes = createWrongTemplateTariffExemptionXlsx();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "wrong_template.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(containsString("헤더가 일치하지 않습니다")));
+    }
+
     // ===== Helper methods =====
 
     private byte[] createValidTariffExemptionXlsx(int dataRows) throws IOException {
@@ -222,6 +236,36 @@ class ExcelImportIntegrationTest {
             row.createCell(13).setCellValue(50000.0);
             row.createCell(14).setCellValue("통과");
             row.createCell(16).setCellValue(100);
+        }
+    }
+
+    private byte[] createWrongTemplateTariffExemptionXlsx() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+
+            // Header row at row 4 (0-based: row 3) with WRONG headers
+            Row headerRow = sheet.createRow(3);
+            headerRow.createCell(0).setCellValue("No");
+            headerRow.createCell(1).setCellValue("WRONG_B");   // Expected: 순번
+            headerRow.createCell(2).setCellValue("WRONG_C");   // Expected: 물품명
+            headerRow.createCell(3).setCellValue("WRONG_D");
+            headerRow.createCell(4).setCellValue("WRONG_E");
+            headerRow.createCell(5).setCellValue("WRONG_F");
+            headerRow.createCell(7).setCellValue("WRONG_H");
+            headerRow.createCell(8).setCellValue("WRONG_I");
+            headerRow.createCell(9).setCellValue("WRONG_J");
+            headerRow.createCell(11).setCellValue("WRONG_L");
+            headerRow.createCell(13).setCellValue("WRONG_N");
+            headerRow.createCell(14).setCellValue("WRONG_O");
+            headerRow.createCell(16).setCellValue("WRONG_Q");
+
+            Row dataRow = sheet.createRow(6);
+            dataRow.createCell(1).setCellValue(1);
+            dataRow.createCell(2).setCellValue("Item1");
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            wb.write(bos);
+            return bos.toByteArray();
         }
     }
 
