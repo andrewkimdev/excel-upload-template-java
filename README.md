@@ -61,10 +61,10 @@ src/main/java/com/foo/excel/
 │   └── ExcelImportProperties.java           # Global properties (file size, max rows, temp dir)
 ├── controller/          # ExcelUploadController (REST + Thymeleaf)
 ├── service/
-│   ├── ExcelConversionService.java                # .xls -> .xlsx auto-conversion (with security checks)
+│   ├── ExcelConversionService.java                # .xls -> .xlsx auto-conversion (preserves styles, widths, heights)
 │   ├── ExcelParserService.java                    # Excel -> List<DTO> with type coercion
 │   ├── ExcelValidationService.java                # JSR-380 + within-file uniqueness validation
-│   ├── ExcelErrorReportService.java               # Error-annotated Excel generation
+│   ├── ExcelErrorReportService.java               # Format-preserving error report generation (SXSSFWorkbook)
 │   ├── ExcelImportOrchestrator.java               # End-to-end pipeline (discovers templates via Spring)
 │   ├── TemplateDefinition.java                    # Type-safe bundle: DTO class + config + handlers
 │   ├── PersistenceHandler.java                    # Strategy interface for saving parsed rows
@@ -80,7 +80,8 @@ src/main/java/com/foo/excel/
 │   └── TariffExemptionTemplateConfig.java         # Wires the TemplateDefinition bean
 ├── util/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
-│   └── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)
+│   ├── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)
+│   └── WorkbookCopyUtils.java                     # Stateless workbook copy helpers (styles, values, metadata)
 └── validation/          # CellError, RowError, ExcelValidationResult, UniqueConstraintValidator
 ```
 
@@ -89,7 +90,7 @@ src/main/java/com/foo/excel/
 1. **File size check** -- reject files over 10 MB
 2. **Filename sanitization** -- prevent path traversal attacks
 3. **Content validation** -- verify file magic bytes match extension (XLSX/XLS)
-4. **Format conversion** -- `.xls` files are auto-converted to `.xlsx`
+4. **Format conversion** -- `.xls` files are auto-converted to `.xlsx` (preserving cell styles, column widths, row heights, and merged regions)
 5. **Secure parsing** -- Excel opened with XXE and zip bomb protections
 6. **Header validation** -- match DTO `@ExcelColumn` annotations against the header row
 7. **Row parsing** -- read data rows, skip blanks, stop at footer marker (`※`)
@@ -98,7 +99,7 @@ src/main/java/com/foo/excel/
 10. **Within-file uniqueness** -- `@ExcelUnique` (single field), `@ExcelCompositeUnique` (composite key)
 11. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker`
 12. **Error merge** -- parse errors, validation errors, and DB uniqueness errors are combined
-13. **Result** -- success with row counts, or error report Excel with `_ERRORS` column and red-highlighted cells
+13. **Result** -- success with row counts, or format-preserving error report Excel with `_ERRORS` column, red-highlighted error cells, original filename in download, and disclaimer footer
 
 ## Security
 
@@ -159,9 +160,10 @@ Tests cover all layers:
 | Test Class | Scope | What it verifies |
 |------------|-------|------------------|
 | `ExcelColumnUtilTest` | Unit | Column letter/index conversion, round-trip consistency |
-| `ExcelConversionServiceTest` | Component | .xlsx passthrough, .xls conversion, merged regions, error cases |
+| `WorkbookCopyUtilsTest` | Unit | Style mapping (same-format, cross-format), error styles, cell value copying, column widths, merged regions |
+| `ExcelConversionServiceTest` | Component | .xlsx passthrough, .xls conversion, merged regions, style/width/height preservation, error cases |
 | `ExcelParserServiceTest` | Component | Row parsing, footer detection, blank row skipping, merged cells, type coercion, header matching |
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
 | `UniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
-| `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, formatted messages, valid output |
+| `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, .xls auto-conversion, error handling |

@@ -16,6 +16,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -153,22 +156,55 @@ public class ExcelUploadController {
             return ResponseEntity.badRequest().build();
         }
 
-        Path errorFile = properties.getTempDirectoryPath()
-                .resolve("errors")
-                .resolve(fileId + ".xlsx");
+        Path errorsDir = properties.getTempDirectoryPath().resolve("errors");
+        Path errorFile = errorsDir.resolve(fileId + ".xlsx");
 
         if (!Files.exists(errorFile)) {
             return ResponseEntity.notFound().build();
         }
+
+        String downloadFilename = buildDownloadFilename(fileId, errorsDir);
+        String contentDisposition = buildContentDisposition(downloadFilename, fileId);
 
         Resource resource = new FileSystemResource(errorFile);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"errors_" + fileId + ".xlsx\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
                 .body(resource);
+    }
+
+    /**
+     * Reads original filename from .meta file, or falls back to UUID-based naming.
+     */
+    private String buildDownloadFilename(String fileId, Path errorsDir) {
+        try {
+            Path metaFile = errorsDir.resolve(fileId + ".meta");
+            if (Files.exists(metaFile)) {
+                String originalName = Files.readString(metaFile, StandardCharsets.UTF_8).trim();
+                if (!originalName.isBlank()) {
+                    // Normalize extension: .xls → .xlsx (source was converted)
+                    if (originalName.toLowerCase().endsWith(".xls")) {
+                        originalName = originalName.substring(0, originalName.length() - 4) + ".xlsx";
+                    }
+                    return "오류_" + originalName;
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Failed to read meta file for {}: {}", fileId, e.getMessage());
+        }
+        return "errors_" + fileId + ".xlsx";
+    }
+
+    /**
+     * Builds Content-Disposition with RFC 5987 encoding for Korean filenames.
+     * Uses both filename= (ASCII fallback) and filename*= (UTF-8 for modern browsers).
+     */
+    private String buildContentDisposition(String downloadFilename, String fileId) {
+        String encodedFilename = URLEncoder.encode(downloadFilename, StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        return "attachment; filename=\"" + fileId + ".xlsx\"; filename*=UTF-8''" + encodedFilename;
     }
 
     @GetMapping("/api/excel/template/{templateType}")

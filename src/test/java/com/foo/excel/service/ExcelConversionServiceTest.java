@@ -207,6 +207,88 @@ class ExcelConversionServiceTest {
         assertThat(result.getParent()).isEqualTo(tempDir);
     }
 
+    // ===== Style preservation tests =====
+
+    @Test
+    void xlsConversion_preservesCellStyles_boldFontAndBorders() throws IOException {
+        byte[] xlsBytes = createStyledXlsBytes();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "styled.xls", "application/vnd.ms-excel", xlsBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        try (Workbook wb = WorkbookFactory.create(result.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            Cell cell = sheet.getRow(0).getCell(0);
+            assertThat(wb.getFontAt(cell.getCellStyle().getFontIndex()).getBold()).isTrue();
+            assertThat(cell.getCellStyle().getBorderBottom()).isEqualTo(BorderStyle.THIN);
+        }
+    }
+
+    @Test
+    void xlsConversion_preservesColumnWidths() throws IOException {
+        byte[] xlsBytes = createStyledXlsBytes();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "widths.xls", "application/vnd.ms-excel", xlsBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        try (Workbook wb = WorkbookFactory.create(result.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            assertThat(sheet.getColumnWidth(0)).isEqualTo(5000);
+        }
+    }
+
+    @Test
+    void xlsConversion_preservesRowHeights() throws IOException {
+        byte[] xlsBytes;
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+            Row row = sheet.createRow(0);
+            row.setHeight((short) 600);
+            row.createCell(0).setCellValue("Tall");
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            wb.write(bos);
+            xlsBytes = bos.toByteArray();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "heights.xls", "application/vnd.ms-excel", xlsBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        try (Workbook wb = WorkbookFactory.create(result.toFile())) {
+            assertThat(wb.getSheetAt(0).getRow(0).getHeight()).isEqualTo((short) 600);
+        }
+    }
+
+    @Test
+    void xlsConversion_dateFormattedCells_surviveConversion() throws IOException {
+        byte[] xlsBytes;
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+            CellStyle dateStyle = wb.createCellStyle();
+            dateStyle.setDataFormat(wb.getCreationHelper().createDataFormat().getFormat("yyyy-MM-dd"));
+            Row row = sheet.createRow(0);
+            Cell cell = row.createCell(0);
+            cell.setCellValue(new java.util.Date());
+            cell.setCellStyle(dateStyle);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            wb.write(bos);
+            xlsBytes = bos.toByteArray();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "dates.xls", "application/vnd.ms-excel", xlsBytes);
+
+        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+
+        try (Workbook wb = WorkbookFactory.create(result.toFile())) {
+            Cell cell = wb.getSheetAt(0).getRow(0).getCell(0);
+            assertThat(DateUtil.isCellDateFormatted(cell)).isTrue();
+        }
+    }
+
     // ===== Helper methods =====
 
     private byte[] createXlsxBytes(String value) throws IOException {
@@ -214,6 +296,27 @@ class ExcelConversionServiceTest {
             Sheet sheet = wb.createSheet("Sheet1");
             Row row = sheet.createRow(0);
             row.createCell(0).setCellValue(value);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            wb.write(bos);
+            return bos.toByteArray();
+        }
+    }
+
+    private byte[] createStyledXlsBytes() throws IOException {
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            CellStyle boldStyle = wb.createCellStyle();
+            Font boldFont = wb.createFont();
+            boldFont.setBold(true);
+            boldStyle.setFont(boldFont);
+            boldStyle.setBorderBottom(BorderStyle.THIN);
+
+            Sheet sheet = wb.createSheet("Sheet1");
+            sheet.setColumnWidth(0, 5000);
+            Row row = sheet.createRow(0);
+            Cell cell = row.createCell(0);
+            cell.setCellValue("Bold");
+            cell.setCellStyle(boldStyle);
+
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             wb.write(bos);
             return bos.toByteArray();

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ class ExcelErrorReportServiceTest {
         List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
         Path errorFile = errorReportService.generateErrorReport(
-                originalFile, validationResult, mappings, config);
+                originalFile, validationResult, mappings, config, "test-original.xlsx");
 
         try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
             Sheet sheet = wb.getSheetAt(0);
@@ -70,7 +71,7 @@ class ExcelErrorReportServiceTest {
         List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
         Path errorFile = errorReportService.generateErrorReport(
-                originalFile, validationResult, mappings, config);
+                originalFile, validationResult, mappings, config, "test-original.xlsx");
 
         try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
             Sheet sheet = wb.getSheetAt(0);
@@ -92,7 +93,7 @@ class ExcelErrorReportServiceTest {
         List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
         Path errorFile = errorReportService.generateErrorReport(
-                originalFile, validationResult, mappings, config);
+                originalFile, validationResult, mappings, config, "test-original.xlsx");
 
         try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
             Sheet sheet = wb.getSheetAt(0);
@@ -115,7 +116,7 @@ class ExcelErrorReportServiceTest {
         List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
         Path errorFile = errorReportService.generateErrorReport(
-                originalFile, validationResult, mappings, config);
+                originalFile, validationResult, mappings, config, "test-original.xlsx");
 
         assertThat(errorFile).exists();
         assertThat(errorFile.toString()).endsWith(".xlsx");
@@ -127,16 +128,13 @@ class ExcelErrorReportServiceTest {
 
     @Test
     void errorReport_messageWithFormulaContent_isSafelyFormatted() throws IOException {
-        // The formatted message includes "[B] " prefix from the column letter,
-        // so even if the error message contains formula-like content,
-        // the final cell value starts with "[" which doesn't trigger Excel formula interpretation.
         Path originalFile = createSimpleXlsx();
         ExcelValidationResult validationResult = createValidationResultWithFormulaInjection();
         TestConfig config = new TestConfig();
         List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
         Path errorFile = errorReportService.generateErrorReport(
-                originalFile, validationResult, mappings, config);
+                originalFile, validationResult, mappings, config, "test-original.xlsx");
 
         try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
             Sheet sheet = wb.getSheetAt(0);
@@ -161,7 +159,7 @@ class ExcelErrorReportServiceTest {
         List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
         Path errorFile = errorReportService.generateErrorReport(
-                originalFile, validationResult, mappings, config);
+                originalFile, validationResult, mappings, config, "test-original.xlsx");
 
         try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
             Sheet sheet = wb.getSheetAt(0);
@@ -184,7 +182,7 @@ class ExcelErrorReportServiceTest {
         List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
         Path errorFile = errorReportService.generateErrorReport(
-                originalFile, validationResult, mappings, config);
+                originalFile, validationResult, mappings, config, "test-original.xlsx");
 
         try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
             Sheet sheet = wb.getSheetAt(0);
@@ -197,6 +195,144 @@ class ExcelErrorReportServiceTest {
             // Normal messages should be formatted with column prefix
             assertThat(cellValue).startsWith("[B]");
             assertThat(cellValue).contains("필수 입력 항목입니다");
+        }
+    }
+
+    // ===== New tests for format preservation =====
+
+    @Test
+    void errorReport_preservesOriginalCellFormatting_withRoseFillAdded() throws IOException {
+        Path originalFile = createStyledXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config, "test-styled.xlsx");
+
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            Row dataRow = sheet.getRow(1);
+            Cell errorCell = dataRow.getCell(1); // column B has error AND bold+border style
+
+            // Error cell should have ROSE fill
+            assertThat(errorCell.getCellStyle().getFillForegroundColor())
+                    .isEqualTo(IndexedColors.ROSE.getIndex());
+            assertThat(errorCell.getCellStyle().getFillPattern())
+                    .isEqualTo(FillPatternType.SOLID_FOREGROUND);
+
+            // Original formatting should be preserved
+            assertThat(wb.getFontAt(errorCell.getCellStyle().getFontIndex()).getBold()).isTrue();
+            assertThat(errorCell.getCellStyle().getBorderBottom()).isEqualTo(BorderStyle.THIN);
+        }
+    }
+
+    @Test
+    void errorReport_copiesAllSheets_fromMultiSheetSource() throws IOException {
+        Path originalFile = createMultiSheetXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config, "test-multi.xlsx");
+
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            assertThat(wb.getNumberOfSheets()).isEqualTo(3);
+            assertThat(wb.getSheetName(0)).isEqualTo("Data");
+            assertThat(wb.getSheetName(1)).isEqualTo("Reference");
+            assertThat(wb.getSheetName(2)).isEqualTo("Instructions");
+        }
+    }
+
+    @Test
+    void errorReport_preservesColumnWidths() throws IOException {
+        Path originalFile = createStyledXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config, "test-widths.xlsx");
+
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            assertThat(sheet.getColumnWidth(0)).isEqualTo(5000);
+        }
+    }
+
+    @Test
+    void errorReport_disclaimerRow_existsWithCorrectText() throws IOException {
+        Path originalFile = createSimpleXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config, "test-disclaimer.xlsx");
+
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            Sheet sheet = wb.getSheetAt(0);
+            // Source has rows 0-2 (lastRowNum=2), disclaimer at row 4 (2+2)
+            Row disclaimerRow = sheet.getRow(4);
+            assertThat(disclaimerRow).isNotNull();
+            Cell disclaimerCell = disclaimerRow.getCell(0);
+            assertThat(disclaimerCell.getStringCellValue()).startsWith("※");
+            assertThat(disclaimerCell.getStringCellValue()).contains("오류 확인용");
+
+            // Verify italic gray style
+            Font font = wb.getFontAt(disclaimerCell.getCellStyle().getFontIndex());
+            assertThat(font.getItalic()).isTrue();
+            assertThat(font.getColor()).isEqualTo(IndexedColors.GREY_50_PERCENT.getIndex());
+        }
+    }
+
+    @Test
+    void errorReport_metaFileWritten_whenOriginalFilenameProvided() throws IOException {
+        Path originalFile = createSimpleXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config, "original-file.xlsx");
+
+        String fileId = errorFile.getFileName().toString().replace(".xlsx", "");
+        Path metaFile = tempDir.resolve("errors").resolve(fileId + ".meta");
+        assertThat(metaFile).exists();
+        assertThat(Files.readString(metaFile, StandardCharsets.UTF_8)).isEqualTo("original-file.xlsx");
+    }
+
+    @Test
+    void errorReport_noMetaFile_whenOriginalFilenameIsNull() throws IOException {
+        Path originalFile = createSimpleXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config, null);
+
+        String fileId = errorFile.getFileName().toString().replace(".xlsx", "");
+        Path metaFile = tempDir.resolve("errors").resolve(fileId + ".meta");
+        assertThat(metaFile).doesNotExist();
+    }
+
+    @Test
+    void errorReport_outputIsValidXlsx_afterSxssfWrite() throws IOException {
+        Path originalFile = createSimpleXlsx();
+        ExcelValidationResult validationResult = createValidationResult();
+        TestConfig config = new TestConfig();
+        List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+        Path errorFile = errorReportService.generateErrorReport(
+                originalFile, validationResult, mappings, config, "test.xlsx");
+
+        // Verify output is valid XLSX (WorkbookFactory returns XSSFWorkbook for .xlsx)
+        try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+            assertThat(wb).isInstanceOf(XSSFWorkbook.class);
+            assertThat(wb.getNumberOfSheets()).isGreaterThan(0);
+            assertThat((Object) wb.getSheetAt(0).getRow(0)).isNotNull();
         }
     }
 
@@ -227,6 +363,73 @@ class ExcelErrorReportServiceTest {
             dataRow2.createCell(2).setCellValue("def");
 
             Path file = tempDir.resolve("original.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createStyledXlsx() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            CellStyle boldBorderStyle = wb.createCellStyle();
+            Font boldFont = wb.createFont();
+            boldFont.setBold(true);
+            boldBorderStyle.setFont(boldFont);
+            boldBorderStyle.setBorderBottom(BorderStyle.THIN);
+            boldBorderStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+            boldBorderStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            Sheet sheet = wb.createSheet("Sheet1");
+            sheet.setColumnWidth(0, 5000);
+
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("No");
+            headerRow.createCell(1).setCellValue("Name");
+            headerRow.createCell(2).setCellValue("Value");
+
+            Row dataRow = sheet.createRow(1);
+            dataRow.createCell(0).setCellValue(1);
+            Cell styledCell = dataRow.createCell(1);
+            styledCell.setCellValue("StyledValue");
+            styledCell.setCellStyle(boldBorderStyle);
+            dataRow.createCell(2).setCellValue("abc");
+
+            Row dataRow2 = sheet.createRow(2);
+            dataRow2.createCell(0).setCellValue(2);
+            dataRow2.createCell(1).setCellValue("Test2");
+            dataRow2.createCell(2).setCellValue("def");
+
+            Path file = tempDir.resolve("styled.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createMultiSheetXlsx() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            // Data sheet (index 0)
+            Sheet dataSheet = wb.createSheet("Data");
+            Row headerRow = dataSheet.createRow(0);
+            headerRow.createCell(0).setCellValue("No");
+            headerRow.createCell(1).setCellValue("Name");
+            headerRow.createCell(2).setCellValue("Value");
+            Row dataRow = dataSheet.createRow(1);
+            dataRow.createCell(0).setCellValue(1);
+            dataRow.createCell(1).setCellValue("Test");
+            dataRow.createCell(2).setCellValue("abc");
+
+            // Reference sheet (index 1)
+            Sheet refSheet = wb.createSheet("Reference");
+            refSheet.createRow(0).createCell(0).setCellValue("Ref Data");
+
+            // Instructions sheet (index 2)
+            Sheet instrSheet = wb.createSheet("Instructions");
+            instrSheet.createRow(0).createCell(0).setCellValue("Instructions");
+
+            Path file = tempDir.resolve("multi-sheet.xlsx");
             try (OutputStream os = Files.newOutputStream(file)) {
                 wb.write(os);
             }
@@ -280,15 +483,13 @@ class ExcelErrorReportServiceTest {
     }
 
     private ExcelValidationResult createValidationResultWithFormulaInjection() {
-        // Simulate a malicious user submitting data that could trigger formula injection
-        // when written to the error report
         CellError cellError = CellError.builder()
                 .columnIndex(1)
                 .columnLetter("B")
                 .fieldName("name")
                 .headerName("Name")
                 .rejectedValue("=cmd|'/C calc'!A0")
-                .message("=SUM(A1:A10)")  // Attacker's payload as error message
+                .message("=SUM(A1:A10)")
                 .build();
 
         RowError rowError = RowError.builder()
@@ -300,7 +501,6 @@ class ExcelErrorReportServiceTest {
     }
 
     private ExcelValidationResult createValidationResultWithAtSign() {
-        // @ is another formula injection vector in Excel
         CellError cellError = CellError.builder()
                 .columnIndex(1)
                 .columnLetter("B")

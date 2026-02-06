@@ -2,6 +2,7 @@ package com.foo.excel.service;
 
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
+import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.RowError;
 import lombok.AllArgsConstructor;
@@ -42,6 +43,7 @@ public class ExcelImportOrchestrator {
         private int errorCount;
         private String errorFileId;
         private String downloadUrl;
+        private String originalFilename;
         private String message;
     }
 
@@ -63,6 +65,17 @@ public class ExcelImportOrchestrator {
             throws IOException {
 
         ExcelImportConfig config = template.getConfig();
+
+        // Extract and sanitize original filename for error report
+        String sanitizedFilename = null;
+        try {
+            String originalName = file.getOriginalFilename();
+            if (originalName != null && !originalName.isBlank()) {
+                sanitizedFilename = SecureExcelUtils.sanitizeFilename(originalName);
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("Could not sanitize original filename: {}", e.getMessage());
+        }
 
         // 1. Create UUID-based temp subdirectory
         String uploadId = UUID.randomUUID().toString();
@@ -115,7 +128,8 @@ public class ExcelImportOrchestrator {
             } else {
                 // 9. Generate error report
                 Path errorFile = errorReportService.generateErrorReport(
-                        xlsxFile, validationResult, parseResult.getColumnMappings(), config);
+                        xlsxFile, validationResult, parseResult.getColumnMappings(), config,
+                        sanitizedFilename);
 
                 String errorFileId = errorFile.getFileName().toString().replace(".xlsx", "");
 
@@ -126,6 +140,7 @@ public class ExcelImportOrchestrator {
                         .errorCount(validationResult.getTotalErrorCount())
                         .errorFileId(errorFileId)
                         .downloadUrl("/api/excel/download/" + errorFileId)
+                        .originalFilename(sanitizedFilename)
                         .message(validationResult.getErrorRowCount() + "개 행에서 "
                                 + validationResult.getTotalErrorCount() + "개 오류가 발견되었습니다")
                         .build();

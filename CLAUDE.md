@@ -82,7 +82,7 @@ com.foo.excel/
 ├── config/              # ExcelImportConfig interface, ExcelImportProperties
 ├── controller/          # Spring MVC controllers
 ├── service/             # Core services + strategy interfaces
-├── util/                # ExcelColumnUtil, SecureExcelUtils
+├── util/                # ExcelColumnUtil, SecureExcelUtils, WorkbookCopyUtils
 ├── validation/          # CellError, RowError, ExcelValidationResult, UniqueConstraintValidator
 └── templates/samples/   # Sample template implementations
     └── tariffexemption/ # Entity, DTO, Config, Service, Repository, Checker

@@ -1,7 +1,9 @@
 package com.foo.excel.service;
 
 import com.foo.excel.util.SecureExcelUtils;
+import com.foo.excel.util.WorkbookCopyUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -101,40 +103,40 @@ public class ExcelConversionService {
     }
 
     private XSSFWorkbook convertWorkbook(HSSFWorkbook hssfWorkbook) {
-        XSSFWorkbook xssfWorkbook = new XSSFWorkbook();
+        var xssfWorkbook = new XSSFWorkbook();
+
+        // Build style mapping (HSSF→XSSF cross-format copy)
+        var styleMap = WorkbookCopyUtils.buildStyleMapping(hssfWorkbook, xssfWorkbook);
 
         for (int i = 0; i < hssfWorkbook.getNumberOfSheets(); i++) {
             var hssfSheet = hssfWorkbook.getSheetAt(i);
             var xssfSheet = xssfWorkbook.createSheet(hssfSheet.getSheetName());
 
-            // Copy merged regions
-            for (var mergedRegion : hssfSheet.getMergedRegions()) {
-                xssfSheet.addMergedRegion(mergedRegion);
+            // Copy sheet-level metadata
+            int maxCol = 0;
+            for (var row : hssfSheet) {
+                maxCol = Math.max(maxCol, row.getLastCellNum());
             }
+            WorkbookCopyUtils.copyColumnWidths(hssfSheet, xssfSheet, maxCol);
+            WorkbookCopyUtils.copyMergedRegions(hssfSheet, xssfSheet);
 
-            // Copy rows and cells
+            // Copy rows, cells, styles, and row heights
             for (var hssfRow : hssfSheet) {
                 var xssfRow = xssfSheet.createRow(hssfRow.getRowNum());
+                xssfRow.setHeight(hssfRow.getHeight());
 
                 for (var hssfCell : hssfRow) {
                     var xssfCell = xssfRow.createCell(hssfCell.getColumnIndex());
-                    copyCellValue(hssfCell, xssfCell);
+                    WorkbookCopyUtils.copyCellValue(hssfCell, xssfCell);
+
+                    CellStyle mappedStyle = styleMap.get((int) hssfCell.getCellStyle().getIndex());
+                    if (mappedStyle != null) {
+                        xssfCell.setCellStyle(mappedStyle);
+                    }
                 }
             }
         }
 
         return xssfWorkbook;
-    }
-
-    private void copyCellValue(org.apache.poi.ss.usermodel.Cell source,
-                               org.apache.poi.ss.usermodel.Cell target) {
-        switch (source.getCellType()) {
-            case STRING -> target.setCellValue(source.getStringCellValue());
-            case NUMERIC -> target.setCellValue(source.getNumericCellValue());
-            case BOOLEAN -> target.setCellValue(source.getBooleanCellValue());
-            case FORMULA -> target.setCellFormula(source.getCellFormula());
-            case BLANK -> target.setBlank();
-            default -> { /* ignore */ }
-        }
     }
 }
