@@ -171,7 +171,7 @@ class ExcelValidationServiceTest {
         assertThat(result.isValid()).isFalse();
         List<String> allMessages = result.getRowErrors().stream()
                 .flatMap(r -> r.getCellErrors().stream())
-                .map(c -> c.getMessage())
+                .map(c -> c.message())
                 .toList();
 
         assertThat(allMessages).anyMatch(m -> m.contains("물품명은 필수 입력 항목입니다"));
@@ -201,8 +201,8 @@ class ExcelValidationServiceTest {
     private String findErrorMessage(ExcelValidationResult result, String fieldName) {
         return result.getRowErrors().stream()
                 .flatMap(r -> r.getCellErrors().stream())
-                .filter(c -> c.getFieldName().equals(fieldName))
-                .map(c -> c.getMessage())
+                .filter(c -> c.fieldName().equals(fieldName))
+                .map(c -> c.message())
                 .findFirst()
                 .orElse("");
     }

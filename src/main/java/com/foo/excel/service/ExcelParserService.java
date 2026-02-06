@@ -7,8 +7,6 @@ import com.foo.excel.util.ExcelColumnUtil;
 import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.RowError;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -31,23 +29,17 @@ public class ExcelParserService {
     private static final ThreadLocal<DataFormatter> DATA_FORMATTER =
             ThreadLocal.withInitial(DataFormatter::new);
 
-    @Data
-    @AllArgsConstructor
-    public static class ColumnMapping {
-        private Field field;
-        private ExcelColumn annotation;
-        private int resolvedColumnIndex;
-        private String resolvedColumnLetter;
-    }
+    public record ColumnMapping(
+            Field field,
+            ExcelColumn annotation,
+            int resolvedColumnIndex,
+            String resolvedColumnLetter) {}
 
-    @Data
-    @AllArgsConstructor
-    public static class ParseResult<T> {
-        private List<T> rows;
-        private List<Integer> sourceRowNumbers;
-        private List<ColumnMapping> columnMappings;
-        private List<RowError> parseErrors;
-    }
+    public record ParseResult<T>(
+            List<T> rows,
+            List<Integer> sourceRowNumbers,
+            List<ColumnMapping> columnMappings,
+            List<RowError> parseErrors) {}
 
     public <T> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config)
             throws IOException {
@@ -79,6 +71,8 @@ public class ExcelParserService {
 
     private <T> List<ColumnMapping> resolveColumnMappings(Class<T> dtoClass, Row headerRow, Sheet sheet) {
         List<ColumnMapping> mappings = new ArrayList<>();
+        List<ColumnResolutionException> errors = new ArrayList<>();
+        Map<Integer, String> headerMap = buildHeaderMap(headerRow, sheet);
 
         for (Field field : getAllFields(dtoClass)) {
             ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
@@ -86,48 +80,81 @@ public class ExcelParserService {
                 continue;
             }
 
-            int resolvedIndex = resolveColumnIndex(annotation, headerRow, sheet);
+            try {
+                int resolvedIndex = resolveColumnIndex(annotation, field.getName(), headerMap);
 
-            if (resolvedIndex < 0) {
-                log.warn("Could not resolve column for field '{}' with header '{}'",
-                        field.getName(), annotation.header());
-                continue;
+                if (resolvedIndex < 0) {
+                    // optional field, not found
+                    continue;
+                }
+
+                String resolvedLetter = ExcelColumnUtil.indexToLetter(resolvedIndex);
+                field.setAccessible(true);
+                mappings.add(new ColumnMapping(field, annotation, resolvedIndex, resolvedLetter));
+            } catch (ColumnResolutionException e) {
+                errors.add(e);
             }
+        }
 
-            String resolvedLetter = ExcelColumnUtil.indexToLetter(resolvedIndex);
-            field.setAccessible(true);
-            mappings.add(new ColumnMapping(field, annotation, resolvedIndex, resolvedLetter));
+        if (!errors.isEmpty()) {
+            throw new ColumnResolutionBatchException(errors);
         }
 
         return mappings;
     }
 
-    private int resolveColumnIndex(ExcelColumn annotation, Row headerRow, Sheet sheet) {
-        // Priority 1: Explicit column letter
-        if (!annotation.column().isEmpty()) {
-            return ExcelColumnUtil.letterToIndex(annotation.column());
-        }
-
-        // Priority 2: Explicit index
-        if (annotation.index() >= 0) {
-            return annotation.index();
-        }
-
-        // Priority 3: Auto-detect from header text
+    private Map<Integer, String> buildHeaderMap(Row headerRow, Sheet sheet) {
+        var map = new LinkedHashMap<Integer, String>();
         for (int i = 0; i <= headerRow.getLastCellNum(); i++) {
             Cell cell = headerRow.getCell(i);
             if (cell == null) {
-                // Check merged cells
                 cell = resolveMergedCell(sheet, headerRow.getRowNum(), i);
             }
             if (cell != null) {
-                String cellValue = getCellStringValue(cell);
-                if (matchHeader(cellValue, annotation.header(), annotation.matchMode())) {
-                    return i;
+                String value = getCellStringValue(cell);
+                if (value != null && !value.isBlank()) {
+                    map.put(i, value);
                 }
             }
         }
+        return map;
+    }
 
+    private int resolveColumnIndex(ExcelColumn annotation, String fieldName,
+                                   Map<Integer, String> headerMap) {
+        // Mode 1: Fixed column with header verification
+        if (!annotation.column().isEmpty()) {
+            int index = ExcelColumnUtil.letterToIndex(annotation.column());
+            String actual = headerMap.get(index);
+
+            if (matchHeader(actual, annotation.header(), annotation.matchMode())) {
+                return index;
+            }
+
+            // Header mismatch
+            if (annotation.required()) {
+                throw new ColumnResolutionException(fieldName, annotation.header(),
+                        actual, annotation.column(), annotation.matchMode());
+            }
+            log.warn("Header mismatch for optional field '{}' at column {}: expected '{}', actual '{}'",
+                    fieldName, annotation.column(), annotation.header(), actual);
+            return -1;
+        }
+
+        // Mode 2: Auto-detect from header text
+        for (var entry : headerMap.entrySet()) {
+            if (matchHeader(entry.getValue(), annotation.header(), annotation.matchMode())) {
+                return entry.getKey();
+            }
+        }
+
+        // Not found
+        if (annotation.required()) {
+            throw new ColumnResolutionException(fieldName, annotation.header(),
+                    null, null, annotation.matchMode());
+        }
+        log.warn("Could not resolve column for optional field '{}' with header '{}'",
+                fieldName, annotation.header());
         return -1;
     }
 
@@ -182,16 +209,16 @@ public class ExcelParserService {
             List<CellError> cellErrors = new ArrayList<>();
 
             for (ColumnMapping mapping : columnMappings) {
-                Cell cell = row.getCell(mapping.getResolvedColumnIndex());
+                Cell cell = row.getCell(mapping.resolvedColumnIndex());
                 if (cell == null) {
-                    cell = resolveMergedCell(sheet, i, mapping.getResolvedColumnIndex());
+                    cell = resolveMergedCell(sheet, i, mapping.resolvedColumnIndex());
                 }
 
                 Object value = getCellValue(cell, mapping, sheet, cellErrors);
                 try {
-                    mapping.getField().set(dto, value);
+                    mapping.field().set(dto, value);
                 } catch (IllegalAccessException e) {
-                    throw new RuntimeException("Cannot set field: " + mapping.getField().getName(), e);
+                    throw new RuntimeException("Cannot set field: " + mapping.field().getName(), e);
                 }
             }
 
@@ -240,8 +267,8 @@ public class ExcelParserService {
             return null;
         }
 
-        Class<?> fieldType = mapping.getField().getType();
-        String dateFormat = mapping.getAnnotation().dateFormat();
+        Class<?> fieldType = mapping.field().getType();
+        String dateFormat = mapping.annotation().dateFormat();
 
         try {
             if (fieldType == String.class) {
@@ -261,10 +288,10 @@ public class ExcelParserService {
         } catch (Exception e) {
             String rawValue = getCellStringValue(cell);
             parseErrors.add(CellError.builder()
-                    .columnIndex(mapping.getResolvedColumnIndex())
-                    .columnLetter(mapping.getResolvedColumnLetter())
-                    .fieldName(mapping.getField().getName())
-                    .headerName(mapping.getAnnotation().header())
+                    .columnIndex(mapping.resolvedColumnIndex())
+                    .columnLetter(mapping.resolvedColumnLetter())
+                    .fieldName(mapping.field().getName())
+                    .headerName(mapping.annotation().header())
                     .rejectedValue(rawValue)
                     .message("'" + rawValue + "' 값을 " + fieldType.getSimpleName()
                             + " 타입으로 변환할 수 없습니다")

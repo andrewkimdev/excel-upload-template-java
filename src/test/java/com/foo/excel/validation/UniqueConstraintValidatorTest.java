@@ -49,7 +49,7 @@ class UniqueConstraintValidatorTest {
                 List.of(dto1, dto2), UniqueTestDto.class, List.of(7, 8));
 
         assertThat(errors).isNotEmpty();
-        assertThat(errors.get(0).getCellErrors().get(0).getMessage())
+        assertThat(errors.get(0).getCellErrors().get(0).message())
                 .contains("중복된 값입니다");
     }
 
@@ -90,7 +90,7 @@ class UniqueConstraintValidatorTest {
                 List.of(dto1, dto2), TariffExemptionDto.class, List.of(7, 8));
 
         assertThat(errors).isNotEmpty();
-        assertThat(errors.get(0).getCellErrors().get(0).getMessage())
+        assertThat(errors.get(0).getCellErrors().get(0).message())
                 .contains("물품명 + 규격 + HSK 조합이 중복됩니다");
     }
 
@@ -142,7 +142,7 @@ class UniqueConstraintValidatorTest {
                 List.of(dto), TariffExemptionDto.class, List.of(7));
 
         assertThat(errors).hasSize(1);
-        assertThat(errors.get(0).getCellErrors().get(0).getMessage())
+        assertThat(errors.get(0).getCellErrors().get(0).message())
                 .contains("이미 등록된 데이터입니다");
     }
 

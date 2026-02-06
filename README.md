@@ -62,10 +62,12 @@ src/main/java/com/foo/excel/
 ├── controller/          # ExcelUploadController (REST + Thymeleaf)
 ├── service/
 │   ├── ExcelConversionService.java                # .xls -> .xlsx auto-conversion (preserves styles, widths, heights)
-│   ├── ExcelParserService.java                    # Excel -> List<DTO> with type coercion
+│   ├── ExcelParserService.java                    # Excel -> List<DTO>; contains ColumnMapping + ParseResult records
+│   ├── ColumnResolutionException.java             # Column header mismatch error
+│   ├── ColumnResolutionBatchException.java        # Aggregated column resolution errors
 │   ├── ExcelValidationService.java                # JSR-380 + within-file uniqueness validation
 │   ├── ExcelErrorReportService.java               # Format-preserving error report generation (SXSSFWorkbook)
-│   ├── ExcelImportOrchestrator.java               # End-to-end pipeline (discovers templates via Spring)
+│   ├── ExcelImportOrchestrator.java               # End-to-end pipeline; contains ImportResult record
 │   ├── TemplateDefinition.java                    # Type-safe bundle: DTO class + config + handlers
 │   ├── PersistenceHandler.java                    # Strategy interface for saving parsed rows
 │   ├── DatabaseUniquenessChecker.java             # Strategy interface for DB-level duplicate checks
@@ -82,7 +84,7 @@ src/main/java/com/foo/excel/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
 │   ├── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)
 │   └── WorkbookCopyUtils.java                     # Stateless workbook copy helpers (styles, values, metadata)
-└── validation/          # CellError, RowError, ExcelValidationResult, UniqueConstraintValidator
+└── validation/          # CellError (record), RowError, ExcelValidationResult, UniqueConstraintValidator
 ```
 
 ## Processing Pipeline
@@ -92,7 +94,7 @@ src/main/java/com/foo/excel/
 3. **Content validation** -- verify file magic bytes match extension (XLSX/XLS)
 4. **Format conversion** -- `.xls` files are auto-converted to `.xlsx` (preserving cell styles, column widths, row heights, and merged regions)
 5. **Secure parsing** -- Excel opened with XXE and zip bomb protections
-6. **Header validation** -- match DTO `@ExcelColumn` annotations against the header row
+6. **Header verification** -- verify actual headers match `@ExcelColumn` expectations at declared positions; fail-fast with Korean error messages if required columns mismatch
 7. **Row parsing** -- read data rows, skip blanks, stop at footer marker (`※`)
 8. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
 9. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
@@ -112,7 +114,7 @@ This module includes built-in protections against common file upload vulnerabili
 | **Path Traversal** | Filename sanitization | `SecureExcelUtils.sanitizeFilename()` |
 | **File Disguise** | Magic bytes validation | `SecureExcelUtils.validateFileContent()` |
 | **Formula Injection** | Cell value sanitization | `SecureExcelUtils.sanitizeForExcelCell()` |
-| **Info Disclosure** | Generic error messages | Controller exception handling |
+| **Info Disclosure** | Generic Korean error messages | All controller catch blocks return safe messages; never `e.getMessage()` |
 
 ### Consumer Security Checklist
 
@@ -130,7 +132,7 @@ See `application.properties` for a detailed security checklist and configuration
 ## Adding a New Template
 
 1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
-2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, skip columns, and footer marker
+2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
 3. **Persistence** -- Implement `PersistenceHandler<T>` to save parsed rows (e.g., via a JPA repository)
 4. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T>` if duplicates should be checked against existing data
 5. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T>` `@Bean`; the orchestrator discovers it automatically

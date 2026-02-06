@@ -154,19 +154,12 @@ public class UniqueConstraintValidator {
     }
 
     private int resolveColumnIndex(ExcelColumn annotation) {
-        if (!annotation.column().isEmpty()) {
-            return ExcelColumnUtil.letterToIndex(annotation.column());
-        }
-        return annotation.index();
+        return annotation.column().isEmpty() ? -1
+                : ExcelColumnUtil.letterToIndex(annotation.column());
     }
 
     private String resolveColumnLetter(ExcelColumn annotation) {
-        if (!annotation.column().isEmpty()) {
-            return annotation.column();
-        }
-        if (annotation.index() >= 0) {
-            return ExcelColumnUtil.indexToLetter(annotation.index());
-        }
-        return "?";
+        return annotation.column().isEmpty() ? "?"
+                : annotation.column();
     }
 }

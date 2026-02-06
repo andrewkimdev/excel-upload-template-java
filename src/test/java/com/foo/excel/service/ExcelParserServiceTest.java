@@ -43,8 +43,8 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<TariffExemptionDto> result =
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
-        assertThat(result.getRows()).hasSize(3);
-        assertThat(result.getSourceRowNumbers()).hasSize(3);
+        assertThat(result.rows()).hasSize(3);
+        assertThat(result.sourceRowNumbers()).hasSize(3);
     }
 
     @Test
@@ -55,7 +55,7 @@ class ExcelParserServiceTest {
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         // Footer after 3 data rows means only 3 rows read
-        assertThat(result.getRows()).hasSize(3);
+        assertThat(result.rows()).hasSize(3);
     }
 
     @Test
@@ -66,7 +66,7 @@ class ExcelParserServiceTest {
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
         // 3 data rows + 1 blank row inserted = only 3 parsed
-        assertThat(result.getRows()).hasSize(3);
+        assertThat(result.rows()).hasSize(3);
     }
 
     @Test
@@ -77,9 +77,9 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<TariffExemptionDto> result =
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
-        assertThat(result.getRows()).isNotEmpty();
+        assertThat(result.rows()).isNotEmpty();
         // The merged cell value should be readable from column F
-        assertThat(result.getRows().get(0).getHsCode()).isEqualTo("8481.80-2000");
+        assertThat(result.rows().get(0).getHsCode()).isEqualTo("8481.80-2000");
     }
 
     @Test
@@ -89,7 +89,7 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<TariffExemptionDto> result =
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
-        assertThat(result.getRows().get(0).getItemName()).isEqualTo("TestItem1");
+        assertThat(result.rows().get(0).getItemName()).isEqualTo("TestItem1");
     }
 
     @Test
@@ -99,7 +99,7 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<TariffExemptionDto> result =
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
-        assertThat(result.getRows().get(0).getSequenceNo()).isEqualTo(1);
+        assertThat(result.rows().get(0).getSequenceNo()).isEqualTo(1);
     }
 
     @Test
@@ -109,8 +109,8 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<TariffExemptionDto> result =
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig);
 
-        assertThat(result.getRows().get(0).getTariffRate()).isNotNull();
-        assertThat(result.getRows().get(0).getTariffRate().doubleValue()).isCloseTo(8.0, within(0.01));
+        assertThat(result.rows().get(0).getTariffRate()).isNotNull();
+        assertThat(result.rows().get(0).getTariffRate().doubleValue()).isCloseTo(8.0, within(0.01));
     }
 
     @Test
@@ -121,10 +121,10 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<SimpleDto> result =
                 parserService.parse(file, SimpleDto.class, simpleConfig);
 
-        assertThat(result.getRows()).hasSize(1);
-        assertThat(result.getRows().get(0).getExactField()).isEqualTo("exactVal");
-        assertThat(result.getRows().get(0).getContainsField()).isEqualTo("containsVal");
-        assertThat(result.getRows().get(0).getStartsWithField()).isEqualTo("startsVal");
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).getExactField()).isEqualTo("exactVal");
+        assertThat(result.rows().get(0).getContainsField()).isEqualTo("containsVal");
+        assertThat(result.rows().get(0).getStartsWithField()).isEqualTo("startsVal");
     }
 
     @Test
@@ -136,8 +136,8 @@ class ExcelParserServiceTest {
 
         // Column A is decorative — the parser skips it, so no field maps to column A
         // Verify that column mappings don't include column A (index 0)
-        assertThat(result.getColumnMappings())
-                .noneMatch(m -> m.getResolvedColumnIndex() == 0);
+        assertThat(result.columnMappings())
+                .noneMatch(m -> m.resolvedColumnIndex() == 0);
     }
 
     @Test
@@ -148,9 +148,9 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<BooleanDto> result =
                 parserService.parse(file, BooleanDto.class, boolConfig);
 
-        assertThat(result.getRows()).hasSize(2);
-        assertThat(result.getRows().get(0).getActive()).isTrue();
-        assertThat(result.getRows().get(1).getActive()).isFalse();
+        assertThat(result.rows()).hasSize(2);
+        assertThat(result.rows().get(0).getActive()).isTrue();
+        assertThat(result.rows().get(1).getActive()).isFalse();
     }
 
     @Test
@@ -161,8 +161,8 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<DateDto> result =
                 parserService.parse(file, DateDto.class, dateConfig);
 
-        assertThat(result.getRows()).hasSize(1);
-        assertThat(result.getRows().get(0).getDate()).isEqualTo(LocalDate.of(2024, 1, 15));
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).getDate()).isEqualTo(LocalDate.of(2024, 1, 15));
     }
 
     @Test
@@ -173,11 +173,79 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<IntegerDto> result =
                 parserService.parse(file, IntegerDto.class, simpleConfig);
 
-        assertThat(result.getRows()).hasSize(1);
-        assertThat(result.getRows().get(0).getCount()).isNull();
-        assertThat(result.getParseErrors()).hasSize(1);
-        assertThat(result.getParseErrors().get(0).getCellErrors().get(0).getMessage())
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).getCount()).isNull();
+        assertThat(result.parseErrors()).hasSize(1);
+        assertThat(result.parseErrors().get(0).getCellErrors().get(0).message())
                 .contains("Integer");
+    }
+
+    // ===== Header verification tests =====
+
+    @Test
+    void parse_fixedColumn_headerMismatch_requiredColumn_throwsException() throws Exception {
+        Path file = createFileWithWrongHeaders();
+        ExcelImportConfig config = new SimpleConfig();
+
+        assertThatThrownBy(() -> parserService.parse(file, SimpleDto.class, config))
+                .isInstanceOf(ColumnResolutionBatchException.class)
+                .satisfies(ex -> {
+                    var batch = (ColumnResolutionBatchException) ex;
+                    assertThat(batch.getExceptions()).isNotEmpty();
+                    assertThat(batch.toKoreanMessage()).contains("헤더가 일치하지 않습니다");
+                });
+    }
+
+    @Test
+    void parse_fixedColumn_headerMismatch_optionalColumn_skipsField() throws Exception {
+        Path file = createFileWithOptionalMismatch();
+        ExcelImportConfig config = new SimpleConfig();
+
+        ExcelParserService.ParseResult<OptionalFieldDto> result =
+                parserService.parse(file, OptionalFieldDto.class, config);
+
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).getName()).isEqualTo("TestName");
+        assertThat(result.rows().get(0).getOptionalField()).isNull();
+    }
+
+    @Test
+    void parse_multipleHeaderMismatches_allReportedInBatch() throws Exception {
+        Path file = createFileWithAllWrongHeaders();
+        ExcelImportConfig config = new SimpleConfig();
+
+        assertThatThrownBy(() -> parserService.parse(file, TwoRequiredDto.class, config))
+                .isInstanceOf(ColumnResolutionBatchException.class)
+                .satisfies(ex -> {
+                    var batch = (ColumnResolutionBatchException) ex;
+                    assertThat(batch.getExceptions()).hasSize(2);
+                    assertThat(batch.toKoreanMessage()).contains("컬럼 B").contains("컬럼 C");
+                });
+    }
+
+    @Test
+    void parse_autoDetect_findsColumn() throws Exception {
+        Path file = createFileForAutoDetect();
+        ExcelImportConfig config = new SimpleConfig();
+
+        ExcelParserService.ParseResult<AutoDetectDto> result =
+                parserService.parse(file, AutoDetectDto.class, config);
+
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).getValue()).isEqualTo("found");
+    }
+
+    @Test
+    void parse_autoDetect_notFound_requiredColumn_throwsException() throws Exception {
+        Path file = createFileForAutoDetect();
+        ExcelImportConfig config = new SimpleConfig();
+
+        assertThatThrownBy(() -> parserService.parse(file, AutoDetectMissingDto.class, config))
+                .isInstanceOf(ColumnResolutionBatchException.class)
+                .satisfies(ex -> {
+                    var batch = (ColumnResolutionBatchException) ex;
+                    assertThat(batch.toKoreanMessage()).contains("컬럼을 찾을 수 없습니다");
+                });
     }
 
     // ===== Helper DTOs =====
@@ -208,6 +276,34 @@ class ExcelParserServiceTest {
     public static class IntegerDto {
         @ExcelColumn(header = "Count", column = "B")
         private Integer count;
+    }
+
+    @Data
+    public static class OptionalFieldDto {
+        @ExcelColumn(header = "Name", column = "B")
+        private String name;
+        @ExcelColumn(header = "Optional", column = "C", required = false)
+        private String optionalField;
+    }
+
+    @Data
+    public static class TwoRequiredDto {
+        @ExcelColumn(header = "First", column = "B")
+        private String first;
+        @ExcelColumn(header = "Second", column = "C")
+        private String second;
+    }
+
+    @Data
+    public static class AutoDetectDto {
+        @ExcelColumn(header = "Target")
+        private String value;
+    }
+
+    @Data
+    public static class AutoDetectMissingDto {
+        @ExcelColumn(header = "NonExistentHeader")
+        private String value;
     }
 
     static class SimpleConfig implements ExcelImportConfig {
@@ -410,6 +506,93 @@ class ExcelParserServiceTest {
             dataRow.createCell(1).setCellValue("not-a-number");
 
             Path file = tempDir.resolve("invalid_type_test.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createFileWithWrongHeaders() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Deco");
+            headerRow.createCell(1).setCellValue("WRONG_HEADER");  // Column B: expected "ExactHeader"
+            headerRow.createCell(2).setCellValue("SomeContainsText");
+            headerRow.createCell(3).setCellValue("StartsWithSuffix");
+
+            Row dataRow = sheet.createRow(1);
+            dataRow.createCell(1).setCellValue("val1");
+            dataRow.createCell(2).setCellValue("val2");
+            dataRow.createCell(3).setCellValue("val3");
+
+            Path file = tempDir.resolve("wrong_headers_test.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createFileWithOptionalMismatch() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Deco");
+            headerRow.createCell(1).setCellValue("Name");
+            headerRow.createCell(2).setCellValue("WRONG");  // Column C: expected "Optional"
+
+            Row dataRow = sheet.createRow(1);
+            dataRow.createCell(1).setCellValue("TestName");
+            dataRow.createCell(2).setCellValue("ignored");
+
+            Path file = tempDir.resolve("optional_mismatch_test.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createFileWithAllWrongHeaders() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Deco");
+            headerRow.createCell(1).setCellValue("WRONG_B");  // Expected "First"
+            headerRow.createCell(2).setCellValue("WRONG_C");  // Expected "Second"
+
+            Row dataRow = sheet.createRow(1);
+            dataRow.createCell(1).setCellValue("val1");
+            dataRow.createCell(2).setCellValue("val2");
+
+            Path file = tempDir.resolve("all_wrong_headers_test.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createFileForAutoDetect() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Irrelevant");
+            headerRow.createCell(1).setCellValue("Also Irrelevant");
+            headerRow.createCell(2).setCellValue("Target");
+
+            Row dataRow = sheet.createRow(1);
+            dataRow.createCell(0).setCellValue("skip");
+            dataRow.createCell(1).setCellValue("skip");
+            dataRow.createCell(2).setCellValue("found");
+
+            Path file = tempDir.resolve("auto_detect_test.xlsx");
             try (OutputStream os = Files.newOutputStream(file)) {
                 wb.write(os);
             }

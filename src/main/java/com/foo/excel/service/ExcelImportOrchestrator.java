@@ -5,9 +5,7 @@ import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.RowError;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,21 +29,18 @@ public class ExcelImportOrchestrator {
     private final ExcelImportProperties properties;
     private final List<TemplateDefinition<?>> templateDefinitions;
 
-    @Data
     @Builder
-    @AllArgsConstructor
-    public static class ImportResult {
-        private boolean success;
-        private int rowsProcessed;
-        private int rowsCreated;
-        private int rowsUpdated;
-        private int errorRows;
-        private int errorCount;
-        private String errorFileId;
-        private String downloadUrl;
-        private String originalFilename;
-        private String message;
-    }
+    public record ImportResult(
+            boolean success,
+            int rowsProcessed,
+            int rowsCreated,
+            int rowsUpdated,
+            int errorRows,
+            int errorCount,
+            String errorFileId,
+            String downloadUrl,
+            String originalFilename,
+            String message) {}
 
     public ImportResult processUpload(MultipartFile file, String templateType) throws IOException {
         TemplateDefinition<?> template = findTemplate(templateType);
@@ -91,36 +86,36 @@ public class ExcelImportOrchestrator {
                     parserService.parse(xlsxFile, template.getDtoClass(), config);
 
             // 4. Check max rows
-            if (parseResult.getRows().size() > properties.getMaxRows()) {
+            if (parseResult.rows().size() > properties.getMaxRows()) {
                 return ImportResult.builder()
                         .success(false)
-                        .rowsProcessed(parseResult.getRows().size())
+                        .rowsProcessed(parseResult.rows().size())
                         .message("최대 행 수(" + properties.getMaxRows() + ")를 초과했습니다. 현재: "
-                                + parseResult.getRows().size() + "행")
+                                + parseResult.rows().size() + "행")
                         .build();
             }
 
             // 5. Validate (JSR-380 + within-file uniqueness)
             ExcelValidationResult validationResult = validationService.validate(
-                    parseResult.getRows(), template.getDtoClass(),
-                    parseResult.getSourceRowNumbers());
+                    parseResult.rows(), template.getDtoClass(),
+                    parseResult.sourceRowNumbers());
 
             // 6. DB uniqueness check
             List<RowError> dbErrors = template.checkDbUniqueness(
-                    parseResult.getRows(), parseResult.getSourceRowNumbers());
+                    parseResult.rows(), parseResult.sourceRowNumbers());
             validationResult.merge(dbErrors);
 
             // 7. Merge parse errors
-            validationResult.merge(parseResult.getParseErrors());
+            validationResult.merge(parseResult.parseErrors());
 
             if (validationResult.isValid()) {
                 // 8. Persist
                 PersistenceHandler.SaveResult saveResult =
-                        template.getPersistenceHandler().saveAll(parseResult.getRows());
+                        template.getPersistenceHandler().saveAll(parseResult.rows());
 
                 return ImportResult.builder()
                         .success(true)
-                        .rowsProcessed(parseResult.getRows().size())
+                        .rowsProcessed(parseResult.rows().size())
                         .rowsCreated(saveResult.created())
                         .rowsUpdated(saveResult.updated())
                         .message("데이터 업로드 완료")
@@ -128,7 +123,7 @@ public class ExcelImportOrchestrator {
             } else {
                 // 9. Generate error report
                 Path errorFile = errorReportService.generateErrorReport(
-                        xlsxFile, validationResult, parseResult.getColumnMappings(), config,
+                        xlsxFile, validationResult, parseResult.columnMappings(), config,
                         sanitizedFilename);
 
                 String errorFileId = errorFile.getFileName().toString().replace(".xlsx", "");
@@ -145,6 +140,12 @@ public class ExcelImportOrchestrator {
                                 + validationResult.getTotalErrorCount() + "개 오류가 발견되었습니다")
                         .build();
             }
+        } catch (ColumnResolutionBatchException e) {
+            log.warn("Column resolution failed: {}", e.getMessage());
+            return ImportResult.builder()
+                    .success(false)
+                    .message(e.toKoreanMessage())
+                    .build();
         } catch (Exception e) {
             log.error("Error processing upload", e);
             throw e;

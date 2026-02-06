@@ -29,20 +29,23 @@
 | Text blocks | PASS | No candidates found |
 | `Path.of()` vs `Paths.get()` | PASS | No deprecated usage |
 | `instanceof` pattern matching | PASS | No candidates found |
-| Records vs classes | **5 ISSUES** | See below |
+| Records vs classes | PASS | **FIXED** — 4 classes converted to records |
 | Old-style for-loops | Acceptable | Index-based loops justified by POI API |
 
-### Records candidates (classes that should be records per CLAUDE.md)
+### Records conversions (FIXED)
 
-| File | Line | Class | Details |
-|------|------|-------|---------|
-| src/main/java/com/foo/excel/validation/CellError.java | 8 | `CellError` | Read-only data carrier with `@Data` + `@Builder` |
-| src/main/java/com/foo/excel/validation/RowError.java | 12 | `RowError` | Read-only with `@Data` + `@Builder`, only has `getFormattedMessage()` |
-| src/main/java/com/foo/excel/service/ExcelParserService.java | 34 | `ColumnMapping` | Static inner class, read-only |
-| src/main/java/com/foo/excel/service/ExcelParserService.java | 43 | `ParseResult` | Static inner class, read-only |
-| src/main/java/com/foo/excel/service/ExcelImportOrchestrator.java | 34 | `ImportResult` | Static inner class with `@Data` + `@Builder`, read-only |
+The following classes were converted from `@Data`/`@AllArgsConstructor` classes to Java records:
 
-**Note:** `ExcelValidationResult` correctly remains a class (has mutable `merge()` method).
+| Class | File | Notes |
+|-------|------|-------|
+| `CellError` | src/main/java/com/foo/excel/validation/CellError.java | `@Builder` record |
+| `ColumnMapping` | src/main/java/com/foo/excel/service/ExcelParserService.java | Plain record |
+| `ParseResult` | src/main/java/com/foo/excel/service/ExcelParserService.java | Plain record |
+| `ImportResult` | src/main/java/com/foo/excel/service/ExcelImportOrchestrator.java | `@Builder` record |
+
+**Not converted (by design):**
+- `RowError` — has mutable state (`cellErrors` list is mutated via `add()`/`addAll()` after construction). Per CLAUDE.md: "Classes that require... mutable state... remain as classes."
+- `ExcelValidationResult` — has mutable `merge()` method.
 
 ---
 
@@ -72,20 +75,13 @@
 | SLF4J placeholder syntax | PASS | 0 |
 | Error message language (Korean/English) | PASS | 0 |
 | `SecureExcelUtils` usage | PASS | 0 |
-| Controller exposing internal details | **2 ISSUES** | See below |
+| Controller exposing internal details | PASS | **FIXED** — see below |
 
-### Security violations: controller exposes `e.getMessage()`
+### Security fix: controller no longer exposes `e.getMessage()`
 
-| File | Line | Severity | Details |
-|------|------|----------|---------|
-| src/main/java/com/foo/excel/controller/ExcelUploadController.java | 116 | HIGH | `catch (IllegalArgumentException e)` returns `e.getMessage()` in REST API response |
-| src/main/java/com/foo/excel/controller/ExcelUploadController.java | 241 | HIGH | `catch (IllegalArgumentException e)` returns `e.getMessage()` in Thymeleaf model |
-
-**CLAUDE.md rule:** "Controllers MUST catch all exceptions and return generic Korean error messages. NEVER return `e.getMessage()`, stack traces, or file paths."
-
-While the current `IllegalArgumentException` messages from `SecureExcelUtils.sanitizeFilename()` are user-friendly Korean text, this pattern is fragile. Future code changes could accidentally expose internal details through this path.
-
-**Recommended fix:** Replace `e.getMessage()` with a generic Korean error message and log the actual exception at WARN level.
+Both `IllegalArgumentException` catch blocks in `ExcelUploadController` now:
+1. Log the actual exception at WARN level (English)
+2. Return a generic Korean message: "잘못된 요청입니다. 파일 형식과 템플릿 유형을 확인하세요."
 
 ---
 
@@ -94,12 +90,9 @@ While the current `IllegalArgumentException` messages from `SecureExcelUtils.san
 | Category | Pass | Issues |
 |----------|------|--------|
 | Naming conventions | 6/6 | 0 |
-| Java 17 features | 6/7 | 5 (records candidates) |
+| Java 17 features | 7/7 | 0 (4 records converted, 2 correctly remain classes) |
 | Spring Boot annotations | 7/7 | 0 |
-| Exception handling | 6/7 | 2 (security) |
-| **Total** | **25/27** | **7** |
+| Exception handling | 7/7 | 0 (security fix applied) |
+| **Total** | **27/27** | **0** |
 
-### Priority action items
-
-1. **HIGH** — Replace `e.getMessage()` exposure in `ExcelUploadController` lines 116 and 241 with generic Korean messages
-2. **MEDIUM** — Convert 5 read-only data carriers to Java records (`CellError`, `RowError`, `ColumnMapping`, `ParseResult`, `ImportResult`)
+All previously identified issues have been resolved. All tests pass.

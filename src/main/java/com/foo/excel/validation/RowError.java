@@ -20,7 +20,7 @@ public class RowError {
 
     public String getFormattedMessage() {
         return cellErrors.stream()
-                .map(e -> "[" + e.getColumnLetter() + "] " + e.getMessage())
+                .map(e -> "[" + e.columnLetter() + "] " + e.message())
                 .collect(Collectors.joining("; "));
     }
 }

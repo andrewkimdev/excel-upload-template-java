@@ -86,7 +86,7 @@ public class ExcelUploadController {
             if (fileSizeError != null) {
                 Map<String, Object> error = Map.of(
                         "success", false,
-                        "message", fileSizeError.getMessage()
+                        "message", fileSizeError.message()
                 );
                 return ResponseEntity.badRequest().body(error);
             }
@@ -94,26 +94,27 @@ public class ExcelUploadController {
             ImportResult result = orchestrator.processUpload(file, templateType);
 
             Map<String, Object> response = new LinkedHashMap<>();
-            response.put("success", result.isSuccess());
-            response.put("rowsProcessed", result.getRowsProcessed());
-            response.put("message", result.getMessage());
+            response.put("success", result.success());
+            response.put("rowsProcessed", result.rowsProcessed());
+            response.put("message", result.message());
 
-            if (result.isSuccess()) {
-                response.put("rowsCreated", result.getRowsCreated());
-                response.put("rowsUpdated", result.getRowsUpdated());
+            if (result.success()) {
+                response.put("rowsCreated", result.rowsCreated());
+                response.put("rowsUpdated", result.rowsUpdated());
                 return ResponseEntity.ok(response);
             } else {
-                response.put("errorRows", result.getErrorRows());
-                response.put("errorCount", result.getErrorCount());
-                if (result.getDownloadUrl() != null) {
-                    response.put("downloadUrl", result.getDownloadUrl());
+                response.put("errorRows", result.errorRows());
+                response.put("errorCount", result.errorCount());
+                if (result.downloadUrl() != null) {
+                    response.put("downloadUrl", result.downloadUrl());
                 }
                 return ResponseEntity.badRequest().body(response);
             }
         } catch (IllegalArgumentException e) {
+            log.warn("Invalid request during upload: {}", e.getMessage());
             Map<String, Object> error = Map.of(
                     "success", false,
-                    "message", e.getMessage()
+                    "message", "잘못된 요청입니다. 파일 형식과 템플릿 유형을 확인하세요."
             );
             return ResponseEntity.badRequest().body(error);
         } catch (SecurityException e) {
@@ -236,9 +237,10 @@ public class ExcelUploadController {
             ImportResult result = orchestrator.processUpload(file, templateType);
             model.addAttribute("result", result);
         } catch (IllegalArgumentException e) {
+            log.warn("Invalid request during upload: {}", e.getMessage());
             model.addAttribute("result", ImportResult.builder()
                     .success(false)
-                    .message(e.getMessage())
+                    .message("잘못된 요청입니다. 파일 형식과 템플릿 유형을 확인하세요.")
                     .build());
         } catch (SecurityException e) {
             // SECURITY: Security exceptions indicate potential attacks.

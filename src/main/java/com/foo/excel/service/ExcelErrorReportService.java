@@ -93,8 +93,8 @@ public class ExcelErrorReportService {
                         var errorColIndices = new HashSet<Integer>();
                         if (rowError != null) {
                             for (var cellError : rowError.getCellErrors()) {
-                                if (cellError.getColumnIndex() >= 0) {
-                                    errorColIndices.add(cellError.getColumnIndex());
+                                if (cellError.columnIndex() >= 0) {
+                                    errorColIndices.add(cellError.columnIndex());
                                 }
                             }
                         }
