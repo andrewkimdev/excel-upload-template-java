@@ -4,7 +4,8 @@
       "/home/codespace/.claude/usage-data"
     ],
     "allow": [
-      "mcp__fs__read_multiple_files"
+      "mcp__fs__read_multiple_files",
+      "Read(//usr/local/sdkman/candidates/java/**)"
     ]
   },
   "postEdit": {

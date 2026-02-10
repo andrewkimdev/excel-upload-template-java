@@ -173,7 +173,7 @@ class ExcelParserServiceTest {
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig, 5);
 
         // Should stop after maxRows + 1 = 6 rows
-        assertThat(result.getRows()).hasSize(6);
+        assertThat(result.rows()).hasSize(6);
     }
 
     @Test
@@ -183,7 +183,7 @@ class ExcelParserServiceTest {
         ExcelParserService.ParseResult<TariffExemptionDto> result =
                 parserService.parse(file, TariffExemptionDto.class, tariffConfig, 100);
 
-        assertThat(result.getRows()).hasSize(3);
+        assertThat(result.rows()).hasSize(3);
     }
 
     @Test
