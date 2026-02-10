@@ -74,6 +74,7 @@ Controllers MUST catch all exceptions and return generic Korean error messages. 
 ### MUST use `SecureExcelUtils` for all file operations
 
 - Open workbooks via `SecureExcelUtils.createWorkbook()` — NEVER via raw `WorkbookFactory.create()`
+- Lightweight row counting via `SecureExcelUtils.countRows()` (StAX streaming, constant memory)
 - Sanitize filenames via `SecureExcelUtils.sanitizeFilename()`
 - Validate file content (magic bytes) via `SecureExcelUtils.validateFileContent()`
 - Sanitize cell values for error reports via `SecureExcelUtils.sanitizeForExcelCell()`

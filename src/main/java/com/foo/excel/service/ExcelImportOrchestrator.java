@@ -81,9 +81,24 @@ public class ExcelImportOrchestrator {
             // 2. Convert to xlsx if needed
             Path xlsxFile = conversionService.ensureXlsxFormat(file, tempSubDir);
 
+            // 2b. Quick row count pre-check (lightweight SAX — avoids full parse for oversized files)
+            int roughRowCount = SecureExcelUtils.countRows(xlsxFile, config.getSheetIndex());
+            int preCountThreshold = properties.getMaxRows()
+                    + (config.getDataStartRow() - 1) + properties.getPreCountBuffer();
+            if (roughRowCount > preCountThreshold) {
+                log.info("Pre-count rejected file: roughly {} rows, threshold={}", roughRowCount, preCountThreshold);
+                return ImportResult.builder()
+                        .success(false)
+                        .rowsProcessed(roughRowCount)
+                        .message("최대 행 수(" + properties.getMaxRows() + ")를 초과했습니다. "
+                                + "파일에 약 " + roughRowCount + "행이 포함되어 있습니다")
+                        .build();
+            }
+
             // 3. Parse
             ExcelParserService.ParseResult<T> parseResult =
-                    parserService.parse(xlsxFile, template.getDtoClass(), config);
+                    parserService.parse(xlsxFile, template.getDtoClass(), config,
+                            properties.getMaxRows());
 
             // 4. Check max rows
             if (parseResult.rows().size() > properties.getMaxRows()) {

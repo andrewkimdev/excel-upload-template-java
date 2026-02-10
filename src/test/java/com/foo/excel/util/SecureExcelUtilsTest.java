@@ -307,6 +307,61 @@ class SecureExcelUtilsTest {
         assertThat(result).startsWith("'");
     }
 
+    // ========== countRows tests ==========
+
+    @Test
+    void countRows_returnsCorrectCount() throws IOException {
+        Path file = createXlsxWithRows(25);
+
+        int count = SecureExcelUtils.countRows(file, 0);
+
+        // 1 header row + 25 data rows = 26 total row elements
+        assertThat(count).isEqualTo(26);
+    }
+
+    @Test
+    void countRows_emptySheet_returnsZero() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            wb.createSheet("Empty");
+            Path file = tempDir.resolve("empty.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+
+            assertThat(SecureExcelUtils.countRows(file, 0)).isZero();
+        }
+    }
+
+    @Test
+    void countRows_selectsCorrectSheet() throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            // Sheet 0: 3 rows
+            Sheet s0 = wb.createSheet("Sheet0");
+            for (int i = 0; i < 3; i++) s0.createRow(i).createCell(0).setCellValue(i);
+
+            // Sheet 1: 7 rows
+            Sheet s1 = wb.createSheet("Sheet1");
+            for (int i = 0; i < 7; i++) s1.createRow(i).createCell(0).setCellValue(i);
+
+            Path file = tempDir.resolve("multi_sheet.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+
+            assertThat(SecureExcelUtils.countRows(file, 0)).isEqualTo(3);
+            assertThat(SecureExcelUtils.countRows(file, 1)).isEqualTo(7);
+        }
+    }
+
+    @Test
+    void countRows_invalidSheetIndex_throwsIOException() throws IOException {
+        Path file = createValidXlsxFile();
+
+        assertThatThrownBy(() -> SecureExcelUtils.countRows(file, 5))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("Sheet index");
+    }
+
     // ========== createWorkbook tests ==========
 
     @Test
@@ -355,6 +410,21 @@ class SecureExcelUtilsTest {
             sheet.createRow(0).createCell(0).setCellValue("Test");
 
             Path file = tempDir.resolve("valid.xlsx");
+            try (OutputStream os = Files.newOutputStream(file)) {
+                wb.write(os);
+            }
+            return file;
+        }
+    }
+
+    private Path createXlsxWithRows(int dataRows) throws IOException {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+            sheet.createRow(0).createCell(0).setCellValue("Header");
+            for (int i = 0; i < dataRows; i++) {
+                sheet.createRow(i + 1).createCell(0).setCellValue("Row" + i);
+            }
+            Path file = tempDir.resolve("rows_" + dataRows + ".xlsx");
             try (OutputStream os = Files.newOutputStream(file)) {
                 wb.write(os);
             }

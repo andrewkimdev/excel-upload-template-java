@@ -43,6 +43,11 @@ public class ExcelParserService {
 
     public <T> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config)
             throws IOException {
+        return parse(xlsxFile, dtoClass, config, Integer.MAX_VALUE);
+    }
+
+    public <T> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config,
+            int maxRows) throws IOException {
 
         int headerRowNum = config.getHeaderRow() - 1;   // Convert to 0-based
         int dataStartRowNum = config.getDataStartRow() - 1;
@@ -63,7 +68,7 @@ public class ExcelParserService {
             List<RowError> parseErrors = new ArrayList<>();
             List<Integer> sourceRowNumbers = new ArrayList<>();
             List<T> rows = parseDataRows(sheet, dtoClass, columnMappings, dataStartRowNum,
-                    footerMarker, parseErrors, sourceRowNumbers);
+                    footerMarker, parseErrors, sourceRowNumbers, maxRows);
 
             return new ParseResult<>(rows, sourceRowNumbers, columnMappings, parseErrors);
         }
@@ -176,7 +181,7 @@ public class ExcelParserService {
 
     private <T> List<T> parseDataRows(Sheet sheet, Class<T> dtoClass,
             List<ColumnMapping> columnMappings, int dataStartRowNum, String footerMarker,
-            List<RowError> parseErrors, List<Integer> sourceRowNumbers) {
+            List<RowError> parseErrors, List<Integer> sourceRowNumbers, int maxRows) {
 
         List<T> rows = new ArrayList<>();
         int lastRowNum = sheet.getLastRowNum();
@@ -231,6 +236,11 @@ public class ExcelParserService {
 
             sourceRowNumbers.add(excelRowNumber);
             rows.add(dto);
+
+            if (rows.size() > maxRows) {
+                log.info("Row limit exceeded during parsing at row {}, stopping early", excelRowNumber);
+                break;
+            }
         }
 
         return rows;

@@ -5,13 +5,18 @@ import org.apache.poi.openxml4j.opc.PackageAccess;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.util.IOUtils;
+import org.apache.poi.xssf.eventusermodel.XSSFReader;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
 
 /**
  * Secure utilities for Excel file handling.
@@ -209,6 +214,59 @@ public final class SecureExcelUtils {
         }
 
         return value;
+    }
+
+    /**
+     * Counts the number of rows in an xlsx sheet using lightweight StAX streaming.
+     * Does NOT load the full workbook DOM — uses constant memory regardless of file size.
+     *
+     * @param xlsxFile the xlsx file to count rows in
+     * @param sheetIndex 0-based sheet index
+     * @return the number of row elements in the sheet XML
+     * @throws IOException if the file cannot be read or the sheet is not found
+     */
+    public static int countRows(Path xlsxFile, int sheetIndex) throws IOException {
+        try (OPCPackage pkg = OPCPackage.open(xlsxFile.toFile(), PackageAccess.READ)) {
+            var reader = new XSSFReader(pkg);
+            Iterator<InputStream> sheets = reader.getSheetsData();
+
+            int currentSheet = 0;
+            while (sheets.hasNext()) {
+                try (InputStream sheetStream = sheets.next()) {
+                    if (currentSheet == sheetIndex) {
+                        return countRowElements(sheetStream);
+                    }
+                }
+                currentSheet++;
+            }
+
+            throw new IOException("Sheet index " + sheetIndex + " not found in workbook");
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Failed to count rows in xlsx file: " + e.getMessage(), e);
+        }
+    }
+
+    private static int countRowElements(InputStream sheetStream) throws IOException {
+        try {
+            XMLInputFactory factory = XMLInputFactory.newInstance();
+            factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+            factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+
+            XMLStreamReader xmlReader = factory.createXMLStreamReader(sheetStream);
+            int rowCount = 0;
+            while (xmlReader.hasNext()) {
+                if (xmlReader.next() == XMLStreamConstants.START_ELEMENT
+                        && "row".equals(xmlReader.getLocalName())) {
+                    rowCount++;
+                }
+            }
+            xmlReader.close();
+            return rowCount;
+        } catch (Exception e) {
+            throw new IOException("Failed to parse sheet XML: " + e.getMessage(), e);
+        }
     }
 
     private static byte[] readFileHeader(Path path, int length) throws IOException {

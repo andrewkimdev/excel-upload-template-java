@@ -93,15 +93,16 @@ src/main/java/com/foo/excel/
 2. **Filename sanitization** -- prevent path traversal attacks
 3. **Content validation** -- verify file magic bytes match extension (XLSX/XLS)
 4. **Format conversion** -- `.xls` files are auto-converted to `.xlsx` (preserving cell styles, column widths, row heights, and merged regions)
-5. **Secure parsing** -- Excel opened with XXE and zip bomb protections
-6. **Header verification** -- verify actual headers match `@ExcelColumn` expectations at declared positions; fail-fast with Korean error messages if required columns mismatch
-7. **Row parsing** -- read data rows, skip blanks, stop at footer marker (`※`)
-8. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
-9. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
-10. **Within-file uniqueness** -- `@ExcelUnique` (single field), `@ExcelCompositeUnique` (composite key)
-11. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker`
-12. **Error merge** -- parse errors, validation errors, and DB uniqueness errors are combined
-13. **Result** -- success with row counts, or format-preserving error report Excel with `_ERRORS` column, red-highlighted error cells, original filename in download, and disclaimer footer
+5. **Row count pre-check** -- lightweight SAX/StAX count rejects obviously oversized files before full parsing
+6. **Secure parsing** -- Excel opened with XXE and zip bomb protections; parser exits early if rows exceed limit
+7. **Header verification** -- verify actual headers match `@ExcelColumn` expectations at declared positions; fail-fast with Korean error messages if required columns mismatch
+8. **Row parsing** -- read data rows, skip blanks, stop at footer marker (`※`)
+9. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
+10. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
+11. **Within-file uniqueness** -- `@ExcelUnique` (single field), `@ExcelCompositeUnique` (composite key)
+12. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker`
+13. **Error merge** -- parse errors, validation errors, and DB uniqueness errors are combined
+14. **Result** -- success with row counts, or format-preserving error report Excel with `_ERRORS` column, red-highlighted error cells, original filename in download, and disclaimer footer
 
 ## Security
 
@@ -114,6 +115,7 @@ This module includes built-in protections against common file upload vulnerabili
 | **Path Traversal** | Filename sanitization | `SecureExcelUtils.sanitizeFilename()` |
 | **File Disguise** | Magic bytes validation | `SecureExcelUtils.validateFileContent()` |
 | **Formula Injection** | Cell value sanitization | `SecureExcelUtils.sanitizeForExcelCell()` |
+| **Resource exhaustion** | Two-tier row limit (SAX pre-count + parser early-exit) | `SecureExcelUtils.countRows()`, `ExcelParserService` |
 | **Info Disclosure** | Generic Korean error messages | All controller catch blocks return safe messages; never `e.getMessage()` |
 
 ### Consumer Security Checklist
@@ -147,6 +149,7 @@ Key properties in `application.properties`:
 |----------|---------|-------------|
 | `excel.import.max-file-size-mb` | `10` | Maximum upload file size in MB |
 | `excel.import.max-rows` | `10000` | Maximum data rows per file |
+| `excel.import.pre-count-buffer` | `100` | Extra rows allowed in SAX pre-count to account for headers/blanks |
 | `excel.import.retention-days` | `30` | Days to keep temp/error files (shorter = more secure) |
 | `excel.import.temp-directory` | `${java.io.tmpdir}/excel-imports` | Temp file storage path |
 | `excel.import.error-column-name` | `_ERRORS` | Name of the error column in error reports |
@@ -164,7 +167,7 @@ Tests cover all layers:
 | `ExcelColumnUtilTest` | Unit | Column letter/index conversion, round-trip consistency |
 | `WorkbookCopyUtilsTest` | Unit | Style mapping (same-format, cross-format), error styles, cell value copying, column widths, merged regions |
 | `ExcelConversionServiceTest` | Component | .xlsx passthrough, .xls conversion, merged regions, style/width/height preservation, error cases |
-| `ExcelParserServiceTest` | Component | Row parsing, footer detection, blank row skipping, merged cells, type coercion, header matching |
+| `ExcelParserServiceTest` | Component | Row parsing, footer detection, blank row skipping, merged cells, type coercion, header matching, early-exit on row limit |
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
 | `UniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |

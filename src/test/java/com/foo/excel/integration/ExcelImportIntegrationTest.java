@@ -135,6 +135,31 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
+    void upload_tooManyRows_rejectedByPreCount() throws Exception {
+        // Set a low maxRows so we don't need to generate 10k+ rows in a test
+        int originalMaxRows = properties.getMaxRows();
+        int originalBuffer = properties.getPreCountBuffer();
+        try {
+            properties.setMaxRows(5);
+            properties.setPreCountBuffer(10);
+            // Threshold = 5 + (7-1) + 10 = 21, so 25 data rows + header row = 26 total > 21
+            byte[] xlsxBytes = createValidTariffExemptionXlsx(25);
+            MockMultipartFile file = new MockMultipartFile(
+                    "file", "too_many_rows.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    xlsxBytes);
+
+            mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.message").value(containsString("최대 행 수")));
+        } finally {
+            properties.setMaxRows(originalMaxRows);
+            properties.setPreCountBuffer(originalBuffer);
+        }
+    }
+
+    @Test
     void upload_fileTooLarge_rejected() throws Exception {
         // Create a file > 10MB
         byte[] largeBytes = new byte[11 * 1024 * 1024];

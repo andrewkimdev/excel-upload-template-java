@@ -166,6 +166,27 @@ class ExcelParserServiceTest {
     }
 
     @Test
+    void parse_maxRows_stopsEarly() throws IOException {
+        Path file = createTariffExemptionFile(20, false, false);
+
+        ExcelParserService.ParseResult<TariffExemptionDto> result =
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig, 5);
+
+        // Should stop after maxRows + 1 = 6 rows
+        assertThat(result.getRows()).hasSize(6);
+    }
+
+    @Test
+    void parse_maxRows_noEffectWhenUnderLimit() throws IOException {
+        Path file = createTariffExemptionFile(3, false, false);
+
+        ExcelParserService.ParseResult<TariffExemptionDto> result =
+                parserService.parse(file, TariffExemptionDto.class, tariffConfig, 100);
+
+        assertThat(result.getRows()).hasSize(3);
+    }
+
+    @Test
     void parse_parseErrors_reportedForInvalidTypes() throws IOException {
         Path file = createFileWithInvalidTypeData();
         ExcelImportConfig simpleConfig = new SimpleConfig();

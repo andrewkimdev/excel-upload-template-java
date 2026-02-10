@@ -16,6 +16,7 @@ public class ExcelImportProperties {
 
     private int maxFileSizeMb = 10;
     private int maxRows = 10000;
+    private int preCountBuffer = 100;
     private int retentionDays = 30;
     private String tempDirectory = System.getProperty("java.io.tmpdir") + "/excel-imports";
     private String errorColumnName = "_ERRORS";
