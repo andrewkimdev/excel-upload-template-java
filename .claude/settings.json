@@ -5,7 +5,8 @@
     ],
     "allow": [
       "mcp__fs__read_multiple_files",
-      "Read(//usr/local/sdkman/candidates/java/**)"
+      "Read(//usr/local/sdkman/candidates/java/**)",
+      "Bash(git push:*)"
     ]
   },
   "postEdit": {
