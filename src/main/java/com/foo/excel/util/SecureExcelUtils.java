@@ -3,7 +3,6 @@ package com.foo.excel.util;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.openxml4j.opc.PackageAccess;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xssf.eventusermodel.XSSFReader;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -36,9 +35,6 @@ public final class SecureExcelUtils {
     // XLSX magic bytes (ZIP format: PK)
     private static final byte[] XLSX_MAGIC = {0x50, 0x4B, 0x03, 0x04};
 
-    // XLS magic bytes (OLE compound document)
-    private static final byte[] XLS_MAGIC = {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0};
-
     static {
         // Configure Apache POI security limits globally
         IOUtils.setByteArrayMaxOverride(MAX_BYTE_ARRAY_SIZE);
@@ -61,18 +57,12 @@ public final class SecureExcelUtils {
         validateFileContent(file.toPath());
 
         // Use OPCPackage with read-only access for XLSX files
-        String fileName = file.getName().toLowerCase();
-        if (fileName.endsWith(".xlsx")) {
-            try {
-                OPCPackage pkg = OPCPackage.open(file, PackageAccess.READ);
-                return new XSSFWorkbook(pkg);
-            } catch (Exception e) {
-                throw new IOException("Failed to open XLSX file securely: " + e.getMessage(), e);
-            }
+        try {
+            OPCPackage pkg = OPCPackage.open(file, PackageAccess.READ);
+            return new XSSFWorkbook(pkg);
+        } catch (Exception e) {
+            throw new IOException("Failed to open XLSX file securely: " + e.getMessage(), e);
         }
-
-        // For XLS files, use WorkbookFactory with default protections
-        return WorkbookFactory.create(file);
     }
 
     /**
@@ -105,12 +95,6 @@ public final class SecureExcelUtils {
                     "File content does not match XLSX format. " +
                     "The file may be corrupted or disguised.");
             }
-        } else if (fileName.endsWith(".xls")) {
-            if (!matchesMagicBytes(header, XLS_MAGIC)) {
-                throw new SecurityException(
-                    "File content does not match XLS format. " +
-                    "The file may be corrupted or disguised.");
-            }
         }
     }
 
@@ -119,7 +103,7 @@ public final class SecureExcelUtils {
      * Note: This consumes bytes from the stream, so use with mark/reset or a fresh stream.
      *
      * @param inputStream the stream to validate
-     * @param expectedExtension the expected file extension (xlsx or xls)
+     * @param expectedExtension the expected file extension (xlsx)
      * @throws IOException if the stream cannot be read
      * @throws SecurityException if the content doesn't match expected format
      */
@@ -136,11 +120,6 @@ public final class SecureExcelUtils {
             if (!matchesMagicBytes(header, XLSX_MAGIC)) {
                 throw new SecurityException(
                     "File content does not match XLSX format");
-            }
-        } else if ("xls".equalsIgnoreCase(expectedExtension)) {
-            if (!matchesMagicBytes(header, XLS_MAGIC)) {
-                throw new SecurityException(
-                    "File content does not match XLS format");
             }
         }
     }
@@ -186,7 +165,7 @@ public final class SecureExcelUtils {
 
         // Ensure the filename has a valid Excel extension
         String lowerFilename = filename.toLowerCase();
-        if (!lowerFilename.endsWith(".xlsx") && !lowerFilename.endsWith(".xls")) {
+        if (!lowerFilename.endsWith(".xlsx")) {
             throw new IllegalArgumentException("Invalid file extension");
         }
 

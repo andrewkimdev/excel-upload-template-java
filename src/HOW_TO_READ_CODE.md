@@ -35,8 +35,8 @@ Read in execution order — this is how an upload flows through the system:
 14. **ExcelImportOrchestrator.java** — **Read this carefully** — it's the conductor that calls everything below (includes SAX pre-count gate)
 15. **ExcelParserService.java** — **Largest file**, POI workbook → DTO conversion with early-exit on row limit. Take your time here
 16. **ExcelColumnUtil.java** (72 lines) — Reflection helper for annotations
-17. **WorkbookCopyUtils.java** (198 lines) — Stateless helpers for copying styles, cell values, column widths, and merged regions between workbooks. Used by both ExcelConversionService (HSSF→XSSF cross-format) and ExcelErrorReportService (format-preserving rebuild)
-18. **ExcelConversionService.java** (142 lines) — .xls → .xlsx auto-conversion with style/width/height preservation
+17. **WorkbookCopyUtils.java** — Stateless helpers for copying styles, cell values, column widths, and merged regions between workbooks. Used by ExcelErrorReportService (format-preserving rebuild)
+18. **ExcelConversionService.java** — .xlsx file validation and secure file handling
 19. **ExcelValidationService.java** (123 lines) — JSR-380 + custom validation
 20. **UniqueConstraintValidator.java** (172 lines) — In-file + DB uniqueness enforcement
 21. **ExcelErrorReportService.java** (193 lines) — Format-preserving error report generation via SXSSFWorkbook full-rebuild
@@ -102,6 +102,6 @@ Then visit `http://localhost:8080`, upload a valid file, upload an invalid one, 
 - **SPEC.md drift.** The original spec mentioned `getSkipColumnIndices()` on the config interface — the implementation removed it (parser reads only `@ExcelColumn`-annotated columns). `required()` on `@ExcelColumn` has been restored with column-existence semantics (orthogonal to JSR-380 cell-value validation).
 - **Generic type erasure.** The orchestrator has a `@SuppressWarnings("unchecked")` cast that's inherent to how `TemplateDefinition<T>` works with Spring's bean registry. Understand why it's unavoidable.
 - **Security surface.** `SecureExcelUtils` handles zip bombs, XXE, path traversal, and lightweight row counting (`countRows()` via StAX). Worth understanding what threats are covered and whether there are gaps for your use case.
-- **WorkbookCopyUtils and cross-format copying.** POI's `cloneStyleFrom()` does not support HSSF→XSSF. `WorkbookCopyUtils` handles this via manual property copying with font index mapping. Understand the `isCrossFormat` branch.
+- **WorkbookCopyUtils.** Used for same-format (XSSF→XSSF) style cloning via `cloneStyleFrom()` when generating error reports.
 - **Test coverage gaps.** There's no dedicated test for `ExcelUploadController`, `TempFileCleanupService`, or the tariff exemption template classes. The integration test covers some controller paths, but mocking-level controller tests are absent.
 - **The `ExcelParserService.ParseResult` inner class** — check whether this could be a Java record per your CLAUDE.md rules. Same for any other static inner DTOs.

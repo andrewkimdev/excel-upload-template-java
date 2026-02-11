@@ -53,9 +53,8 @@ public class MyEntity {
 
 ## Apache POI / Excel Guidelines
 
+- Only `.xlsx` (XSSF) format is supported — `.xls` (HSSF) is not accepted
 - SXSSFWorkbook does NOT support reading/cloning styles from existing workbooks the same way XSSFWorkbook does
-- HSSF font index mapping differs from XSSF — always test cross-format operations separately
-- When preserving formatting, handle HSSF and XSSF/SXSSF as separate code paths
 
 ---
 

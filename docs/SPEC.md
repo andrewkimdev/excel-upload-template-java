@@ -4,7 +4,7 @@
 | Version | Changes |
 |---------|---------|
 | v1 | Initial specification |
-| v2 | Added .xls auto-conversion, column letter notation, confirmed structure patterns |
+| v2 | Added column letter notation, confirmed structure patterns |
 
 ---
 
@@ -15,8 +15,7 @@
 |----------|-------|
 | Row identity strategy | Upsert on natural key |
 | Validation failure scope | Reject entire file (all-or-nothing) |
-| Primary format | `.xlsx` |
-| Legacy format | `.xls` (auto-convert to `.xlsx` on upload) |
+| File format | `.xlsx` only |
 
 ### Excel Template Structure (Confirmed Pattern)
 | Decision | Value |
@@ -44,7 +43,7 @@
 | Retention period | 30 days (configurable via `application.properties`) |
 | Max file size | 10 MB (configurable) |
 | Max rows | 10,000 (configurable) |
-| Auto-conversion | `.xls` → `.xlsx` on upload |
+| Accepted format | `.xlsx` only |
 
 ---
 
@@ -479,125 +478,46 @@ public class TariffExemptionDto implements ExcelImportConfig {
 
 ---
 
-## File Conversion Service
+## File Validation Service
 
 ```java
 package com.foo.excel.service;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import com.foo.excel.util.SecureExcelUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.file.Path;
 
 @Service
 public class ExcelConversionService {
-    
+
     /**
      * Ensure the file is in .xlsx format.
-     * If .xls is uploaded, convert to .xlsx.
-     * 
+     *
      * @param file Uploaded file
      * @param tempDir Directory for temporary files
-     * @return Path to .xlsx file (may be converted)
+     * @return Path to validated .xlsx file
      */
     public Path ensureXlsxFormat(MultipartFile file, Path tempDir) throws IOException {
         String originalName = file.getOriginalFilename();
-        
+
         if (originalName == null) {
             throw new IllegalArgumentException("파일명이 없습니다");
         }
-        
-        String lowerName = originalName.toLowerCase();
-        
+
+        String safeName = SecureExcelUtils.sanitizeFilename(originalName);
+        String lowerName = safeName.toLowerCase();
+
         if (lowerName.endsWith(".xlsx")) {
-            // Already xlsx - save directly
-            Path targetPath = tempDir.resolve(originalName);
+            Path targetPath = tempDir.resolve(safeName);
             file.transferTo(targetPath);
+            SecureExcelUtils.validateFileContent(targetPath);
             return targetPath;
-            
-        } else if (lowerName.endsWith(".xls")) {
-            // Convert xls to xlsx
-            return convertXlsToXlsx(file, tempDir, originalName);
-            
         } else {
             throw new IllegalArgumentException(
-                "지원하지 않는 파일 형식입니다. .xlsx 또는 .xls 파일만 업로드 가능합니다.");
-        }
-    }
-    
-    private Path convertXlsToXlsx(MultipartFile file, Path tempDir, String originalName) 
-            throws IOException {
-        
-        // Read as HSSFWorkbook (.xls)
-        try (InputStream is = file.getInputStream();
-             HSSFWorkbook hssfWorkbook = new HSSFWorkbook(is)) {
-            
-            // Create new XSSFWorkbook and copy content
-            XSSFWorkbook xssfWorkbook = convertWorkbook(hssfWorkbook);
-            
-            // Generate new filename
-            String newName = originalName.substring(0, originalName.lastIndexOf('.')) + ".xlsx";
-            Path targetPath = tempDir.resolve(newName);
-            
-            // Write xlsx
-            try (OutputStream os = Files.newOutputStream(targetPath)) {
-                xssfWorkbook.write(os);
-            }
-            
-            xssfWorkbook.close();
-            return targetPath;
-        }
-    }
-    
-    private XSSFWorkbook convertWorkbook(HSSFWorkbook hssfWorkbook) {
-        // For simple conversion, we can use POI's built-in mechanisms
-        // or implement sheet-by-sheet, row-by-row copy
-        
-        // Simple approach: Write to temp xlsx via streaming
-        // Note: This is a simplified version. For production, consider
-        // using a library like 'poi-converter' or manual cell-by-cell copy
-        // to preserve all formatting.
-        
-        XSSFWorkbook xssfWorkbook = new XSSFWorkbook();
-        
-        for (int i = 0; i < hssfWorkbook.getNumberOfSheets(); i++) {
-            var hssfSheet = hssfWorkbook.getSheetAt(i);
-            var xssfSheet = xssfWorkbook.createSheet(hssfSheet.getSheetName());
-            
-            // Copy merged regions
-            for (var mergedRegion : hssfSheet.getMergedRegions()) {
-                xssfSheet.addMergedRegion(mergedRegion);
-            }
-            
-            // Copy rows and cells
-            for (var hssfRow : hssfSheet) {
-                var xssfRow = xssfSheet.createRow(hssfRow.getRowNum());
-                
-                for (var hssfCell : hssfRow) {
-                    var xssfCell = xssfRow.createCell(hssfCell.getColumnIndex());
-                    copyCellValue(hssfCell, xssfCell);
-                }
-            }
-        }
-        
-        return xssfWorkbook;
-    }
-    
-    private void copyCellValue(org.apache.poi.ss.usermodel.Cell source,
-                               org.apache.poi.ss.usermodel.Cell target) {
-        switch (source.getCellType()) {
-            case STRING -> target.setCellValue(source.getStringCellValue());
-            case NUMERIC -> target.setCellValue(source.getNumericCellValue());
-            case BOOLEAN -> target.setCellValue(source.getBooleanCellValue());
-            case FORMULA -> target.setCellFormula(source.getCellFormula());
-            case BLANK -> target.setBlank();
-            default -> { /* ignore */ }
+                "지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.");
         }
     }
 }
@@ -613,7 +533,7 @@ src/main/java/com/foo/excel/
 ├── controller/
 │   └── ExcelUploadController.java
 ├── service/
-│   ├── ExcelConversionService.java      # .xls → .xlsx conversion
+│   ├── ExcelConversionService.java      # .xlsx file validation
 │   ├── ExcelParserService.java          # Reads Excel → List<DTO>
 │   ├── ExcelValidationService.java      # JSR-380 + custom validation
 │   ├── ExcelErrorReportService.java     # Generates error-annotated Excel
@@ -683,30 +603,15 @@ spring.servlet.multipart.max-request-size=10MB
                     ┌──────────────┐
                     │  User        │
                     │  uploads     │
-                    │  .xls/.xlsx  │
+                    │  .xlsx       │
                     └──────┬───────┘
                            │
                            ▼
                     ┌──────────────┐
-                    │  Check       │
+                    │  Validate    │
+                    │  .xlsx       │
                     │  extension   │
                     └──────┬───────┘
-                           │
-              ┌────────────┴────────────┐
-              │                         │
-              ▼                         ▼
-       ┌─────────────┐          ┌─────────────┐
-       │  .xls       │          │  .xlsx      │
-       │  detected   │          │  detected   │
-       └──────┬──────┘          └──────┬──────┘
-              │                        │
-              ▼                        │
-       ┌─────────────┐                 │
-       │  Convert    │                 │
-       │  to .xlsx   │                 │
-       └──────┬──────┘                 │
-              │                        │
-              └────────────┬───────────┘
                            │
                            ▼
                     ┌──────────────┐
@@ -761,7 +666,7 @@ spring.servlet.multipart.max-request-size=10MB
 ```
 POST /api/excel/upload/{templateType}
   - Request: multipart/form-data with file
-  - Accepts: .xls or .xlsx
+  - Accepts: .xlsx
   - Response 200 (success):
     {
       "success": true,
@@ -800,7 +705,7 @@ GET /api/excel/template/{templateType}
 5. Create `ExcelImportProperties` configuration
 
 ### Phase 2: Parsing
-6. Create `ExcelConversionService` (.xls → .xlsx)
+6. Create `ExcelConversionService` (.xlsx validation)
 7. Create `ExcelParserService` (with merged cell handling)
 
 ### Phase 3: Validation

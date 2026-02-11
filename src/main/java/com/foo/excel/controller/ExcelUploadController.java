@@ -185,10 +185,6 @@ public class ExcelUploadController {
             if (Files.exists(metaFile)) {
                 String originalName = Files.readString(metaFile, StandardCharsets.UTF_8).trim();
                 if (!originalName.isBlank()) {
-                    // Normalize extension: .xls → .xlsx (source was converted)
-                    if (originalName.toLowerCase().endsWith(".xls")) {
-                        originalName = originalName.substring(0, originalName.length() - 4) + ".xlsx";
-                    }
                     return "오류_" + originalName;
                 }
             }

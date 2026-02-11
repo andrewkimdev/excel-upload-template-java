@@ -1,7 +1,6 @@
 package com.foo.excel.util;
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.junit.jupiter.api.Test;
@@ -87,9 +86,10 @@ class SecureExcelUtilsTest {
     }
 
     @Test
-    void sanitizeFilename_validXls_passesThrough() {
-        String result = SecureExcelUtils.sanitizeFilename("legacy_data.xls");
-        assertThat(result).isEqualTo("legacy_data.xls");
+    void sanitizeFilename_xlsExtension_throws() {
+        assertThatThrownBy(() -> SecureExcelUtils.sanitizeFilename("legacy_data.xls"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("extension");
     }
 
     @Test
@@ -99,7 +99,7 @@ class SecureExcelUtilsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"data.csv", "data.txt", "data.pdf", "data", "data.exe"})
+    @ValueSource(strings = {"data.csv", "data.txt", "data.pdf", "data", "data.exe", "data.xls"})
     void sanitizeFilename_invalidExtension_throws(String filename) {
         assertThatThrownBy(() -> SecureExcelUtils.sanitizeFilename(filename))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -134,13 +134,6 @@ class SecureExcelUtilsTest {
     }
 
     @Test
-    void validateFileContent_validXls_passes() throws IOException {
-        Path xlsFile = createValidXlsFile();
-        assertThatCode(() -> SecureExcelUtils.validateFileContent(xlsFile))
-                .doesNotThrowAnyException();
-    }
-
-    @Test
     void validateFileContent_xlsxWithWrongMagicBytes_throwsSecurityException() throws IOException {
         // Create a file with .xlsx extension but PDF content
         Path fakeXlsx = tempDir.resolve("fake.xlsx");
@@ -149,17 +142,6 @@ class SecureExcelUtilsTest {
         assertThatThrownBy(() -> SecureExcelUtils.validateFileContent(fakeXlsx))
                 .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("XLSX");
-    }
-
-    @Test
-    void validateFileContent_xlsWithWrongMagicBytes_throwsSecurityException() throws IOException {
-        // Create a file with .xls extension but text content
-        Path fakeXls = tempDir.resolve("fake.xls");
-        Files.write(fakeXls, "This is not an Excel file".getBytes());
-
-        assertThatThrownBy(() -> SecureExcelUtils.validateFileContent(fakeXls))
-                .isInstanceOf(SecurityException.class)
-                .hasMessageContaining("XLS");
     }
 
     @Test
@@ -191,15 +173,6 @@ class SecureExcelUtilsTest {
         ByteArrayInputStream stream = new ByteArrayInputStream(xlsxMagic);
 
         assertThatCode(() -> SecureExcelUtils.validateStreamContent(stream, "xlsx"))
-                .doesNotThrowAnyException();
-    }
-
-    @Test
-    void validateStreamContent_validXlsStream_passes() throws IOException {
-        byte[] xlsMagic = {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, 0x00, 0x00, 0x00, 0x00};
-        ByteArrayInputStream stream = new ByteArrayInputStream(xlsMagic);
-
-        assertThatCode(() -> SecureExcelUtils.validateStreamContent(stream, "xls"))
                 .doesNotThrowAnyException();
     }
 
@@ -375,16 +348,6 @@ class SecureExcelUtilsTest {
     }
 
     @Test
-    void createWorkbook_validXlsFile_returnsWorkbook() throws IOException {
-        Path xlsFile = createValidXlsFile();
-
-        try (Workbook workbook = SecureExcelUtils.createWorkbook(xlsFile)) {
-            assertThat(workbook).isNotNull();
-            assertThat(workbook.getNumberOfSheets()).isEqualTo(1);
-        }
-    }
-
-    @Test
     void createWorkbook_invalidXlsxContent_throws() throws IOException {
         Path fakeXlsx = tempDir.resolve("fake.xlsx");
         Files.write(fakeXlsx, "Not a valid Excel file".getBytes());
@@ -425,19 +388,6 @@ class SecureExcelUtilsTest {
                 sheet.createRow(i + 1).createCell(0).setCellValue("Row" + i);
             }
             Path file = tempDir.resolve("rows_" + dataRows + ".xlsx");
-            try (OutputStream os = Files.newOutputStream(file)) {
-                wb.write(os);
-            }
-            return file;
-        }
-    }
-
-    private Path createValidXlsFile() throws IOException {
-        try (HSSFWorkbook wb = new HSSFWorkbook()) {
-            Sheet sheet = wb.createSheet("TestSheet");
-            sheet.createRow(0).createCell(0).setCellValue("Test");
-
-            Path file = tempDir.resolve("valid.xls");
             try (OutputStream os = Files.newOutputStream(file)) {
                 wb.write(os);
             }

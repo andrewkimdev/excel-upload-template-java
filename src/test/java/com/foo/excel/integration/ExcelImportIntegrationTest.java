@@ -2,7 +2,6 @@ package com.foo.excel.integration;
 
 import com.foo.excel.ExcelUploadApplication;
 import com.foo.excel.config.ExcelImportProperties;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -108,17 +107,15 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
-    void upload_xlsFile_autoConvertsAndProcesses() throws Exception {
-        byte[] xlsBytes = createValidTariffExemptionXls(2);
+    void upload_xlsFile_rejected() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tariff.xls",
                 "application/vnd.ms-excel",
-                xlsBytes);
+                new byte[0]);
 
         mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.rowsProcessed").value(2));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
     }
 
     @Test
@@ -203,16 +200,6 @@ class ExcelImportIntegrationTest {
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Sheet1");
             fillTariffExemptionSheet(sheet, 1, true);
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            wb.write(bos);
-            return bos.toByteArray();
-        }
-    }
-
-    private byte[] createValidTariffExemptionXls(int dataRows) throws IOException {
-        try (HSSFWorkbook wb = new HSSFWorkbook()) {
-            Sheet sheet = wb.createSheet("Sheet1");
-            fillTariffExemptionSheet(sheet, dataRows, false);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             wb.write(bos);
             return bos.toByteArray();
