@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Excel File Upload</h1>
+        <h1>Excel 파일 업로드</h1>
 
         <!--
         SECURITY NOTES FOR CONSUMERS:
@@ -25,19 +25,39 @@
         -->
         <form method="post" th:action="@{/upload}" enctype="multipart/form-data">
             <div class="form-group">
-                <label for="templateType">Template Type</label>
+                <label for="templateType">템플릿 유형</label>
                 <select id="templateType" name="templateType" required>
                     <option value="tariff-exemption">Tariff Exemption (관세면제)</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="file">Excel File (.xls / .xlsx)</label>
+                <label for="comeYear">반입연도 (comeYear)</label>
+                <input type="text" id="comeYear" name="comeYear" required>
+            </div>
+
+            <div class="form-group">
+                <label for="comeSequence">반입순번 (comeSequence)</label>
+                <input type="text" id="comeSequence" name="comeSequence" required>
+            </div>
+
+            <div class="form-group">
+                <label for="uploadSequence">업로드순번 (uploadSequence)</label>
+                <input type="text" id="uploadSequence" name="uploadSequence" required>
+            </div>
+
+            <div class="form-group">
+                <label for="equipCode">장비코드 (equipCode)</label>
+                <input type="text" id="equipCode" name="equipCode" required>
+            </div>
+
+            <div class="form-group">
+                <label for="file">Excel 파일 (.xlsx)</label>
                 <!--
                 SECURITY: The 'accept' attribute is for UX only and can be bypassed.
                 Server-side validation (magic bytes check) provides actual security.
                 -->
-                <input type="file" id="file" name="file" accept=".xls,.xlsx" required>
+                <input type="file" id="file" name="file" accept=".xlsx" required>
             </div>
 
             <button type="submit">Upload</button>

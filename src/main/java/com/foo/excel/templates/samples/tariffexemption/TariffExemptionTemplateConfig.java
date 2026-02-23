@@ -9,14 +9,13 @@ public class TariffExemptionTemplateConfig {
 
     @Bean
     public TemplateDefinition<TariffExemptionDto> tariffExemptionTemplate(
-            TariffExemptionService persistenceHandler,
-            TariffExemptionDbUniquenessChecker dbUniquenessChecker) {
+            TariffExemptionService persistenceHandler) {
         return new TemplateDefinition<>(
                 "tariff-exemption",
                 TariffExemptionDto.class,
                 new TariffExemptionImportConfig(),
                 persistenceHandler,
-                dbUniquenessChecker
+                null
         );
     }
 }

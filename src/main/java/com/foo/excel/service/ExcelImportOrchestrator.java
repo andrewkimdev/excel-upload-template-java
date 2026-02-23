@@ -42,9 +42,10 @@ public class ExcelImportOrchestrator {
             String originalFilename,
             String message) {}
 
-    public ImportResult processUpload(MultipartFile file, String templateType) throws IOException {
+    public ImportResult processUpload(MultipartFile file, String templateType, UploadCommonData commonData)
+            throws IOException {
         TemplateDefinition<?> template = findTemplate(templateType);
-        return doProcess(template, file);
+        return doProcess(template, file, commonData);
     }
 
     private TemplateDefinition<?> findTemplate(String templateType) {
@@ -56,7 +57,8 @@ public class ExcelImportOrchestrator {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> ImportResult doProcess(TemplateDefinition<T> template, MultipartFile file)
+    private <T> ImportResult doProcess(TemplateDefinition<T> template, MultipartFile file,
+                                       UploadCommonData commonData)
             throws IOException {
 
         ExcelImportConfig config = template.getConfig();
@@ -126,7 +128,10 @@ public class ExcelImportOrchestrator {
             if (validationResult.isValid()) {
                 // 8. Persist
                 PersistenceHandler.SaveResult saveResult =
-                        template.getPersistenceHandler().saveAll(parseResult.rows());
+                        template.getPersistenceHandler().saveAll(
+                                parseResult.rows(),
+                                parseResult.sourceRowNumbers(),
+                                commonData);
 
                 return ImportResult.builder()
                         .success(true)

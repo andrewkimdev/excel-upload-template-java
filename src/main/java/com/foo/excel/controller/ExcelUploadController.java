@@ -1,8 +1,15 @@
 package com.foo.excel.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.service.ExcelImportOrchestrator;
 import com.foo.excel.service.ExcelImportOrchestrator.ImportResult;
+import com.foo.excel.service.UploadCommonData;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
@@ -69,6 +76,8 @@ public class ExcelUploadController {
 
     private final ExcelImportOrchestrator orchestrator;
     private final ExcelImportProperties properties;
+    private final ObjectMapper objectMapper;
+    private final Validator validator;
 
     private static final Pattern UUID_PATTERN =
             Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
@@ -79,7 +88,8 @@ public class ExcelUploadController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> apiUpload(
             @PathVariable String templateType,
-            @RequestParam("file") MultipartFile file) {
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "commonData", required = false) String commonDataJson) {
 
         try {
             ImportResult fileSizeError = checkFileSize(file);
@@ -91,7 +101,9 @@ public class ExcelUploadController {
                 return ResponseEntity.badRequest().body(error);
             }
 
-            ImportResult result = orchestrator.processUpload(file, templateType);
+            UploadCommonData commonData = parseAndValidateCommonData(commonDataJson);
+
+            ImportResult result = orchestrator.processUpload(file, templateType, commonData);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("success", result.success());
@@ -111,16 +123,16 @@ public class ExcelUploadController {
                 return ResponseEntity.badRequest().body(response);
             }
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid request during upload: {}", e.getMessage());
+            log.warn("업로드 요청 오류: {}", e.getMessage());
             Map<String, Object> error = Map.of(
                     "success", false,
-                    "message", "잘못된 요청입니다. 파일 형식과 템플릿 유형을 확인하세요."
+                    "message", e.getMessage()
             );
             return ResponseEntity.badRequest().body(error);
         } catch (SecurityException e) {
             // SECURITY: Security exceptions indicate potential attacks.
             // Log the details but return a generic message to avoid information disclosure.
-            log.warn("Security violation during upload: {}", e.getMessage());
+            log.warn("업로드 보안 검증 실패: {}", e.getMessage());
             Map<String, Object> error = Map.of(
                     "success", false,
                     "message", "파일 보안 검증에 실패했습니다"
@@ -130,7 +142,7 @@ public class ExcelUploadController {
             // SECURITY: Do not expose internal error details to users.
             // Exception messages may contain file paths, stack traces, or other sensitive info.
             // Log the full error for debugging but return a generic message.
-            log.error("Upload failed", e);
+            log.error("업로드 처리 실패", e);
             Map<String, Object> error = Map.of(
                     "success", false,
                     "message", "파일 처리 중 오류가 발생했습니다. 관리자에게 문의하세요."
@@ -185,10 +197,6 @@ public class ExcelUploadController {
             if (Files.exists(metaFile)) {
                 String originalName = Files.readString(metaFile, StandardCharsets.UTF_8).trim();
                 if (!originalName.isBlank()) {
-                    // Normalize extension: .xls → .xlsx (source was converted)
-                    if (originalName.toLowerCase().endsWith(".xls")) {
-                        originalName = originalName.substring(0, originalName.length() - 4) + ".xlsx";
-                    }
                     return "오류_" + originalName;
                 }
             }
@@ -224,6 +232,10 @@ public class ExcelUploadController {
     @PostMapping("/upload")
     public String handleUpload(
             @RequestParam("templateType") String templateType,
+            @RequestParam("comeYear") String comeYear,
+            @RequestParam("comeSequence") String comeSequence,
+            @RequestParam("uploadSequence") String uploadSequence,
+            @RequestParam("equipCode") String equipCode,
             @RequestParam("file") MultipartFile file,
             Model model) {
 
@@ -234,18 +246,22 @@ public class ExcelUploadController {
                 return "result";
             }
 
-            ImportResult result = orchestrator.processUpload(file, templateType);
+            UploadCommonData commonData = buildCommonDataFromForm(
+                    comeYear, comeSequence, uploadSequence, equipCode);
+            validateCommonData(commonData);
+
+            ImportResult result = orchestrator.processUpload(file, templateType, commonData);
             model.addAttribute("result", result);
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid request during upload: {}", e.getMessage());
+            log.warn("업로드 요청 오류: {}", e.getMessage());
             model.addAttribute("result", ImportResult.builder()
                     .success(false)
-                    .message("잘못된 요청입니다. 파일 형식과 템플릿 유형을 확인하세요.")
+                    .message(e.getMessage())
                     .build());
         } catch (SecurityException e) {
             // SECURITY: Security exceptions indicate potential attacks.
             // Log the details but return a generic message to avoid information disclosure.
-            log.warn("Security violation during upload: {}", e.getMessage());
+            log.warn("업로드 보안 검증 실패: {}", e.getMessage());
             model.addAttribute("result", ImportResult.builder()
                     .success(false)
                     .message("파일 보안 검증에 실패했습니다")
@@ -253,7 +269,7 @@ public class ExcelUploadController {
         } catch (Exception e) {
             // SECURITY: Do not expose internal error details to users.
             // Exception messages may contain file paths, stack traces, or other sensitive info.
-            log.error("Upload failed", e);
+            log.error("업로드 처리 실패", e);
             model.addAttribute("result", ImportResult.builder()
                     .success(false)
                     .message("파일 처리 중 오류가 발생했습니다. 관리자에게 문의하세요.")
@@ -272,5 +288,44 @@ public class ExcelUploadController {
                     .build();
         }
         return null;
+    }
+
+    private UploadCommonData parseAndValidateCommonData(String commonDataJson) {
+        if (commonDataJson == null || commonDataJson.isBlank()) {
+            throw new IllegalArgumentException("commonData 파트는 필수입니다.");
+        }
+
+        try {
+            ObjectMapper strictMapper = objectMapper.copy()
+                    .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                    .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
+
+            UploadCommonData commonData = strictMapper.readValue(commonDataJson, UploadCommonData.class);
+            validateCommonData(commonData);
+            return commonData;
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("commonData 형식이 올바르지 않습니다.");
+        }
+    }
+
+    private UploadCommonData buildCommonDataFromForm(
+            String comeYear,
+            String comeSequence,
+            String uploadSequence,
+            String equipCode) {
+        UploadCommonData commonData = new UploadCommonData();
+        commonData.setComeYear(comeYear);
+        commonData.setComeSequence(comeSequence);
+        commonData.setUploadSequence(uploadSequence);
+        commonData.setEquipCode(equipCode);
+        return commonData;
+    }
+
+    private void validateCommonData(UploadCommonData commonData) {
+        var violations = validator.validate(commonData);
+        if (!violations.isEmpty()) {
+            ConstraintViolation<UploadCommonData> violation = violations.iterator().next();
+            throw new IllegalArgumentException(violation.getMessage());
+        }
     }
 }

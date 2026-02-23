@@ -6,9 +6,15 @@ import java.util.Optional;
 
 public interface TariffExemptionRepository extends JpaRepository<TariffExemption, Long> {
 
-    Optional<TariffExemption> findByItemNameAndSpecificationAndHsCode(
-            String itemName, String specification, String hsCode);
+    Optional<TariffExemption> findByComeYearAndComeSequenceAndUploadSequenceAndEquipCodeAndRowNumber(
+            String comeYear,
+            String comeSequence,
+            String uploadSequence,
+            String equipCode,
+            Integer rowNumber);
 
     boolean existsByItemNameAndSpecificationAndHsCode(
-            String itemName, String specification, String hsCode);
+            String itemName,
+            String specification,
+            String hsCode);
 }
