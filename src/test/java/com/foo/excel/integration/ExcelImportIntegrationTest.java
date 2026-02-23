@@ -54,7 +54,9 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(requiredCommonDataPart()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.rowsProcessed").value(2))
@@ -69,7 +71,9 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.errorRows").value(greaterThan(0)))
@@ -86,7 +90,9 @@ class ExcelImportIntegrationTest {
                 xlsxBytes);
 
         MvcResult uploadResult = mockMvc.perform(
-                multipart("/api/excel/upload/tariff-exemption").file(file))
+                multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.downloadUrl").exists())
                 .andReturn();
@@ -108,17 +114,19 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
-    void upload_xlsFile_autoConvertsAndProcesses() throws Exception {
+    void upload_xlsFile_rejected() throws Exception {
         byte[] xlsBytes = createValidTariffExemptionXls(2);
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tariff.xls",
                 "application/vnd.ms-excel",
                 xlsBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.rowsProcessed").value(2));
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(requiredCommonDataPart()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(containsString(".xlsx")));
     }
 
     @Test
@@ -129,7 +137,9 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/unknown-type").file(file))
+        mockMvc.perform(multipart("/api/excel/upload/unknown-type")
+                        .file(file)
+                        .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
     }
@@ -149,7 +159,9 @@ class ExcelImportIntegrationTest {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     xlsxBytes);
 
-            mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+            mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                            .file(file)
+                            .file(requiredCommonDataPart()))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
                     .andExpect(jsonPath("$.message").value(containsString("최대 행 수")));
@@ -169,7 +181,9 @@ class ExcelImportIntegrationTest {
                 largeBytes);
 
         // Spring's multipart max-file-size should reject this
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(requiredCommonDataPart()))
                 .andExpect(status().is4xxClientError());
     }
 
@@ -181,7 +195,9 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value(containsString("헤더가 일치하지 않습니다")));
@@ -299,5 +315,19 @@ class ExcelImportIntegrationTest {
         int start = jsonResponse.indexOf("\"downloadUrl\":\"") + "\"downloadUrl\":\"".length();
         int end = jsonResponse.indexOf("\"", start);
         return jsonResponse.substring(start, end);
+    }
+
+    private MockMultipartFile requiredCommonDataPart() {
+        return new MockMultipartFile(
+                "commonData",
+                "commonData",
+                MediaType.APPLICATION_JSON_VALUE,
+                ("{" +
+                        "\"comeYear\":\"2026\"," +
+                        "\"comeSequence\":\"001\"," +
+                        "\"uploadSequence\":\"U001\"," +
+                        "\"equipCode\":\"EQ-01\"" +
+                        "}").getBytes()
+        );
     }
 }
