@@ -29,19 +29,22 @@ When documents conflict, use this order:
   - reject legacy `.xls` and accept `.xlsx` only
   - secure workbook opening
   - row pre-count / row-limit checks
-- Do not expose internal exception details to users in controller responses.
+- Hide internal exception details for unexpected/system failures in controller responses.
 - Keep user-facing messages and logs in Korean.
 - Use Thymeleaf escaping (`th:text`) for user content.
+- Keep REST `commonData` contract strict: reject unknown JSON fields (`FAIL_ON_UNKNOWN_PROPERTIES`).
 - Add new Excel templates under `com.foo.excel.templates...` using the existing pattern:
   - DTO (`@ExcelColumn` + validation)
   - `ExcelImportConfig`
   - `PersistenceHandler` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, UploadCommonData commonData)`)
   - optional `DatabaseUniquenessChecker`
   - `TemplateDefinition` bean wiring
+  - include summary entity/repository where the template uses upload-level aggregate persistence
 
 ## Guardrails for Changes
 
 - Avoid introducing rules that conflict with current implementation.
 - Do not enforce style mandates not present in `README.md` or `docs/SPEC-final.md`.
 - If a broad policy from `CLAUDE.md` is unsupported by code/docs, treat it as optional guidance.
+- Keep documentation inventories (architecture/tests) synchronized with implemented classes/tests (e.g., summary repositories and contract tests).
 - After edits, run relevant tests before finalizing.

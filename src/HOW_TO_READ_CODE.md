@@ -1,107 +1,90 @@
 # How to Read This Codebase
 
-The codebase is ~2,750 lines of production code and ~2,550 lines of tests across 41 Java files — very manageable.
+This guide is a practical reading order for the current implementation.
 
----
+## 1) Start with runtime truth
 
-## Phase 1: Orientation (read once, skim)
+1. `src/main/java/com/foo/excel/controller/ExcelUploadController.java`
+2. `src/main/java/com/foo/excel/service/ExcelImportOrchestrator.java`
+3. `src/main/java/com/foo/excel/service/ExcelConversionService.java`
+4. `src/main/java/com/foo/excel/service/ExcelParserService.java`
+5. `src/main/java/com/foo/excel/service/ExcelValidationService.java`
+6. `src/main/java/com/foo/excel/validation/UniqueConstraintValidator.java`
+7. `src/main/java/com/foo/excel/service/ExcelErrorReportService.java`
 
-1. **SPEC.md** — You wrote this, but re-read it now so the intended design is fresh
-2. **CLAUDE.md** — Coding standards and resolved tech debt; establishes what "correct" looks like
-3. **README.md** — Architecture overview
-4. **build.gradle** — Dependencies, versions, what's actually pulled in
+These files show the full upload flow end-to-end.
 
-## Phase 2: The annotation DSL (~130 lines)
+## 2) Keep these current behavior facts in mind
 
-This is the "API" your users see when defining a template. Read these first because every service references them.
+- Upload accepts `.xlsx` only. `.xls` is rejected in `ExcelConversionService`.
+- `commonData` is required for REST upload (`/api/excel/upload/{templateType}`).
+- `commonData` is parsed strictly (`FAIL_ON_UNKNOWN_PROPERTIES`, coercion disabled).
+- Server-managed fields are fixed by `UploadCommonData`: `createdBy=user01`, `approvedYn=N`.
+- Security path uses filename sanitization, magic-byte validation, secure workbook open, row pre-count, parser row-limit early-exit.
+- Error reports preserve formatting, add `_ERRORS`, sanitize formula-like values, and store original filename in a `.meta` file.
 
-5. **ExcelColumn.java** — The core annotation
-6. **HeaderMatchMode.java** — Matching strategy enum
-7. **ExcelUnique.java** — Single-field uniqueness
-8. **ExcelCompositeUnique.java** + **ExcelCompositeUniques.java** — Multi-field uniqueness
+## 3) Read the annotation/config DSL
 
-## Phase 3: Configuration & wiring (~100 lines)
+- `src/main/java/com/foo/excel/annotation/ExcelColumn.java`
+- `src/main/java/com/foo/excel/annotation/HeaderMatchMode.java`
+- `src/main/java/com/foo/excel/annotation/ExcelUnique.java`
+- `src/main/java/com/foo/excel/annotation/ExcelCompositeUnique.java`
+- `src/main/java/com/foo/excel/annotation/ExcelCompositeUniques.java`
+- `src/main/java/com/foo/excel/config/ExcelImportConfig.java`
+- `src/main/java/com/foo/excel/config/ExcelImportProperties.java`
+- `src/main/java/com/foo/excel/service/TemplateDefinition.java`
 
-9. **ExcelImportConfig.java** — Interface each template implements
-10. **ExcelImportProperties.java** — `@ConfigurationProperties` for limits
-11. **TemplateDefinition.java** — The bean that ties a template together (auto-discovery mechanism)
+## 4) Read utilities and error model
 
-## Phase 4: The processing pipeline (core logic, ~1,930 lines)
+- `src/main/java/com/foo/excel/util/SecureExcelUtils.java`
+- `src/main/java/com/foo/excel/util/WorkbookCopyUtils.java`
+- `src/main/java/com/foo/excel/util/ExcelColumnUtil.java`
+- `src/main/java/com/foo/excel/validation/CellError.java`
+- `src/main/java/com/foo/excel/validation/RowError.java`
+- `src/main/java/com/foo/excel/validation/ExcelValidationResult.java`
 
-Read in execution order — this is how an upload flows through the system:
+## 5) Read the sample template implementation
 
-12. **ExcelUploadController.java** — Entry point, HTTP handling, error report download with original filename
-13. **SecureExcelUtils.java** — Security checks + lightweight SAX row counting (`countRows()`)
-14. **ExcelImportOrchestrator.java** — **Read this carefully** — it's the conductor that calls everything below (includes SAX pre-count gate)
-15. **ExcelParserService.java** — **Largest file**, POI workbook → DTO conversion with early-exit on row limit. Take your time here
-16. **ExcelColumnUtil.java** (72 lines) — Reflection helper for annotations
-17. **WorkbookCopyUtils.java** (198 lines) — Stateless helpers for copying styles, cell values, column widths, and merged regions between workbooks. Used by both ExcelConversionService (HSSF→XSSF cross-format) and ExcelErrorReportService (format-preserving rebuild)
-18. **ExcelConversionService.java** (142 lines) — .xls → .xlsx auto-conversion with style/width/height preservation
-19. **ExcelValidationService.java** (123 lines) — JSR-380 + custom validation
-20. **UniqueConstraintValidator.java** (172 lines) — In-file + DB uniqueness enforcement
-21. **ExcelErrorReportService.java** (193 lines) — Format-preserving error report generation via SXSSFWorkbook full-rebuild
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionDto.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionImportConfig.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionTemplateConfig.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionService.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemption.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionSummary.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionRepository.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionSummaryRepository.java`
+- `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionDbUniquenessChecker.java`
 
-## Phase 5: Validation DTOs (~45 lines, quick)
+Note: `TariffExemptionTemplateConfig` currently wires `dbUniquenessChecker` as `null`, so DB uniqueness in the orchestrator is optional and disabled for the active template wiring.
 
-22. **CellError.java**, **RowError.java**, **ExcelValidationResult.java** — Data carriers for validation results
+## 6) Read the web layer
 
-## Phase 6: The sample template (~380 lines)
+- `src/main/resources/templates/upload.html`
+- `src/main/resources/templates/result.html`
+- `src/main/resources/static/style.css`
+- `src/main/resources/application.properties`
 
-This is a complete worked example. Read it as a cohesive unit:
+## 7) Read tests in pipeline order
 
-23. **TariffExemptionDto.java** — DTO with annotations (shows how the DSL is used)
-24. **TariffExemptionImportConfig.java** — Config implementation
-25. **TariffExemption.java** — JPA entity
-26. **TariffExemptionRepository.java** — Spring Data repo
-27. **TariffExemptionService.java** — Persistence handler
-28. **TariffExemptionDbUniquenessChecker.java** — DB-level uniqueness
-29. **TariffExemptionTemplateConfig.java** — Wires the `TemplateDefinition` bean
+- `src/test/java/com/foo/excel/util/SecureExcelUtilsTest.java`
+- `src/test/java/com/foo/excel/service/ExcelConversionServiceTest.java`
+- `src/test/java/com/foo/excel/service/ExcelParserServiceTest.java`
+- `src/test/java/com/foo/excel/service/ExcelValidationServiceTest.java`
+- `src/test/java/com/foo/excel/validation/UniqueConstraintValidatorTest.java`
+- `src/test/java/com/foo/excel/service/ExcelErrorReportServiceTest.java`
+- `src/test/java/com/foo/excel/integration/ExcelImportIntegrationTest.java`
+- `src/test/java/com/foo/excel/util/WorkbookCopyUtilsTest.java`
+- `src/test/java/com/foo/excel/util/ExcelColumnUtilTest.java`
+- `src/test/java/com/foo/excel/service/ColumnResolutionExceptionTest.java`
+- `src/test/java/com/foo/excel/plan/TariffUploadPlanContractTest.java`
 
-## Phase 7: Remaining services
-
-30. **TempFileCleanupService.java** — Scheduled cleanup (covers .xlsx and .meta files)
-31. **PersistenceHandler.java** + **DatabaseUniquenessChecker.java** — SPI interfaces
-
-## Phase 8: Web layer
-
-32. **application.properties**
-33. **upload.html** + **result.html**
-34. **style.css**
-
-## Phase 9: Tests (read alongside or after the source)
-
-Read in the same pipeline order. The tests double as documentation of edge cases:
-
-35. **SecureExcelUtilsTest.java** (377 lines)
-36. **ExcelParserServiceTest.java** (419 lines) — largest test
-37. **WorkbookCopyUtilsTest.java** (202 lines) — same-format and cross-format style mapping, error styles, all CellTypes
-38. **ExcelConversionServiceTest.java** (338 lines) — includes style/width/height preservation and security tests
-39. **ExcelValidationServiceTest.java** (209 lines)
-40. **UniqueConstraintValidatorTest.java** (168 lines)
-41. **ExcelErrorReportServiceTest.java** (520 lines) — format preservation, multi-sheet copy, disclaimer footer, .meta file
-42. **ExcelColumnUtilTest.java** (93 lines)
-43. **ExcelImportIntegrationTest.java** (234 lines) — end-to-end, read last
-
----
-
-## Before you start reading
-
-Run the app and upload a file so you have a mental model of what the code produces:
+## 8) Quick manual check before deep reading
 
 ```bash
 ./gradlew bootRun
 ```
 
-Then visit `http://localhost:8080`, upload a valid file, upload an invalid one, and see the error report. Having that experience makes the code much easier to follow.
-
----
-
-## Things to watch for as you read
-
-- **The orchestrator is the spine.** If you only read one file deeply, make it `ExcelImportOrchestrator.java`. It shows the full parse → validate → persist → report flow in one place.
-- **SPEC.md drift.** The original spec mentioned `getSkipColumnIndices()` on the config interface — the implementation removed it (parser reads only `@ExcelColumn`-annotated columns). `required()` on `@ExcelColumn` has been restored with column-existence semantics (orthogonal to JSR-380 cell-value validation).
-- **Generic type erasure.** The orchestrator has a `@SuppressWarnings("unchecked")` cast that's inherent to how `TemplateDefinition<T>` works with Spring's bean registry. Understand why it's unavoidable.
-- **Security surface.** `SecureExcelUtils` handles zip bombs, XXE, path traversal, and lightweight row counting (`countRows()` via StAX). Worth understanding what threats are covered and whether there are gaps for your use case.
-- **WorkbookCopyUtils and cross-format copying.** POI's `cloneStyleFrom()` does not support HSSF→XSSF. `WorkbookCopyUtils` handles this via manual property copying with font index mapping. Understand the `isCrossFormat` branch.
-- **Test coverage gaps.** There's no dedicated test for `ExcelUploadController`, `TempFileCleanupService`, or the tariff exemption template classes. The integration test covers some controller paths, but mocking-level controller tests are absent.
-- **The `ExcelParserService.ParseResult` inner class** — check whether this could be a Java record per your CLAUDE.md rules. Same for any other static inner DTOs.
+Then test:
+- upload a valid `.xlsx`
+- upload invalid data to trigger error report
+- verify `/api/excel/download/{fileId}` download behavior

@@ -69,7 +69,7 @@ Spring Boot processes requests concurrently. Non-thread-safe POI objects (e.g., 
 
 ### NEVER expose internal details to users
 
-Controllers MUST catch all exceptions and return generic Korean error messages. NEVER return `e.getMessage()`, stack traces, or file paths.
+Controllers MUST hide internal exception details for unexpected/system failures. Do not return stack traces, file paths, or raw internal exception payloads to users.
 
 ### MUST use `SecureExcelUtils` for all file operations
 
@@ -88,7 +88,7 @@ Controllers MUST catch all exceptions and return generic Korean error messages. 
 - `createdBy` and `approvedYn` are server-managed:
   - force `createdBy=user01`
   - force `approvedYn=N`
-- If client sends `createdBy` or `approvedYn`, server MUST ignore them.
+- `commonData` uses strict JSON parsing (`FAIL_ON_UNKNOWN_PROPERTIES`), so unknown fields are rejected.
 
 ### Thymeleaf
 
@@ -110,7 +110,7 @@ com.foo.excel/
 ├── util/                # ExcelColumnUtil, SecureExcelUtils, WorkbookCopyUtils
 ├── validation/          # CellError, RowError, ExcelValidationResult, UniqueConstraintValidator
 └── templates/samples/   # Sample template implementations
-    └── tariffexemption/ # Entity, DTO, Config, Service, Repository, Checker
+    └── tariffexemption/ # Detail entity, summary entity, DTO, config, service, repositories, checker
 ```
 
 ### New templates MUST go under `templates/`
@@ -142,6 +142,7 @@ User-facing messages and internal log messages MUST be in Korean.
 - MUST use `@SpringBootTest` + `MockMvc` for full integration tests
 - Component-level tests create POI workbooks in-memory
 - Test class names MUST match: `FooService` → `FooServiceTest`
+- Current suite also includes focused utility/contract tests such as `SecureExcelUtilsTest`, `ColumnResolutionExceptionTest`, and `TariffUploadPlanContractTest`
 
 ---
 

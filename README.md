@@ -40,7 +40,7 @@ Open http://localhost:8080 to access the upload form.
 - Server-managed fields:
   - `createdBy`: forced to `user01` on server
   - `approvedYn`: forced to `N` on server
-- If client sends `createdBy` or `approvedYn`, server ignores them.
+- `commonData` is parsed in strict mode (`FAIL_ON_UNKNOWN_PROPERTIES`), so unknown fields are rejected.
 
 ### Upload Request Contract (Thymeleaf)
 
@@ -104,7 +104,9 @@ src/main/java/com/foo/excel/
 │   ├── TariffExemptionDto.java                    # DTO with @ExcelColumn + JSR-380 annotations
 │   ├── TariffExemptionImportConfig.java           # ExcelImportConfig for tariff exemption
 │   ├── TariffExemption.java                       # JPA entity
+│   ├── TariffExemptionSummary.java                # Summary JPA entity (upload-level aggregate)
 │   ├── TariffExemptionRepository.java             # Spring Data JPA repository
+│   ├── TariffExemptionSummaryRepository.java      # Spring Data JPA repository for summary table
 │   ├── TariffExemptionService.java                # Implements PersistenceHandler
 │   ├── TariffExemptionDbUniquenessChecker.java    # Implements DatabaseUniquenessChecker
 │   └── TariffExemptionTemplateConfig.java         # Wires the TemplateDefinition bean
@@ -144,7 +146,7 @@ This module includes built-in protections against common file upload vulnerabili
 | **Legacy Format Risk** | Reject legacy `.xls`; accept `.xlsx` only | Upload validation flow |
 | **Formula Injection** | Cell value sanitization | `SecureExcelUtils.sanitizeForExcelCell()` |
 | **Resource exhaustion** | Two-tier row limit (SAX pre-count + parser early-exit) | `SecureExcelUtils.countRows()`, `ExcelParserService` |
-| **Info Disclosure** | Generic Korean error messages | All controller catch blocks return safe messages; never `e.getMessage()` |
+| **Info Disclosure** | Internal exception details hidden for unexpected/system errors | `SecurityException`/generic exception paths return safe Korean messages |
 
 ### Consumer Security Checklist
 
@@ -193,10 +195,13 @@ Tests cover all layers:
 | Test Class | Scope | What it verifies |
 |------------|-------|------------------|
 | `ExcelColumnUtilTest` | Unit | Column letter/index conversion, round-trip consistency |
+| `SecureExcelUtilsTest` | Unit | Filename sanitization, magic-byte validation, workbook safety utilities |
 | `WorkbookCopyUtilsTest` | Unit | Style mapping (same-format, cross-format), error styles, cell value copying, column widths, merged regions |
+| `ColumnResolutionExceptionTest` | Unit | Header mismatch diagnostics and Korean error rendering for column resolution failures |
 | `ExcelConversionServiceTest` | Component | Legacy `.xls` rejection or format-policy checks (if conversion service remains, it must not enable `.xls` upload support) |
 | `ExcelParserServiceTest` | Component | Row parsing, footer detection, blank row skipping, merged cells, type coercion, header matching, early-exit on row limit |
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
 | `UniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, `commonData` required validation, `.xlsx` success path, `.xls` rejection, error handling |
+| `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for tariff template persistence mapping and keys |
