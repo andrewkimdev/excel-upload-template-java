@@ -32,6 +32,7 @@ Open http://localhost:8080 to access the upload form.
 - Parts:
   - `file`: Excel file (`.xlsx` only)
   - `commonData`: JSON (`application/json`)
+- `commonData` schema is template-specific (`TemplateDefinition<T, C>`의 `commonDataClass` 기준)
 - Required `commonData` fields:
   - `comeYear`
   - `comeSequence`
@@ -96,13 +97,14 @@ src/main/java/com/foo/excel/
 │   ├── ExcelValidationService.java                # JSR-380 + within-file uniqueness validation
 │   ├── ExcelErrorReportService.java               # Format-preserving error report generation (SXSSFWorkbook)
 │   ├── ExcelImportOrchestrator.java               # End-to-end pipeline; contains ImportResult record
-│   ├── TemplateDefinition.java                    # Type-safe bundle: DTO class + config + handlers
-│   ├── PersistenceHandler.java                    # Strategy interface for saving parsed rows
+│   ├── TemplateDefinition.java                    # Type-safe bundle: DTO + commonData + config + handlers
+│   ├── PersistenceHandler.java                    # Strategy interface for saving parsed rows with typed commonData
 │   ├── DatabaseUniquenessChecker.java             # Strategy interface for DB-level duplicate checks
 │   └── TempFileCleanupService.java                # Scheduled cleanup of expired temp/error files
 ├── templates/samples/tariffexemption/             # Example template implementation
 │   ├── TariffExemptionDto.java                    # DTO with @ExcelColumn + JSR-380 annotations
 │   ├── TariffExemptionImportConfig.java           # ExcelImportConfig for tariff exemption
+│   ├── TariffExemptionCommonData.java             # Tariff template-specific commonData DTO
 │   ├── TariffExemption.java                       # JPA entity
 │   ├── TariffExemptionSummary.java                # Summary JPA entity (upload-level aggregate)
 │   ├── TariffExemptionRepository.java             # Spring Data JPA repository
@@ -165,9 +167,10 @@ See `application.properties` for a detailed security checklist and configuration
 
 1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
 2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
-3. **Persistence** -- Implement `PersistenceHandler<T>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, UploadCommonData commonData)` to save parsed rows merged with common fields
-4. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T>` if duplicates should be checked against existing data
-5. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T>` `@Bean`; the orchestrator discovers it automatically
+3. **CommonData** -- 템플릿별 DTO를 만들고 `CommonData`를 구현한다 (strict JSON + Bean Validation 대상)
+4. **Persistence** -- Implement `PersistenceHandler<T, C>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)` to save parsed rows merged with common fields
+5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T>` if duplicates should be checked against existing data
+6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, C>` `@Bean` with `commonDataClass`; the orchestrator discovers it automatically
 
 See the `TariffExemption*` classes for a complete example (`TariffExemptionDto`, `TariffExemptionImportConfig`, `TariffExemptionService`, `TariffExemptionDbUniquenessChecker`, `TariffExemptionTemplateConfig`).
 
@@ -203,5 +206,5 @@ Tests cover all layers:
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
 | `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
-| `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, `commonData` required validation, `.xlsx` success path, `.xls` rejection, error handling |
-| `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for tariff template persistence mapping and keys |
+| `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, `commonData` required/strict validation, `.xlsx` success path, `.xls` rejection, error handling |
+| `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `CommonData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |

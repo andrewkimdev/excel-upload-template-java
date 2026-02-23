@@ -1,13 +1,17 @@
 package com.foo.excel.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foo.excel.config.ExcelImportProperties;
+import com.foo.excel.service.CommonData;
 import com.foo.excel.service.ExcelImportOrchestrator;
 import com.foo.excel.service.ExcelImportOrchestrator.ImportResult;
-import com.foo.excel.service.UploadCommonData;
+import com.foo.excel.templates.samples.tariffexemption.TariffExemptionCommonData;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
@@ -101,7 +105,8 @@ public class ExcelFileController {
                 return ResponseEntity.badRequest().body(error);
             }
 
-            UploadCommonData commonData = parseAndValidateCommonData(commonDataJson);
+            Class<? extends CommonData> commonDataClass = orchestrator.getCommonDataClass(templateType);
+            CommonData commonData = parseAndValidateCommonData(commonDataJson, commonDataClass);
 
             ImportResult result = orchestrator.processUpload(file, templateType, commonData);
 
@@ -246,8 +251,8 @@ public class ExcelFileController {
                 return "result";
             }
 
-            UploadCommonData commonData = buildCommonDataFromForm(
-                    comeYear, comeSequence, uploadSequence, equipCode);
+            CommonData commonData = buildCommonDataFromForm(
+                    templateType, comeYear, comeSequence, uploadSequence, equipCode);
             validateCommonData(commonData);
 
             ImportResult result = orchestrator.processUpload(file, templateType, commonData);
@@ -290,7 +295,8 @@ public class ExcelFileController {
         return null;
     }
 
-    private UploadCommonData parseAndValidateCommonData(String commonDataJson) {
+    private CommonData parseAndValidateCommonData(String commonDataJson,
+                                                  Class<? extends CommonData> commonDataClass) {
         if (commonDataJson == null || commonDataJson.isBlank()) {
             throw new IllegalArgumentException("commonData 파트는 필수입니다.");
         }
@@ -299,8 +305,12 @@ public class ExcelFileController {
             ObjectMapper strictMapper = objectMapper.copy()
                     .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                     .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
+            strictMapper.coercionConfigFor(LogicalType.Textual)
+                    .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
+                    .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
+                    .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail);
 
-            UploadCommonData commonData = strictMapper.readValue(commonDataJson, UploadCommonData.class);
+            CommonData commonData = strictMapper.readValue(commonDataJson, commonDataClass);
             validateCommonData(commonData);
             return commonData;
         } catch (JsonProcessingException e) {
@@ -308,12 +318,17 @@ public class ExcelFileController {
         }
     }
 
-    private UploadCommonData buildCommonDataFromForm(
+    private CommonData buildCommonDataFromForm(
+            String templateType,
             String comeYear,
             String comeSequence,
             String uploadSequence,
             String equipCode) {
-        UploadCommonData commonData = new UploadCommonData();
+        if (!"tariff-exemption".equals(templateType)) {
+            throw new IllegalArgumentException("알 수 없는 템플릿 타입입니다: " + templateType);
+        }
+
+        TariffExemptionCommonData commonData = new TariffExemptionCommonData();
         commonData.setComeYear(comeYear);
         commonData.setComeSequence(comeSequence);
         commonData.setUploadSequence(uploadSequence);
@@ -321,10 +336,10 @@ public class ExcelFileController {
         return commonData;
     }
 
-    private void validateCommonData(UploadCommonData commonData) {
+    private void validateCommonData(CommonData commonData) {
         var violations = validator.validate(commonData);
         if (!violations.isEmpty()) {
-            ConstraintViolation<UploadCommonData> violation = violations.iterator().next();
+            ConstraintViolation<?> violation = violations.iterator().next();
             throw new IllegalArgumentException(violation.getMessage());
         }
     }

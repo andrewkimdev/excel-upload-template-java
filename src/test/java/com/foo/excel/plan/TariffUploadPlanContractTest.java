@@ -1,8 +1,10 @@
 package com.foo.excel.plan;
 
 import com.foo.excel.ExcelUploadApplication;
+import com.foo.excel.service.CommonData;
 import com.foo.excel.service.ExcelImportOrchestrator;
 import com.foo.excel.service.PersistenceHandler;
+import com.foo.excel.service.TemplateDefinition;
 import com.foo.excel.templates.samples.tariffexemption.TariffExemption;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
@@ -23,6 +25,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -110,7 +113,7 @@ class TariffUploadPlanContractTest {
         boolean hasNewSignature = Arrays.stream(ExcelImportOrchestrator.class.getDeclaredMethods())
                 .filter(method -> method.getName().equals("processUpload"))
                 .anyMatch(method -> method.getParameterCount() == 3
-                        && method.getParameterTypes()[2].getSimpleName().equals("UploadCommonData"));
+                        && method.getParameterTypes()[2].equals(CommonData.class));
 
         assertTrue(hasNewSignature,
                 "ExcelImportOrchestrator.processUpload(file, templateType, commonData) 시그니처가 필요합니다.");
@@ -124,10 +127,20 @@ class TariffUploadPlanContractTest {
                 .anyMatch(method -> method.getParameterCount() == 3
                         && List.class.isAssignableFrom(method.getParameterTypes()[0])
                         && List.class.isAssignableFrom(method.getParameterTypes()[1])
-                        && method.getParameterTypes()[2].getSimpleName().equals("UploadCommonData"));
+                        && CommonData.class.isAssignableFrom(method.getParameterTypes()[2]));
 
         assertTrue(hasNewSaveAllSignature,
                 "PersistenceHandler.saveAll(rows, sourceRowNumbers, commonData) 시그니처가 필요합니다.");
+    }
+
+    @Test
+    void templateDefinitionContract_includesCommonDataClassField() {
+        List<String> fieldNames = Arrays.stream(TemplateDefinition.class.getDeclaredFields())
+                .map(Field::getName)
+                .collect(Collectors.toList());
+
+        assertTrue(fieldNames.contains("commonDataClass"),
+                "TemplateDefinition에는 commonDataClass 필드가 포함되어야 합니다.");
     }
 
     @Test

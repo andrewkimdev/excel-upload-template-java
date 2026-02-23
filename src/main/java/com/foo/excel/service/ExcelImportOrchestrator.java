@@ -27,7 +27,7 @@ public class ExcelImportOrchestrator {
     private final ExcelValidationService validationService;
     private final ExcelErrorReportService errorReportService;
     private final ExcelImportProperties properties;
-    private final List<TemplateDefinition<?>> templateDefinitions;
+    private final List<TemplateDefinition<?, ?>> templateDefinitions;
 
     @Builder
     public record ImportResult(
@@ -42,24 +42,34 @@ public class ExcelImportOrchestrator {
             String originalFilename,
             String message) {}
 
-    public ImportResult processUpload(MultipartFile file, String templateType, UploadCommonData commonData)
+    public ImportResult processUpload(MultipartFile file, String templateType, CommonData commonData)
             throws IOException {
-        TemplateDefinition<?> template = findTemplate(templateType);
+        TemplateDefinition<?, ?> template = findTemplate(templateType);
         return doProcess(template, file, commonData);
     }
 
-    private TemplateDefinition<?> findTemplate(String templateType) {
+    public Class<? extends CommonData> getCommonDataClass(String templateType) {
+        return findTemplate(templateType).getCommonDataClass();
+    }
+
+    private TemplateDefinition<?, ?> findTemplate(String templateType) {
         return templateDefinitions.stream()
                 .filter(t -> t.getTemplateType().equals(templateType))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Unknown template type: " + templateType));
+                        "알 수 없는 템플릿 타입입니다: " + templateType));
     }
 
     @SuppressWarnings("unchecked")
-    private <T> ImportResult doProcess(TemplateDefinition<T> template, MultipartFile file,
-                                       UploadCommonData commonData)
+    private <T, C extends CommonData> ImportResult doProcess(TemplateDefinition<?, ?> rawTemplate,
+                                                             MultipartFile file,
+                                                             CommonData commonData)
             throws IOException {
+        TemplateDefinition<T, C> template = (TemplateDefinition<T, C>) rawTemplate;
+        if (!template.getCommonDataClass().isInstance(commonData)) {
+            throw new IllegalArgumentException("commonData 형식이 템플릿과 일치하지 않습니다.");
+        }
+        C typedCommonData = template.getCommonDataClass().cast(commonData);
 
         ExcelImportConfig config = template.getConfig();
 
@@ -71,7 +81,7 @@ public class ExcelImportOrchestrator {
                 sanitizedFilename = SecureExcelUtils.sanitizeFilename(originalName);
             }
         } catch (IllegalArgumentException e) {
-            log.warn("Could not sanitize original filename: {}", e.getMessage());
+            log.warn("원본 파일명 정규화에 실패했습니다: {}", e.getMessage());
         }
 
         // 1. Create UUID-based temp subdirectory
@@ -131,7 +141,7 @@ public class ExcelImportOrchestrator {
                         template.getPersistenceHandler().saveAll(
                                 parseResult.rows(),
                                 parseResult.sourceRowNumbers(),
-                                commonData);
+                                typedCommonData);
 
                 return ImportResult.builder()
                         .success(true)
@@ -161,13 +171,13 @@ public class ExcelImportOrchestrator {
                         .build();
             }
         } catch (ColumnResolutionBatchException e) {
-            log.warn("Column resolution failed: {}", e.getMessage());
+            log.warn("컬럼 해석에 실패했습니다: {}", e.getMessage());
             return ImportResult.builder()
                     .success(false)
                     .message(e.toKoreanMessage())
                     .build();
         } catch (Exception e) {
-            log.error("Error processing upload", e);
+            log.error("업로드 처리 중 오류가 발생했습니다", e);
             throw e;
         }
     }

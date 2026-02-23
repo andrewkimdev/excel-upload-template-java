@@ -1,6 +1,7 @@
-package com.foo.excel.service;
+package com.foo.excel.templates.samples.tariffexemption;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.foo.excel.service.CommonData;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,7 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class UploadCommonData {
+public class TariffExemptionCommonData implements CommonData {
 
     private static final String DEFAULT_CREATED_BY = "user01";
     private static final String DEFAULT_APPROVED_YN = "N";

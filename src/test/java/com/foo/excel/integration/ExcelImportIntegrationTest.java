@@ -130,6 +130,76 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
+    void upload_missingCommonData_rejected() throws Exception {
+        byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "tariff.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message", containsString("commonData")));
+    }
+
+    @Test
+    void upload_commonDataUnknownField_rejected() throws Exception {
+        byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "tariff.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+        MockMultipartFile invalidCommonData = new MockMultipartFile(
+                "commonData",
+                "commonData",
+                MediaType.APPLICATION_JSON_VALUE,
+                ("{" +
+                        "\"comeYear\":\"2026\"," +
+                        "\"comeSequence\":\"001\"," +
+                        "\"uploadSequence\":\"U001\"," +
+                        "\"equipCode\":\"EQ-01\"," +
+                        "\"unknown\":\"x\"" +
+                        "}").getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(invalidCommonData))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message", containsString("commonData")));
+    }
+
+    @Test
+    void upload_commonDataScalarCoercion_rejected() throws Exception {
+        byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "tariff.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+        MockMultipartFile invalidCommonData = new MockMultipartFile(
+                "commonData",
+                "commonData",
+                MediaType.APPLICATION_JSON_VALUE,
+                ("{" +
+                        "\"comeYear\":2026," +
+                        "\"comeSequence\":\"001\"," +
+                        "\"uploadSequence\":\"U001\"," +
+                        "\"equipCode\":\"EQ-01\"" +
+                        "}").getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(file)
+                        .file(invalidCommonData))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message", containsString("commonData")));
+    }
+
+    @Test
     void upload_unknownTemplateType_returnsError() throws Exception {
         byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
         MockMultipartFile file = new MockMultipartFile(

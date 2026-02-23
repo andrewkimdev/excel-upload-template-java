@@ -1,7 +1,6 @@
 package com.foo.excel.templates.samples.tariffexemption;
 
 import com.foo.excel.service.PersistenceHandler;
-import com.foo.excel.service.UploadCommonData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,8 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class TariffExemptionService implements PersistenceHandler<TariffExemptionDto> {
+public class TariffExemptionService
+        implements PersistenceHandler<TariffExemptionDto, TariffExemptionCommonData> {
 
     private static final int UPSERT_RETRY_LIMIT = 2;
 
@@ -24,7 +24,7 @@ public class TariffExemptionService implements PersistenceHandler<TariffExemptio
     @Transactional
     public SaveResult saveAll(List<TariffExemptionDto> dtos,
                               List<Integer> sourceRowNumbers,
-                              UploadCommonData commonData) {
+                              TariffExemptionCommonData commonData) {
         int created = 0;
         int updated = 0;
 
@@ -44,7 +44,7 @@ public class TariffExemptionService implements PersistenceHandler<TariffExemptio
 
     private boolean upsertDetailWithRetry(TariffExemptionDto dto,
                                           Integer rowNumber,
-                                          UploadCommonData commonData) {
+                                          TariffExemptionCommonData commonData) {
         int attempt = 0;
         while (attempt <= UPSERT_RETRY_LIMIT) {
             attempt++;
@@ -77,7 +77,7 @@ public class TariffExemptionService implements PersistenceHandler<TariffExemptio
         throw new IllegalStateException("동시 저장 충돌로 상세 데이터 처리에 실패했습니다.");
     }
 
-    private void upsertSummaryWithRetry(int rowCount, UploadCommonData commonData) {
+    private void upsertSummaryWithRetry(int rowCount, TariffExemptionCommonData commonData) {
         int attempt = 0;
         while (attempt <= UPSERT_RETRY_LIMIT) {
             attempt++;
@@ -134,7 +134,7 @@ public class TariffExemptionService implements PersistenceHandler<TariffExemptio
 
     private TariffExemption buildEntityFromDto(TariffExemptionDto dto,
                                                Integer rowNumber,
-                                               UploadCommonData commonData) {
+                                               TariffExemptionCommonData commonData) {
         TariffExemption entity = TariffExemption.builder()
                 .comeYear(commonData.getComeYear())
                 .comeSequence(commonData.getComeSequence())
@@ -158,13 +158,14 @@ public class TariffExemptionService implements PersistenceHandler<TariffExemptio
         return entity;
     }
 
-    private void applyAuditDefaults(TariffExemption entity, UploadCommonData commonData) {
+    private void applyAuditDefaults(TariffExemption entity, TariffExemptionCommonData commonData) {
         entity.setApprovedYn(commonData.getApprovedYn());
         entity.setCreatedBy(commonData.getCreatedBy());
         entity.setCreatedAt(LocalDateTime.now());
     }
 
-    private void applyAuditDefaults(TariffExemptionSummary entity, UploadCommonData commonData) {
+    private void applyAuditDefaults(TariffExemptionSummary entity,
+                                    TariffExemptionCommonData commonData) {
         entity.setApprovedYn(commonData.getApprovedYn());
         entity.setCreatedBy(commonData.getCreatedBy());
         entity.setCreatedAt(LocalDateTime.now());

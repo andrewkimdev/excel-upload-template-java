@@ -20,12 +20,15 @@ public class ExcelUploadFileService {
             throw new IllegalArgumentException("파일명이 없습니다");
         }
 
-        String safeName = SecureExcelUtils.sanitizeFilename(originalName);
-        String lowerName = safeName.toLowerCase();
-
-        if (!lowerName.endsWith(".xlsx")) {
+        String lowerOriginalName = originalName.trim().toLowerCase();
+        if (lowerOriginalName.endsWith(".xls")) {
             throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.");
         }
+        if (!lowerOriginalName.endsWith(".xlsx")) {
+            throw new IllegalArgumentException("유효하지 않은 파일 확장자입니다.");
+        }
+
+        String safeName = SecureExcelUtils.sanitizeFilename(originalName);
 
         Path targetPath = tempDir.resolve(safeName);
         file.transferTo(targetPath);

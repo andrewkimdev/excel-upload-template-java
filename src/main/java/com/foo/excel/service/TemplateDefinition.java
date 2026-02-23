@@ -8,19 +8,21 @@ import java.util.Collections;
 import java.util.List;
 
 @Getter
-public class TemplateDefinition<T> {
+public class TemplateDefinition<T, C extends CommonData> {
 
     private final String templateType;
     private final Class<T> dtoClass;
+    private final Class<C> commonDataClass;
     private final ExcelImportConfig config;
-    private final PersistenceHandler<T> persistenceHandler;
+    private final PersistenceHandler<T, C> persistenceHandler;
     private final DatabaseUniquenessChecker<T> dbUniquenessChecker;
 
-    public TemplateDefinition(String templateType, Class<T> dtoClass, ExcelImportConfig config,
-                              PersistenceHandler<T> persistenceHandler,
+    public TemplateDefinition(String templateType, Class<T> dtoClass, Class<C> commonDataClass,
+                              ExcelImportConfig config, PersistenceHandler<T, C> persistenceHandler,
                               DatabaseUniquenessChecker<T> dbUniquenessChecker) {
         this.templateType = templateType;
         this.dtoClass = dtoClass;
+        this.commonDataClass = commonDataClass;
         this.config = config;
         this.persistenceHandler = persistenceHandler;
         this.dbUniquenessChecker = dbUniquenessChecker;

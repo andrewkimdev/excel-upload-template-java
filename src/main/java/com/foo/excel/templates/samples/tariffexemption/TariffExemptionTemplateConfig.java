@@ -8,11 +8,12 @@ import org.springframework.context.annotation.Configuration;
 public class TariffExemptionTemplateConfig {
 
     @Bean
-    public TemplateDefinition<TariffExemptionDto> tariffExemptionTemplate(
+    public TemplateDefinition<TariffExemptionDto, TariffExemptionCommonData> tariffExemptionTemplate(
             TariffExemptionService persistenceHandler) {
         return new TemplateDefinition<>(
                 "tariff-exemption",
                 TariffExemptionDto.class,
+                TariffExemptionCommonData.class,
                 new TariffExemptionImportConfig(),
                 persistenceHandler,
                 null
