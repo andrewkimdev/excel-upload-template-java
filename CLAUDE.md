@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Spring Boot 3.3.4 / Java 17 application for Excel file upload, parsing, validation, and import.
+Spring Boot 3.3.4 / Java 17 application for Excel file upload, parsing, validation, and import (`.xlsx` only).
 Uses Gradle 8+, Lombok, Apache POI 5.4.1, H2 (dev), Thymeleaf.
 
 ---
@@ -53,9 +53,9 @@ public class MyEntity {
 
 ## Apache POI / Excel Guidelines
 
-- SXSSFWorkbook does NOT support reading/cloning styles from existing workbooks the same way XSSFWorkbook does
-- HSSF font index mapping differs from XSSF — always test cross-format operations separately
-- When preserving formatting, handle HSSF and XSSF/SXSSF as separate code paths
+- Upload pipeline is OOXML `.xlsx` only; legacy `.xls` input MUST be rejected in early validation.
+- Use `SecureExcelUtils` validation/opening path consistently for all uploaded files.
+- Preserve existing formatting behavior for `.xlsx` error reports without introducing `.xls` compatibility paths.
 
 ---
 
@@ -78,6 +78,17 @@ Controllers MUST catch all exceptions and return generic Korean error messages. 
 - Sanitize filenames via `SecureExcelUtils.sanitizeFilename()`
 - Validate file content (magic bytes) via `SecureExcelUtils.validateFileContent()`
 - Sanitize cell values for error reports via `SecureExcelUtils.sanitizeForExcelCell()`
+
+### Upload contract (`POST /api/excel/upload/{templateType}`)
+
+- Request MUST be `multipart/form-data` with:
+  - `file` (`.xlsx` only)
+  - `commonData` (`application/json`)
+- Required `commonData` fields: `comeYear`, `comeSequence`, `uploadSequence`, `equipCode`
+- `createdBy` and `approvedYn` are server-managed:
+  - force `createdBy=user01`
+  - force `approvedYn=N`
+- If client sends `createdBy` or `approvedYn`, server MUST ignore them.
 
 ### Thymeleaf
 
@@ -110,7 +121,7 @@ Create a subpackage under `com.foo.excel.templates` containing:
 2. `*ImportConfig.java` — implements `ExcelImportConfig`
 3. `*Entity.java` — JPA entity (if persistence needed)
 4. `*Repository.java` — Spring Data JPA repository
-5. `*Service.java` — implements `PersistenceHandler<Dto>`
+5. `*Service.java` — implements `PersistenceHandler<Dto>` and the current save contract `saveAll(List<T> rows, List<Integer> sourceRowNumbers, UploadCommonData commonData)`
 6. `*DbUniquenessChecker.java` — (optional) implements `DatabaseUniquenessChecker<Dto>`
 7. `*TemplateConfig.java` — `@Configuration` producing `TemplateDefinition<Dto>` bean
 
@@ -120,7 +131,7 @@ MUST use `@Slf4j` and SLF4J placeholder syntax (`log.info("x={}", x)`). No strin
 
 ### Error messages
 
-User-facing messages MUST be in Korean. Internal log messages MUST be in English.
+User-facing messages and internal log messages MUST be in Korean.
 
 ---
 

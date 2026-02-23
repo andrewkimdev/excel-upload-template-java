@@ -26,15 +26,16 @@ When documents conflict, use this order:
 - Keep upload security path aligned with existing flow in README:
   - filename sanitization
   - magic-byte validation
+  - reject legacy `.xls` and accept `.xlsx` only
   - secure workbook opening
   - row pre-count / row-limit checks
 - Do not expose internal exception details to users in controller responses.
-- Keep user-facing messages in Korean and logs in English.
+- Keep user-facing messages and logs in Korean.
 - Use Thymeleaf escaping (`th:text`) for user content.
 - Add new Excel templates under `com.foo.excel.templates...` using the existing pattern:
   - DTO (`@ExcelColumn` + validation)
   - `ExcelImportConfig`
-  - `PersistenceHandler`
+  - `PersistenceHandler` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, UploadCommonData commonData)`)
   - optional `DatabaseUniquenessChecker`
   - `TemplateDefinition` bean wiring
 
