@@ -1,5 +1,6 @@
 HELP.md
 .gradle
+/scratch.txt
 /.gradle-local/
 /.gradle-user-home/
 build/
