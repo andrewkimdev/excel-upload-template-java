@@ -12,7 +12,7 @@ import java.util.*;
 
 @Slf4j
 @Component
-public class UniqueConstraintValidator {
+public class WithinFileUniqueConstraintValidator {
 
     public <T> List<RowError> checkWithinFileUniqueness(List<T> rows, Class<T> dtoClass,
                                                         List<Integer> sourceRowNumbers) {

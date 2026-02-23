@@ -18,7 +18,7 @@ import java.util.*;
 public class ExcelValidationService {
 
     private final Validator validator;
-    private final UniqueConstraintValidator uniqueConstraintValidator;
+    private final WithinFileUniqueConstraintValidator withinFileUniqueConstraintValidator;
 
     public <T> ExcelValidationResult validate(List<T> rows, Class<T> dtoClass,
                                               List<Integer> sourceRowNumbers) {
@@ -47,7 +47,7 @@ public class ExcelValidationService {
         }
 
         // Pass 2: Within-file uniqueness
-        List<RowError> uniqueErrors = uniqueConstraintValidator.checkWithinFileUniqueness(
+        List<RowError> uniqueErrors = withinFileUniqueConstraintValidator.checkWithinFileUniqueness(
                 rows, dtoClass, sourceRowNumbers);
         mergeErrors(allErrors, uniqueErrors);
 

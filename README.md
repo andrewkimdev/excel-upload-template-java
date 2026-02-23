@@ -88,7 +88,7 @@ src/main/java/com/foo/excel/
 ├── config/
 │   ├── ExcelImportConfig.java               # Template layout interface (header row, data start row, footer marker)
 │   └── ExcelImportProperties.java           # Global properties (file size, max rows, temp dir)
-├── controller/          # ExcelUploadController (REST + Thymeleaf)
+├── controller/          # ExcelFileController (REST + Thymeleaf)
 ├── service/
 │   ├── ExcelParserService.java                    # Excel -> List<DTO>; contains ColumnMapping + ParseResult records
 │   ├── ColumnResolutionException.java             # Column header mismatch error
@@ -114,7 +114,7 @@ src/main/java/com/foo/excel/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
 │   ├── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)
 │   └── WorkbookCopyUtils.java                     # Stateless workbook copy helpers (styles, values, metadata)
-└── validation/          # CellError (record), RowError, ExcelValidationResult, UniqueConstraintValidator
+└── validation/          # CellError (record), RowError, ExcelValidationResult, WithinFileUniqueConstraintValidator
 ```
 
 ## Processing Pipeline
@@ -198,10 +198,10 @@ Tests cover all layers:
 | `SecureExcelUtilsTest` | Unit | Filename sanitization, magic-byte validation, workbook safety utilities |
 | `WorkbookCopyUtilsTest` | Unit | Style mapping (same-format, cross-format), error styles, cell value copying, column widths, merged regions |
 | `ColumnResolutionExceptionTest` | Unit | Header mismatch diagnostics and Korean error rendering for column resolution failures |
-| `ExcelConversionServiceTest` | Component | Legacy `.xls` rejection or format-policy checks (if conversion service remains, it must not enable `.xls` upload support) |
+| `ExcelUploadFileServiceTest` | Component | `.xlsx` 전용 업로드 파일 저장 및 형식/매직바이트 검증 유지 |
 | `ExcelParserServiceTest` | Component | Row parsing, footer detection, blank row skipping, merged cells, type coercion, header matching, early-exit on row limit |
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
-| `UniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
+| `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, `commonData` required validation, `.xlsx` success path, `.xls` rejection, error handling |
 | `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for tariff template persistence mapping and keys |

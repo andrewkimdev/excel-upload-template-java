@@ -108,7 +108,7 @@ com.foo.excel/
 ├── controller/          # Spring MVC controllers
 ├── service/             # Core services + strategy interfaces
 ├── util/                # ExcelColumnUtil, SecureExcelUtils, WorkbookCopyUtils
-├── validation/          # CellError, RowError, ExcelValidationResult, UniqueConstraintValidator
+├── validation/          # CellError, RowError, ExcelValidationResult, WithinFileUniqueConstraintValidator
 └── templates/samples/   # Sample template implementations
     └── tariffexemption/ # Detail entity, summary entity, DTO, config, service, repositories, checker
 ```

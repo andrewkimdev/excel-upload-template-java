@@ -6,12 +6,12 @@ This document describes the upload pipeline as currently implemented.
 
 ```
 HTTP (REST/Thymeleaf)
-  -> ExcelUploadController
+  -> ExcelFileController
     -> ExcelImportOrchestrator
-      -> ExcelConversionService (.xlsx-only gate)
+      -> ExcelUploadFileService (.xlsx-only gate)
       -> SecureExcelUtils.countRows (pre-check)
       -> ExcelParserService
-      -> ExcelValidationService (+ UniqueConstraintValidator)
+      -> ExcelValidationService (+ WithinFileUniqueConstraintValidator)
       -> optional DatabaseUniquenessChecker (template-dependent)
       -> merge parse/validation/db errors
       -> PersistenceHandler.saveAll(...) OR ExcelErrorReportService.generateErrorReport(...)
@@ -61,7 +61,7 @@ Form fields map to `UploadCommonData` fields and file.
 
 ### Step 0: request-level size gate (controller)
 
-`ExcelUploadController` checks file size against `excel.import.max-file-size-mb` before orchestrator call.
+`ExcelFileController` checks file size against `excel.import.max-file-size-mb` before orchestrator call.
 
 ### Step 1: template resolution (orchestrator)
 
@@ -70,7 +70,7 @@ Unknown template -> `IllegalArgumentException`.
 
 ### Step 2: secure filename + `.xlsx`-only format gate
 
-`ExcelConversionService.ensureXlsxFormat(...)`:
+`ExcelUploadFileService.storeAndValidateXlsx(...)`:
 - sanitizes filename (`SecureExcelUtils.sanitizeFilename`)
 - rejects non-`.xlsx` with Korean error
 - saves multipart file into temp upload directory
@@ -108,7 +108,7 @@ Orchestrator rejects if parsed row count is greater than `maxRows`.
 
 `ExcelValidationService.validate(...)`:
 - JSR-380 bean validation
-- within-file uniqueness via `UniqueConstraintValidator`
+- within-file uniqueness via `WithinFileUniqueConstraintValidator`
   - `@ExcelUnique`
   - `@ExcelCompositeUnique`
 
@@ -161,12 +161,12 @@ Response includes `downloadUrl=/api/excel/download/{uuid}`.
 
 ## 5) Key classes map
 
-- Controller: `src/main/java/com/foo/excel/controller/ExcelUploadController.java`
+- Controller: `src/main/java/com/foo/excel/controller/ExcelFileController.java`
 - Orchestrator: `src/main/java/com/foo/excel/service/ExcelImportOrchestrator.java`
-- Conversion: `src/main/java/com/foo/excel/service/ExcelConversionService.java`
+- Conversion: `src/main/java/com/foo/excel/service/ExcelUploadFileService.java`
 - Parser: `src/main/java/com/foo/excel/service/ExcelParserService.java`
 - Validation: `src/main/java/com/foo/excel/service/ExcelValidationService.java`
-- Uniqueness validator: `src/main/java/com/foo/excel/validation/UniqueConstraintValidator.java`
+- Uniqueness validator: `src/main/java/com/foo/excel/validation/WithinFileUniqueConstraintValidator.java`
 - Error report: `src/main/java/com/foo/excel/service/ExcelErrorReportService.java`
 - Security utilities: `src/main/java/com/foo/excel/util/SecureExcelUtils.java`
 - Template wiring example: `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionTemplateConfig.java`

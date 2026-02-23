@@ -17,16 +17,16 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class ExcelConversionServiceTest {
+class ExcelUploadFileServiceTest {
 
-    private ExcelConversionService conversionService;
+    private ExcelUploadFileService uploadFileService;
 
     @TempDir
     Path tempDir;
 
     @BeforeEach
     void setUp() {
-        conversionService = new ExcelConversionService();
+        uploadFileService = new ExcelUploadFileService();
     }
 
     @Test
@@ -37,7 +37,7 @@ class ExcelConversionServiceTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+        Path result = uploadFileService.storeAndValidateXlsx(file, tempDir);
 
         assertThat(result.getFileName().toString()).isEqualTo("test.xlsx");
         try (Workbook wb = WorkbookFactory.create(result.toFile())) {
@@ -52,7 +52,7 @@ class ExcelConversionServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.xls", "application/vnd.ms-excel", xlsxBytes);
 
-        assertThatThrownBy(() -> conversionService.ensureXlsxFormat(file, tempDir))
+        assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(".xlsx");
     }
@@ -62,7 +62,7 @@ class ExcelConversionServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.csv", "text/csv", "a,b,c".getBytes());
 
-        assertThatThrownBy(() -> conversionService.ensureXlsxFormat(file, tempDir))
+        assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -71,7 +71,7 @@ class ExcelConversionServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", null, "application/octet-stream", new byte[0]);
 
-        assertThatThrownBy(() -> conversionService.ensureXlsxFormat(file, tempDir))
+        assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -83,7 +83,7 @@ class ExcelConversionServiceTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        Path result = conversionService.ensureXlsxFormat(file, tempDir);
+        Path result = uploadFileService.storeAndValidateXlsx(file, tempDir);
 
         assertThat(result.getParent()).isEqualTo(tempDir);
         assertThat(result.getFileName().toString()).doesNotContain("..");
@@ -98,7 +98,7 @@ class ExcelConversionServiceTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 pdfBytes);
 
-        assertThatThrownBy(() -> conversionService.ensureXlsxFormat(file, tempDir))
+        assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
                 .isInstanceOf(SecurityException.class);
     }
 

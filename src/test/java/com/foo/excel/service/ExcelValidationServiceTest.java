@@ -2,7 +2,7 @@ package com.foo.excel.service;
 
 import com.foo.excel.templates.samples.tariffexemption.TariffExemptionDto;
 import com.foo.excel.validation.ExcelValidationResult;
-import com.foo.excel.validation.UniqueConstraintValidator;
+import com.foo.excel.validation.WithinFileUniqueConstraintValidator;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
@@ -22,7 +22,7 @@ class ExcelValidationServiceTest {
     void setUp() {
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
-        UniqueConstraintValidator uniqueValidator = new UniqueConstraintValidator();
+        WithinFileUniqueConstraintValidator uniqueValidator = new WithinFileUniqueConstraintValidator();
         validationService = new ExcelValidationService(validator, uniqueValidator);
     }
 

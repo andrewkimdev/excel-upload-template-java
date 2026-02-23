@@ -8,12 +8,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 @Service
-public class ExcelConversionService {
+public class ExcelUploadFileService {
 
     /**
      * .xlsx 파일만 허용한다.
      */
-    public Path ensureXlsxFormat(MultipartFile file, Path tempDir) throws IOException {
+    public Path storeAndValidateXlsx(MultipartFile file, Path tempDir) throws IOException {
         String originalName = file.getOriginalFilename();
 
         if (originalName == null) {

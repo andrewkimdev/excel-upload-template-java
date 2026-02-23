@@ -72,7 +72,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-public class ExcelUploadController {
+public class ExcelFileController {
 
     private final ExcelImportOrchestrator orchestrator;
     private final ExcelImportProperties properties;

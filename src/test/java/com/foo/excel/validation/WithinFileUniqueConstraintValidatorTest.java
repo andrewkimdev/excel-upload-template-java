@@ -22,17 +22,17 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class UniqueConstraintValidatorTest {
+class WithinFileUniqueConstraintValidatorTest {
 
     @Mock
     private TariffExemptionRepository tariffExemptionRepository;
 
-    private UniqueConstraintValidator validator;
+    private WithinFileUniqueConstraintValidator validator;
     private TariffExemptionDbUniquenessChecker dbChecker;
 
     @BeforeEach
     void setUp() {
-        validator = new UniqueConstraintValidator();
+        validator = new WithinFileUniqueConstraintValidator();
         dbChecker = new TariffExemptionDbUniquenessChecker(tariffExemptionRepository);
     }
 

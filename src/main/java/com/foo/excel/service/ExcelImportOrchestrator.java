@@ -22,7 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ExcelImportOrchestrator {
 
-    private final ExcelConversionService conversionService;
+    private final ExcelUploadFileService uploadFileService;
     private final ExcelParserService parserService;
     private final ExcelValidationService validationService;
     private final ExcelErrorReportService errorReportService;
@@ -80,8 +80,8 @@ public class ExcelImportOrchestrator {
         Files.createDirectories(tempSubDir);
 
         try {
-            // 2. Convert to xlsx if needed
-            Path xlsxFile = conversionService.ensureXlsxFormat(file, tempSubDir);
+            // 2. Store and validate xlsx file
+            Path xlsxFile = uploadFileService.storeAndValidateXlsx(file, tempSubDir);
 
             // 2b. Quick row count pre-check (lightweight SAX — avoids full parse for oversized files)
             int roughRowCount = SecureExcelUtils.countRows(xlsxFile, config.getSheetIndex());
