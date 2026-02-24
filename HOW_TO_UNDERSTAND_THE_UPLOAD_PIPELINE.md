@@ -21,7 +21,7 @@ HTTP (REST/Thymeleaf)
 
 ### REST
 
-- `POST /api/excel/upload/{templateType}`
+- `POST /api/excel/upload/tariff-exemption`
 - Parts:
   - `file` (`multipart/form-data`)
   - `commonData` (`application/json`, required)
@@ -35,16 +35,17 @@ HTTP (REST/Thymeleaf)
 Behavior:
 - strict JSON parsing (`FAIL_ON_UNKNOWN_PROPERTIES`, scalar coercion disabled)
 - bean validation errors return bad request
-- server-managed values are fixed by `UploadCommonData`:
+- server-managed values are fixed on server side:
   - `createdBy=user01`
   - `approvedYn=N`
 
 ### Thymeleaf
 
-- `GET /` -> `upload.html`
-- `POST /upload` -> `result.html`
+- `GET /` -> `index`
+- `GET /upload/tariff-exemption` -> `upload-tariff-exemption`
+- `POST /upload/tariff-exemption` -> `result`
 
-Form fields map to `UploadCommonData` fields and file.
+Form fields map to template-specific `CommonData` fields and file.
 
 ### Download
 
@@ -65,7 +66,7 @@ Form fields map to `UploadCommonData` fields and file.
 
 ### Step 1: template resolution (orchestrator)
 
-`ExcelImportOrchestrator.findTemplate(templateType)` resolves from injected `List<TemplateDefinition<?>>`.
+`ExcelImportOrchestrator.findTemplate(templateType)` resolves from injected `List<TemplateDefinition<?, ?>>`.
 Unknown template -> `IllegalArgumentException`.
 
 ### Step 2: secure filename + `.xlsx`-only format gate
@@ -126,7 +127,7 @@ Orchestrator merges parser conversion errors into `ExcelValidationResult`.
 ### Step 8a: success path (persist)
 
 If valid, orchestrator calls:
-- `PersistenceHandler.saveAll(List<T> rows, List<Integer> sourceRowNumbers, UploadCommonData commonData)`
+- `PersistenceHandler.saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)`
 
 Current tariff implementation (`TariffExemptionService`):
 - upserts detail rows by `(comeYear, comeSequence, uploadSequence, equipCode, rowNumber)`

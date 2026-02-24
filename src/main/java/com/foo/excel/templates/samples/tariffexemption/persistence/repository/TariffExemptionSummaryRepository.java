@@ -5,5 +5,4 @@ import com.foo.excel.templates.samples.tariffexemption.persistence.entity.Tariff
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TariffExemptionSummaryRepository
-        extends JpaRepository<TariffExemptionSummary, TariffExemptionSummaryId> {
-}
+    extends JpaRepository<TariffExemptionSummary, TariffExemptionSummaryId> {}

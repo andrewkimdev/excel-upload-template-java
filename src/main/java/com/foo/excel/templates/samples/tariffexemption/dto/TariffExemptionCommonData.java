@@ -12,28 +12,28 @@ import lombok.Setter;
 @NoArgsConstructor
 public class TariffExemptionCommonData implements CommonData {
 
-    private static final String DEFAULT_CREATED_BY = "user01";
-    private static final String DEFAULT_APPROVED_YN = "N";
+  private static final String DEFAULT_CREATED_BY = "user01";
+  private static final String DEFAULT_APPROVED_YN = "N";
 
-    @NotBlank(message = "comeYear는 필수입니다")
-    private String comeYear;
+  @NotBlank(message = "comeYear는 필수입니다")
+  private String comeYear;
 
-    @NotBlank(message = "comeSequence는 필수입니다")
-    private String comeSequence;
+  @NotBlank(message = "comeSequence는 필수입니다")
+  private String comeSequence;
 
-    @NotBlank(message = "uploadSequence는 필수입니다")
-    private String uploadSequence;
+  @NotBlank(message = "uploadSequence는 필수입니다")
+  private String uploadSequence;
 
-    @NotBlank(message = "equipCode는 필수입니다")
-    private String equipCode;
+  @NotBlank(message = "equipCode는 필수입니다")
+  private String equipCode;
 
-    @JsonIgnore
-    public String getCreatedBy() {
-        return DEFAULT_CREATED_BY;
-    }
+  @JsonIgnore
+  public String getCreatedBy() {
+    return DEFAULT_CREATED_BY;
+  }
 
-    @JsonIgnore
-    public String getApprovedYn() {
-        return DEFAULT_APPROVED_YN;
-    }
+  @JsonIgnore
+  public String getApprovedYn() {
+    return DEFAULT_APPROVED_YN;
+  }
 }

@@ -93,33 +93,46 @@ src/main/java/com/foo/excel/
 │   └── ExcelImportProperties.java           # Global properties (file size, max rows, temp dir)
 ├── controller/          # Thin split controllers (REST + Thymeleaf) + shared download endpoint
 ├── service/
-│   ├── ExcelParserService.java                    # Excel -> List<DTO>; contains ColumnMapping + ParseResult records
-│   ├── ColumnResolutionException.java             # Column header mismatch error
-│   ├── ColumnResolutionBatchException.java        # Aggregated column resolution errors
-│   ├── ExcelUploadFileService.java                # Multipart file handling + secure temp storage
-│   ├── ExcelUploadRequestService.java             # Request-level orchestration (size/commonData strict parsing + validation)
-│   ├── ExcelValidationService.java                # JSR-380 + within-file uniqueness validation
-│   ├── ExcelErrorReportService.java               # Format-preserving error report generation (SXSSFWorkbook)
-│   ├── ExcelImportOrchestrator.java               # End-to-end pipeline; contains ImportResult record
-│   ├── CommonData.java                            # Marker interface for template-specific commonData DTOs
-│   ├── TemplateDefinition.java                    # Type-safe bundle: DTO + commonData + config + handlers
-│   ├── PersistenceHandler.java                    # Strategy interface for saving parsed rows with typed commonData
-│   ├── DatabaseUniquenessChecker.java             # Strategy interface for DB-level duplicate checks
-│   └── TempFileCleanupService.java                # Scheduled cleanup of expired temp/error files
+│   ├── contract/
+│   │   ├── CommonData.java                        # Marker interface for template-specific commonData DTOs
+│   │   ├── TemplateDefinition.java                # Type-safe bundle: DTO + commonData + config + handlers
+│   │   ├── PersistenceHandler.java                # Strategy interface for saving parsed rows with typed commonData
+│   │   └── DatabaseUniquenessChecker.java         # Strategy interface for DB-level duplicate checks
+│   ├── file/
+│   │   ├── ExcelUploadFileService.java            # Multipart file handling + secure temp storage
+│   │   └── TempFileCleanupService.java            # Scheduled cleanup of expired temp/error files
+│   └── pipeline/
+│       ├── ExcelImportOrchestrator.java           # End-to-end pipeline; contains ImportResult record
+│       ├── ExcelUploadRequestService.java         # Request-level orchestration (size/commonData strict parsing + validation)
+│       ├── parse/
+│       │   ├── ExcelParserService.java            # Excel -> List<DTO>; contains ColumnMapping + ParseResult records
+│       │   ├── ColumnResolutionException.java     # Column header mismatch error
+│       │   └── ColumnResolutionBatchException.java# Aggregated column resolution errors
+│       ├── report/
+│       │   └── ExcelErrorReportService.java       # Format-preserving error report generation (SXSSFWorkbook)
+│       └── validation/
+│           └── ExcelValidationService.java        # JSR-380 + within-file uniqueness validation
 ├── templates/samples/tariffexemption/             # Example template implementation
-│   ├── TariffExemptionDto.java                    # DTO with @ExcelColumn + JSR-380 annotations
-│   ├── TariffExemptionImportConfig.java           # ExcelImportConfig for tariff exemption
-│   ├── TariffExemptionCommonData.java             # Tariff template-specific commonData DTO
-│   ├── TariffExemptionCommonDataFormMapper.java   # Thymeleaf form -> TariffExemptionCommonData mapper
-│   ├── TariffExemptionId.java                     # Detail composite PK (@Embeddable)
-│   ├── TariffExemptionSummaryId.java              # Summary composite PK (@Embeddable)
-│   ├── TariffExemption.java                       # Detail JPA entity (@EmbeddedId)
-│   ├── TariffExemptionSummary.java                # Summary JPA entity (@EmbeddedId, upload aggregate)
-│   ├── TariffExemptionRepository.java             # Spring Data JPA repository
-│   ├── TariffExemptionSummaryRepository.java      # Spring Data JPA repository for summary table
-│   ├── TariffExemptionService.java                # Implements PersistenceHandler
-│   ├── TariffExemptionDbUniquenessChecker.java    # Optional DatabaseUniquenessChecker implementation
-│   └── TariffExemptionTemplateConfig.java         # Wires the TemplateDefinition bean (currently checker is null)
+│   ├── config/
+│   │   ├── TariffExemptionImportConfig.java       # ExcelImportConfig for tariff exemption
+│   │   └── TariffExemptionTemplateConfig.java     # Wires the TemplateDefinition bean (currently checker is null)
+│   ├── dto/
+│   │   ├── TariffExemptionDto.java                # DTO with @ExcelColumn + JSR-380 annotations
+│   │   └── TariffExemptionCommonData.java         # Tariff template-specific commonData DTO
+│   ├── mapper/
+│   │   └── TariffExemptionCommonDataFormMapper.java # Thymeleaf form -> TariffExemptionCommonData mapper
+│   ├── persistence/
+│   │   ├── entity/
+│   │   │   ├── TariffExemptionId.java             # Detail composite PK (@Embeddable)
+│   │   │   ├── TariffExemptionSummaryId.java      # Summary composite PK (@Embeddable)
+│   │   │   ├── TariffExemption.java               # Detail JPA entity (@EmbeddedId)
+│   │   │   └── TariffExemptionSummary.java        # Summary JPA entity (@EmbeddedId, upload aggregate)
+│   │   └── repository/
+│   │       ├── TariffExemptionRepository.java     # Spring Data JPA repository
+│   │       └── TariffExemptionSummaryRepository.java # Summary repository
+│   └── service/
+│       ├── TariffExemptionService.java            # Implements PersistenceHandler
+│       └── TariffExemptionDbUniquenessChecker.java# Optional DatabaseUniquenessChecker implementation
 ├── util/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
 │   ├── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)

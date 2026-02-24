@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class ExcelUploadApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(ExcelUploadApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(ExcelUploadApplication.class, args);
+  }
 }
