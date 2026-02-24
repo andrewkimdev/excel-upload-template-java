@@ -41,7 +41,9 @@ Open http://localhost:8080 to access the upload form.
 - Server-managed fields:
   - `createdBy`: forced to `user01` on server
   - `approvedYn`: forced to `N` on server
-- `commonData` is parsed in strict mode (`FAIL_ON_UNKNOWN_PROPERTIES`), so unknown fields are rejected.
+- `commonData` is parsed in strict mode:
+  - reject unknown fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
+  - reject scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
 
 ### Upload Request Contract (Thymeleaf)
 
@@ -94,9 +96,12 @@ src/main/java/com/foo/excel/
 │   ├── ExcelParserService.java                    # Excel -> List<DTO>; contains ColumnMapping + ParseResult records
 │   ├── ColumnResolutionException.java             # Column header mismatch error
 │   ├── ColumnResolutionBatchException.java        # Aggregated column resolution errors
+│   ├── ExcelUploadFileService.java                # Multipart file handling + secure temp storage
+│   ├── ExcelUploadRequestService.java             # Request-level orchestration (size/commonData strict parsing + validation)
 │   ├── ExcelValidationService.java                # JSR-380 + within-file uniqueness validation
 │   ├── ExcelErrorReportService.java               # Format-preserving error report generation (SXSSFWorkbook)
 │   ├── ExcelImportOrchestrator.java               # End-to-end pipeline; contains ImportResult record
+│   ├── CommonData.java                            # Marker interface for template-specific commonData DTOs
 │   ├── TemplateDefinition.java                    # Type-safe bundle: DTO + commonData + config + handlers
 │   ├── PersistenceHandler.java                    # Strategy interface for saving parsed rows with typed commonData
 │   ├── DatabaseUniquenessChecker.java             # Strategy interface for DB-level duplicate checks
@@ -105,6 +110,7 @@ src/main/java/com/foo/excel/
 │   ├── TariffExemptionDto.java                    # DTO with @ExcelColumn + JSR-380 annotations
 │   ├── TariffExemptionImportConfig.java           # ExcelImportConfig for tariff exemption
 │   ├── TariffExemptionCommonData.java             # Tariff template-specific commonData DTO
+│   ├── TariffExemptionCommonDataFormMapper.java   # Thymeleaf form -> TariffExemptionCommonData mapper
 │   ├── TariffExemptionId.java                     # Detail composite PK (@Embeddable)
 │   ├── TariffExemptionSummaryId.java              # Summary composite PK (@Embeddable)
 │   ├── TariffExemption.java                       # Detail JPA entity (@EmbeddedId)
@@ -203,6 +209,7 @@ Tests cover all layers:
 | `SecureExcelUtilsTest` | Unit | Filename sanitization, magic-byte validation, workbook safety utilities |
 | `WorkbookCopyUtilsTest` | Unit | Style mapping (same-format, cross-format), error styles, cell value copying, column widths, merged regions |
 | `ColumnResolutionExceptionTest` | Unit | Header mismatch diagnostics and Korean error rendering for column resolution failures |
+| `ExcelApiExceptionHandlerTest` | Controller | API 예외 처리 매핑(400/413/500)과 내부 오류 메시지 비노출 보장 |
 | `ExcelUploadFileServiceTest` | Component | `.xlsx` 전용 업로드 파일 저장 및 형식/매직바이트 검증 유지 |
 | `ExcelParserServiceTest` | Component | Row parsing, footer detection, blank row skipping, merged cells, type coercion, header matching, early-exit on row limit |
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
@@ -210,3 +217,5 @@ Tests cover all layers:
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `commonData`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
 | `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `CommonData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |
+| `TariffExemptionEmbeddedIdMappingTest` | Template Unit | Detail/Summary embedded ID 매핑 및 엔티티 구성 검증 |
+| `TariffExemptionEmbeddedIdPersistenceTest` | Template Integration | Embedded ID 기반 upsert/요약 집계 persistence 동작 검증 |

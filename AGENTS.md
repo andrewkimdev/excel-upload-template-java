@@ -47,6 +47,9 @@ When documents conflict, use this order:
 ## Guardrails for Changes
 
 - Avoid introducing rules that conflict with current implementation.
+- This repository is designed to be cherry-picked into a larger project, not consumed as a stable standalone API.
+- Backward compatibility is not a goal here; prefer simplifying refactors even when they introduce breaking changes.
+- Proactively remove unused or dead code when identified.
 - Do not enforce style mandates not present in `README.md` or `docs/SPEC-final.md`.
 - If a broad policy from `CLAUDE.md` is unsupported by code/docs, treat it as optional guidance.
 - Keep documentation inventories (architecture/tests) synchronized with implemented classes/tests (e.g., summary repositories and contract tests).
