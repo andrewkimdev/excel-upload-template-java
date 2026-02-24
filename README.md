@@ -19,15 +19,15 @@ Open http://localhost:8080 to access the upload form.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/excel/upload/{templateType}` | Upload and process an Excel file |
+| `POST` | `/api/excel/upload/tariff-exemption` | Upload and process an Excel file (tariff template) |
 | `GET` | `/api/excel/download/{fileId}` | Download an error report |
-| `GET` | `/api/excel/template/{templateType}` | Download a blank template (not yet implemented) |
-| `POST` | `/upload` | Form submission (Thymeleaf) |
-| `GET` | `/` | Upload form (Thymeleaf) |
+| `GET` | `/upload/tariff-exemption` | Template-specific upload form (Thymeleaf) |
+| `POST` | `/upload/tariff-exemption` | Template-specific form submission (Thymeleaf) |
+| `GET` | `/` | Template selector (Thymeleaf) |
 
 ### Upload Request Contract (REST)
 
-- Endpoint: `POST /api/excel/upload/{templateType}`
+- Endpoint: `POST /api/excel/upload/tariff-exemption`
 - Content type: `multipart/form-data`
 - Parts:
   - `file`: Excel file (`.xlsx` only)
@@ -45,7 +45,7 @@ Open http://localhost:8080 to access the upload form.
 
 ### Upload Request Contract (Thymeleaf)
 
-- Endpoint: `POST /upload`
+- Endpoint: `POST /upload/tariff-exemption`
 - Form fields include:
   - `comeYear`
   - `comeSequence`
@@ -89,7 +89,7 @@ src/main/java/com/foo/excel/
 ├── config/
 │   ├── ExcelImportConfig.java               # Template layout interface (header row, data start row, footer marker)
 │   └── ExcelImportProperties.java           # Global properties (file size, max rows, temp dir)
-├── controller/          # ExcelFileController (REST + Thymeleaf)
+├── controller/          # Thin split controllers (REST + Thymeleaf) + shared download endpoint
 ├── service/
 │   ├── ExcelParserService.java                    # Excel -> List<DTO>; contains ColumnMapping + ParseResult records
 │   ├── ColumnResolutionException.java             # Column header mismatch error
@@ -208,5 +208,5 @@ Tests cover all layers:
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
 | `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
-| `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, `commonData` required/strict validation, `.xlsx` success path, `.xls` rejection, error handling |
+| `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `commonData`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
 | `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `CommonData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |

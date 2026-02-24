@@ -5,6 +5,7 @@ import com.foo.excel.service.CommonData;
 import com.foo.excel.service.ExcelImportOrchestrator;
 import com.foo.excel.service.PersistenceHandler;
 import com.foo.excel.service.TemplateDefinition;
+import com.foo.excel.templates.TemplateTypes;
 import com.foo.excel.templates.samples.tariffexemption.TariffExemption;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
@@ -37,6 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class TariffUploadPlanContractTest {
 
+    private static final String API_UPLOAD_TARIFF = "/api/excel/upload/" + TemplateTypes.TARIFF_EXEMPTION;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -52,7 +55,7 @@ class TariffUploadPlanContractTest {
                 createValidTariffExemptionXlsx()
         );
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption").file(file))
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF).file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("commonData")));
     }
@@ -79,7 +82,7 @@ class TariffUploadPlanContractTest {
                         "}").getBytes()
         );
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(commonData))
                 .andExpect(status().isBadRequest());
@@ -101,7 +104,7 @@ class TariffUploadPlanContractTest {
                 requiredCommonDataJson().getBytes()
         );
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(commonData))
                 .andExpect(status().isBadRequest())

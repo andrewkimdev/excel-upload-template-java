@@ -30,7 +30,7 @@ label {
     color: #555;
 }
 
-select, input[type="file"] {
+select, input[type="text"], input[type="file"] {
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
@@ -93,6 +93,18 @@ button:hover {
 }
 
 .back-link:hover {
+    text-decoration: underline;
+}
+
+.template-link {
+    display: inline-block;
+    margin-top: 12px;
+    color: #4a90d9;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.template-link:hover {
     text-decoration: underline;
 }
 

@@ -2,15 +2,13 @@ package com.foo.excel.integration;
 
 import com.foo.excel.ExcelUploadApplication;
 import com.foo.excel.config.ExcelImportProperties;
+import com.foo.excel.templates.TemplateTypes;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,16 +21,26 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 
-import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @SpringBootTest(classes = ExcelUploadApplication.class)
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class ExcelImportIntegrationTest {
+
+    private static final String API_UPLOAD_TARIFF = "/api/excel/upload/" + TemplateTypes.TARIFF_EXEMPTION;
+    private static final String PAGE_UPLOAD_TARIFF = "/upload/" + TemplateTypes.TARIFF_EXEMPTION;
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,12 +50,11 @@ class ExcelImportIntegrationTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        // Ensure temp/errors directory exists
         Files.createDirectories(properties.getTempDirectoryPath().resolve("errors"));
     }
 
     @Test
-    void upload_validXlsx_returnsSuccess() throws Exception {
+    void upload_validXlsx_returnsSuccess_blackBoxLiteralRoute() throws Exception {
         byte[] xlsxBytes = createValidTariffExemptionXlsx(2);
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tariff.xlsx",
@@ -75,7 +82,7 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(firstFile)
                         .file(requiredCommonDataPart()))
                 .andExpect(status().isOk())
@@ -83,7 +90,7 @@ class ExcelImportIntegrationTest {
                 .andExpect(jsonPath("$.rowsCreated").value(2))
                 .andExpect(jsonPath("$.rowsUpdated").value(0));
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(secondFile)
                         .file(requiredCommonDataPart()))
                 .andExpect(status().isOk())
@@ -100,7 +107,7 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
@@ -111,7 +118,6 @@ class ExcelImportIntegrationTest {
 
     @Test
     void download_existingErrorFile_returnsXlsxContentType() throws Exception {
-        // First upload an invalid file to generate an error report
         byte[] xlsxBytes = createInvalidTariffExemptionXlsx();
         MockMultipartFile file = new MockMultipartFile(
                 "file", "tariff_invalid.xlsx",
@@ -119,15 +125,14 @@ class ExcelImportIntegrationTest {
                 xlsxBytes);
 
         MvcResult uploadResult = mockMvc.perform(
-                multipart("/api/excel/upload/tariff-exemption")
-                        .file(file)
-                        .file(requiredCommonDataPart()))
+                        multipart(API_UPLOAD_TARIFF)
+                                .file(file)
+                                .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.downloadUrl").exists())
                 .andReturn();
 
         String responseBody = uploadResult.getResponse().getContentAsString();
-        // Extract download URL from JSON response
         String downloadUrl = extractDownloadUrl(responseBody);
 
         mockMvc.perform(get(downloadUrl))
@@ -150,7 +155,7 @@ class ExcelImportIntegrationTest {
                 "application/vnd.ms-excel",
                 xlsBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
@@ -166,7 +171,7 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
@@ -193,7 +198,7 @@ class ExcelImportIntegrationTest {
                         "}").getBytes()
         );
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(invalidCommonData))
                 .andExpect(status().isBadRequest())
@@ -220,7 +225,7 @@ class ExcelImportIntegrationTest {
                         "}").getBytes()
         );
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(invalidCommonData))
                 .andExpect(status().isBadRequest())
@@ -229,7 +234,7 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
-    void upload_unknownTemplateType_returnsError() throws Exception {
+    void removedGenericUploadRoute_returns404() throws Exception {
         byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.xlsx",
@@ -239,26 +244,56 @@ class ExcelImportIntegrationTest {
         mockMvc.perform(multipart("/api/excel/upload/unknown-type")
                         .file(file)
                         .file(requiredCommonDataPart()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void removedTemplateDownloadRoute_returns404() throws Exception {
+        mockMvc.perform(get("/api/excel/template/" + TemplateTypes.TARIFF_EXEMPTION))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void page_route_rendersTemplateSpecificForm() throws Exception {
+        mockMvc.perform(get(PAGE_UPLOAD_TARIFF))
+                .andExpect(status().isOk())
+                .andExpect(view().name("upload-tariff-exemption"))
+                .andExpect(content().string(containsString("Tariff Exemption 업로드")));
+    }
+
+    @Test
+    void page_formSubmission_success_rendersResultModel() throws Exception {
+        byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "tariff.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        mockMvc.perform(multipart(PAGE_UPLOAD_TARIFF)
+                        .file(file)
+                        .param("comeYear", "2026")
+                        .param("comeSequence", "001")
+                        .param("uploadSequence", "U001")
+                        .param("equipCode", "EQ-01"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("result"))
+                .andExpect(model().attributeExists("result"));
     }
 
     @Test
     void upload_tooManyRows_rejectedByPreCount() throws Exception {
-        // Set a low maxRows so we don't need to generate 10k+ rows in a test
         int originalMaxRows = properties.getMaxRows();
         int originalBuffer = properties.getPreCountBuffer();
         try {
             properties.setMaxRows(5);
             properties.setPreCountBuffer(10);
-            // Threshold = 5 + (7-1) + 10 = 21, so 25 data rows + header row = 26 total > 21
             byte[] xlsxBytes = createValidTariffExemptionXlsx(25);
             MockMultipartFile file = new MockMultipartFile(
                     "file", "too_many_rows.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     xlsxBytes);
 
-            mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+            mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                             .file(file)
                             .file(requiredCommonDataPart()))
                     .andExpect(status().isBadRequest())
@@ -271,19 +306,29 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
-    void upload_fileTooLarge_rejected() throws Exception {
-        // Create a file > 10MB
+    void upload_fileTooLarge_returns413() throws Exception {
         byte[] largeBytes = new byte[11 * 1024 * 1024];
         MockMultipartFile file = new MockMultipartFile(
                 "file", "large.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 largeBytes);
 
-        // Spring's multipart max-file-size should reject this
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(requiredCommonDataPart()))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value(containsString("크기")));
+    }
+
+    @Test
+    void upload_multipartParsingFailure_returns400() throws Exception {
+        mockMvc.perform(post(API_UPLOAD_TARIFF)
+                        .contentType(MediaType.parseMediaType("multipart/form-data; boundary=BrokenBoundary"))
+                        .content("--BrokenBoundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"x.xlsx\"\r\n"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("멀티파트 요청 처리 중 오류가 발생했습니다."));
     }
 
     @Test
@@ -294,15 +339,13 @@ class ExcelImportIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 xlsxBytes);
 
-        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
                         .file(file)
                         .file(requiredCommonDataPart()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.message").value(containsString("헤더가 일치하지 않습니다")));
     }
-
-    // ===== Helper methods =====
 
     private byte[] createValidTariffExemptionXlsx(int dataRows) throws IOException {
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
@@ -335,7 +378,6 @@ class ExcelImportIntegrationTest {
     }
 
     private void fillTariffExemptionSheet(Sheet sheet, int dataRows, boolean makeInvalid) {
-        // Header row at row 4 (0-based: row 3)
         Row headerRow = sheet.createRow(3);
         headerRow.createCell(0).setCellValue("No");
         headerRow.createCell(1).setCellValue("순번");
@@ -355,14 +397,13 @@ class ExcelImportIntegrationTest {
         headerRow.createCell(15).setCellValue("");
         headerRow.createCell(16).setCellValue("연간 예상소요량");
 
-        // Data rows start at row 7 (0-based: row 6)
         for (int i = 0; i < dataRows; i++) {
             Row row = sheet.createRow(6 + i);
             row.createCell(0).setCellValue(i + 1);
             row.createCell(1).setCellValue(i + 1);
             if (makeInvalid) {
-                row.createCell(2).setCellValue("");  // blank itemName - violates @NotBlank
-                row.createCell(5).setCellValue("bad-hs-code");  // violates @Pattern
+                row.createCell(2).setCellValue("");
+                row.createCell(5).setCellValue("bad-hs-code");
             } else {
                 row.createCell(2).setCellValue("Item" + (i + 1));
                 row.createCell(5).setCellValue("8481.80-200" + i);
@@ -383,11 +424,10 @@ class ExcelImportIntegrationTest {
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Sheet1");
 
-            // Header row at row 4 (0-based: row 3) with WRONG headers
             Row headerRow = sheet.createRow(3);
             headerRow.createCell(0).setCellValue("No");
-            headerRow.createCell(1).setCellValue("WRONG_B");   // Expected: 순번
-            headerRow.createCell(2).setCellValue("WRONG_C");   // Expected: 물품명
+            headerRow.createCell(1).setCellValue("WRONG_B");
+            headerRow.createCell(2).setCellValue("WRONG_C");
             headerRow.createCell(3).setCellValue("WRONG_D");
             headerRow.createCell(4).setCellValue("WRONG_E");
             headerRow.createCell(5).setCellValue("WRONG_F");
@@ -410,7 +450,6 @@ class ExcelImportIntegrationTest {
     }
 
     private String extractDownloadUrl(String jsonResponse) {
-        // Simple extraction: find "downloadUrl":"..."
         int start = jsonResponse.indexOf("\"downloadUrl\":\"") + "\"downloadUrl\":\"".length();
         int end = jsonResponse.indexOf("\"", start);
         return jsonResponse.substring(start, end);
