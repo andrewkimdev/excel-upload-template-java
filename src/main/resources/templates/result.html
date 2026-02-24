@@ -3,54 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Result</title>
+    <title>업로드 결과</title>
     <link rel="stylesheet" th:href="@{/style.css}">
 </head>
 <body>
     <div class="container">
-        <h1>Upload Result</h1>
+        <h1>업로드 결과</h1>
 
         <div th:if="${result.success}" class="alert alert-success">
-            <h2>Success</h2>
+            <h2>성공</h2>
             <!--
-            SECURITY: th:text automatically escapes HTML to prevent XSS attacks.
-            Never use th:utext with user-controlled data.
+            보안: th:text는 XSS 공격 방지를 위해 HTML을 자동 이스케이프합니다.
+            사용자 제어 데이터에는 th:utext를 사용하지 마세요.
             -->
             <p th:text="${result.message}"></p>
             <ul>
-                <li>Rows Processed: <span th:text="${result.rowsProcessed}"></span></li>
-                <li>Rows Created: <span th:text="${result.rowsCreated}"></span></li>
-                <li>Rows Updated: <span th:text="${result.rowsUpdated}"></span></li>
+                <li>처리 행 수: <span th:text="${result.rowsProcessed}"></span></li>
+                <li>생성 행 수: <span th:text="${result.rowsCreated}"></span></li>
+                <li>수정 행 수: <span th:text="${result.rowsUpdated}"></span></li>
             </ul>
         </div>
 
         <div th:if="${!result.success}" class="alert alert-error">
-            <h2>Errors Found</h2>
+            <h2>오류 발생</h2>
             <p th:text="${result.message}"></p>
             <ul th:if="${result.rowsProcessed > 0}">
-                <li>Total Rows: <span th:text="${result.rowsProcessed}"></span></li>
-                <li>Error Rows: <span th:text="${result.errorRows}"></span></li>
-                <li>Total Errors: <span th:text="${result.errorCount}"></span></li>
+                <li>전체 행 수: <span th:text="${result.rowsProcessed}"></span></li>
+                <li>오류 행 수: <span th:text="${result.errorRows}"></span></li>
+                <li>전체 오류 수: <span th:text="${result.errorCount}"></span></li>
             </ul>
             <!--
-            SECURITY NOTE: Download URL Handling
+            보안 참고: 다운로드 URL 처리
             =====================================
-            The download URL is constructed using Thymeleaf's URL expression @{...}
-            with a path variable bound to errorFileId (a UUID generated server-side).
-            The controller validates the UUID format before file access.
+            다운로드 URL은 Thymeleaf URL 표현식 @{...}을 사용해 구성하며,
+            경로 변수는 서버에서 생성한 UUID(errorFileId)에 바인딩됩니다.
+            컨트롤러는 파일 접근 전에 UUID 형식을 검증합니다.
 
-            If you modify URL construction:
-            1. Never include user-controlled data in URLs without validation
-            2. Validate that URLs point only to allowed paths
-            3. Always use th:href="@{...}" (Thymeleaf URL building) instead of
-               raw th:href="${...}" to get proper context-path handling and encoding
+            URL 구성을 수정할 때:
+            1. 검증 없이 사용자 제어 데이터를 URL에 포함하지 마세요.
+            2. URL이 허용된 경로만 가리키는지 검증하세요.
+            3. 올바른 컨텍스트 경로/인코딩 처리를 위해
+               raw th:href="${...}" 대신 th:href="@{...}"를 사용하세요.
             -->
             <p th:if="${result.errorFileId}">
-                <a th:href="@{/api/excel/download/{id}(id=${result.errorFileId})}" class="download-link">Download Error Report</a>
+                <a th:href="@{/api/excel/download/{id}(id=${result.errorFileId})}" class="download-link">오류 리포트 다운로드</a>
             </p>
         </div>
 
-        <a href="/upload/tariff-exemption" class="back-link">Back to Upload</a>
+        <a href="/upload/tariff-exemption" class="back-link">업로드 화면으로 돌아가기</a>
     </div>
 </body>
 </html>

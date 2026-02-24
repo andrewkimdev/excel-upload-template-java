@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tariff Exemption Upload</title>
+    <title>관세면제 업로드</title>
     <link rel="stylesheet" th:href="@{/style.css}">
 </head>
 <body>
 <div class="container">
-    <h1>Tariff Exemption 업로드</h1>
+    <h1>관세면제 업로드</h1>
 
     <form method="post" th:action="@{/upload/tariff-exemption}" enctype="multipart/form-data">
         <div class="form-group">
@@ -36,7 +36,7 @@
             <input type="file" id="file" name="file" accept=".xlsx" required>
         </div>
 
-        <button type="submit">Upload</button>
+        <button type="submit">업로드</button>
     </form>
 </div>
 </body>

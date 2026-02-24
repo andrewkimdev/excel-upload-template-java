@@ -258,7 +258,7 @@ class ExcelImportIntegrationTest {
         mockMvc.perform(get(PAGE_UPLOAD_TARIFF))
                 .andExpect(status().isOk())
                 .andExpect(view().name("upload-tariff-exemption"))
-                .andExpect(content().string(containsString("Tariff Exemption 업로드")));
+                .andExpect(content().string(containsString("관세면제 업로드")));
     }
 
     @Test
