@@ -9,9 +9,8 @@ Minimal operating rules for coding agents in this repository.
 When documents conflict, use this order:
 
 1. Runtime behavior in code under `src/main/java`
-2. `docs/SPEC-final.md` (if present, and explicitly "as implemented")
-3. `README.md`
-4. `CLAUDE.md` (advisory, not canonical)
+2. `README.md`
+3. `CLAUDE.md` (advisory, not canonical)
 
 ## Verified Baseline
 
@@ -30,7 +29,8 @@ When documents conflict, use this order:
   - secure workbook opening
   - row pre-count / row-limit checks
 - Hide internal exception details for unexpected/system failures in controller responses.
-- Keep user-facing messages and logs in Korean.
+- Keep user-facing messages and externally returned errors in Korean.
+- Internal technical logs may remain English where currently implemented.
 - Use Thymeleaf escaping (`th:text`) for user content.
 - Keep REST `commonData` contract strict:
   - reject unknown JSON fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
@@ -50,7 +50,7 @@ When documents conflict, use this order:
 - This repository is designed to be cherry-picked into a larger project, not consumed as a stable standalone API.
 - Backward compatibility is not a goal here; prefer simplifying refactors even when they introduce breaking changes.
 - Proactively remove unused or dead code when identified.
-- Do not enforce style mandates not present in `README.md` or `docs/SPEC-final.md`.
+- Do not enforce style mandates not present in `README.md`.
 - If a broad policy from `CLAUDE.md` is unsupported by code/docs, treat it as optional guidance.
 - Keep documentation inventories (architecture/tests) synchronized with implemented classes/tests (e.g., summary repositories and contract tests).
 - After edits, run relevant tests before finalizing.

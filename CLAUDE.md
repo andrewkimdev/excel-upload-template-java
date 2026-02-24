@@ -14,11 +14,12 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 
 ## Runtime Contracts To Preserve
 
-### Upload contract (`POST /api/excel/upload/{templateType}`)
+### Upload contract (`POST /api/excel/upload/tariff-exemption`)
 
 - Multipart parts:
   - `file` (`.xlsx` only; `.xls` rejected)
   - `commonData` (`application/json`)
+- Current runtime wiring uses explicit template routes (not a generic `{templateType}` catch-all).
 - `commonData` is template-specific via `TemplateDefinition<T, C extends CommonData>.commonDataClass`
 - For current tariff template, required fields are:
   - `comeYear`, `comeSequence`, `uploadSequence`, `equipCode`
@@ -38,13 +39,15 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 
 ### Web behavior
 
-- Keep user-facing messages/logs in Korean.
+- Keep user-facing messages and externally returned errors in Korean.
+- Internal technical logs may remain English where currently implemented.
 - Keep Thymeleaf escaping (`th:text`) for user content.
 
 ## Current Architectural Shape
 
 - Core orchestration:
-  - `ExcelFileController` -> `ExcelImportOrchestrator` -> parser/validator/persistence
+  - Upload: `TariffExemptionUploadApiController` -> `ExcelUploadRequestService` -> `ExcelImportOrchestrator`
+  - Download: `ExcelFileController` serves `/api/excel/download/{fileId}`
 - Template wiring:
   - `TemplateDefinition<T, C extends CommonData>`
   - `PersistenceHandler<T, C extends CommonData>`
