@@ -64,6 +64,35 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
+    void upload_sameFileAndCommonData_twice_switchesCreatedToUpdated() throws Exception {
+        byte[] xlsxBytes = createValidTariffExemptionXlsx(2);
+        MockMultipartFile firstFile = new MockMultipartFile(
+                "file", "tariff.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+        MockMultipartFile secondFile = new MockMultipartFile(
+                "file", "tariff.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(firstFile)
+                        .file(requiredCommonDataPart()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.rowsCreated").value(2))
+                .andExpect(jsonPath("$.rowsUpdated").value(0));
+
+        mockMvc.perform(multipart("/api/excel/upload/tariff-exemption")
+                        .file(secondFile)
+                        .file(requiredCommonDataPart()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.rowsCreated").value(0))
+                .andExpect(jsonPath("$.rowsUpdated").value(2));
+    }
+
+    @Test
     void upload_invalidData_returnsErrorWithDownloadUrl() throws Exception {
         byte[] xlsxBytes = createInvalidTariffExemptionXlsx();
         MockMultipartFile file = new MockMultipartFile(

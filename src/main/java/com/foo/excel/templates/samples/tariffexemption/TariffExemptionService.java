@@ -45,17 +45,12 @@ public class TariffExemptionService
     private boolean upsertDetailWithRetry(TariffExemptionDto dto,
                                           Integer rowNumber,
                                           TariffExemptionCommonData commonData) {
+        TariffExemptionId detailId = buildDetailId(commonData, rowNumber);
         int attempt = 0;
         while (attempt <= UPSERT_RETRY_LIMIT) {
             attempt++;
             try {
-                Optional<TariffExemption> existing = repository
-                        .findByComeYearAndComeSequenceAndUploadSequenceAndEquipCodeAndRowNumber(
-                                commonData.getComeYear(),
-                                commonData.getComeSequence(),
-                                commonData.getUploadSequence(),
-                                commonData.getEquipCode(),
-                                rowNumber);
+                Optional<TariffExemption> existing = repository.findById(detailId);
 
                 if (existing.isPresent()) {
                     TariffExemption entity = existing.get();
@@ -64,7 +59,8 @@ public class TariffExemptionService
                     return false;
                 }
 
-                TariffExemption newEntity = buildEntityFromDto(dto, rowNumber, commonData);
+                TariffExemption newEntity = buildEntityFromDto(dto, commonData);
+                newEntity.setId(detailId);
                 repository.saveAndFlush(newEntity);
                 return true;
             } catch (DataIntegrityViolationException e) {
@@ -78,16 +74,12 @@ public class TariffExemptionService
     }
 
     private void upsertSummaryWithRetry(int rowCount, TariffExemptionCommonData commonData) {
+        TariffExemptionSummaryId summaryId = buildSummaryId(commonData);
         int attempt = 0;
         while (attempt <= UPSERT_RETRY_LIMIT) {
             attempt++;
             try {
-                Optional<TariffExemptionSummary> existing = summaryRepository
-                        .findByComeYearAndComeSequenceAndUploadSequenceAndEquipCode(
-                                commonData.getComeYear(),
-                                commonData.getComeSequence(),
-                                commonData.getUploadSequence(),
-                                commonData.getEquipCode());
+                Optional<TariffExemptionSummary> existing = summaryRepository.findById(summaryId);
 
                 if (existing.isPresent()) {
                     TariffExemptionSummary entity = existing.get();
@@ -98,10 +90,7 @@ public class TariffExemptionService
                 }
 
                 TariffExemptionSummary newEntity = TariffExemptionSummary.builder()
-                        .comeYear(commonData.getComeYear())
-                        .comeSequence(commonData.getComeSequence())
-                        .uploadSequence(commonData.getUploadSequence())
-                        .equipCode(commonData.getEquipCode())
+                        .id(summaryId)
                         .uploadedRows(rowCount)
                         .build();
                 applyAuditDefaults(newEntity, commonData);
@@ -133,14 +122,8 @@ public class TariffExemptionService
     }
 
     private TariffExemption buildEntityFromDto(TariffExemptionDto dto,
-                                               Integer rowNumber,
                                                TariffExemptionCommonData commonData) {
         TariffExemption entity = TariffExemption.builder()
-                .comeYear(commonData.getComeYear())
-                .comeSequence(commonData.getComeSequence())
-                .uploadSequence(commonData.getUploadSequence())
-                .equipCode(commonData.getEquipCode())
-                .rowNumber(rowNumber)
                 .sequenceNo(dto.getSequenceNo())
                 .itemName(dto.getItemName())
                 .specification(dto.getSpecification())
@@ -156,6 +139,25 @@ public class TariffExemptionService
                 .build();
         applyAuditDefaults(entity, commonData);
         return entity;
+    }
+
+    private TariffExemptionId buildDetailId(TariffExemptionCommonData commonData, Integer rowNumber) {
+        return new TariffExemptionId(
+                commonData.getComeYear(),
+                commonData.getComeSequence(),
+                commonData.getUploadSequence(),
+                commonData.getEquipCode(),
+                rowNumber
+        );
+    }
+
+    private TariffExemptionSummaryId buildSummaryId(TariffExemptionCommonData commonData) {
+        return new TariffExemptionSummaryId(
+                commonData.getComeYear(),
+                commonData.getComeSequence(),
+                commonData.getUploadSequence(),
+                commonData.getEquipCode()
+        );
     }
 
     private void applyAuditDefaults(TariffExemption entity, TariffExemptionCommonData commonData) {

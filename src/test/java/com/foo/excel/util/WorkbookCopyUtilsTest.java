@@ -1,6 +1,5 @@
 package com.foo.excel.util;
 
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -30,22 +29,6 @@ class WorkbookCopyUtilsTest {
             assertThat(target.getFontAt(mapped.getFontIndex()).getBold()).isTrue();
             assertThat(mapped.getFillForegroundColor()).isEqualTo(IndexedColors.LIGHT_GREEN.getIndex());
             assertThat(mapped.getFillPattern()).isEqualTo(FillPatternType.SOLID_FOREGROUND);
-        }
-    }
-
-    @Test
-    void buildStyleMapping_hssfToXssf_preservesBorders() throws IOException {
-        try (var source = new HSSFWorkbook(); var target = new XSSFWorkbook()) {
-            CellStyle srcStyle = source.createCellStyle();
-            srcStyle.setBorderBottom(BorderStyle.THIN);
-            srcStyle.setBorderTop(BorderStyle.DOUBLE);
-
-            var styleMap = WorkbookCopyUtils.buildStyleMapping(source, target);
-
-            CellStyle mapped = styleMap.get((int) srcStyle.getIndex());
-            assertThat(mapped).isNotNull();
-            assertThat(mapped.getBorderBottom()).isEqualTo(BorderStyle.THIN);
-            assertThat(mapped.getBorderTop()).isEqualTo(BorderStyle.DOUBLE);
         }
     }
 

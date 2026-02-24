@@ -1,12 +1,9 @@
 package com.foo.excel.templates.samples.tariffexemption;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,28 +18,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "tariff_exemption_summary", uniqueConstraints =
-    @UniqueConstraint(columnNames = {
-            "come_year", "come_sequence", "upload_sequence", "equip_code"
-    })
-)
+@Table(name = "tariff_exemption_summary")
 public class TariffExemptionSummary {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "come_year", nullable = false, length = 20)
-    private String comeYear;
-
-    @Column(name = "come_sequence", nullable = false, length = 50)
-    private String comeSequence;
-
-    @Column(name = "upload_sequence", nullable = false, length = 50)
-    private String uploadSequence;
-
-    @Column(name = "equip_code", nullable = false, length = 50)
-    private String equipCode;
+    @EmbeddedId
+    private TariffExemptionSummaryId id;
 
     @Column(name = "uploaded_rows", nullable = false)
     private Integer uploadedRows;

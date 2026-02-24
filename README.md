@@ -33,7 +33,7 @@ Open http://localhost:8080 to access the upload form.
   - `file`: Excel file (`.xlsx` only)
   - `commonData`: JSON (`application/json`)
 - `commonData` schema is template-specific (`TemplateDefinition<T, C>`의 `commonDataClass` 기준)
-- Required `commonData` fields:
+- Required `commonData` fields (현재 `tariff-exemption` 템플릿 기준):
   - `comeYear`
   - `comeSequence`
   - `uploadSequence`
@@ -105,13 +105,15 @@ src/main/java/com/foo/excel/
 │   ├── TariffExemptionDto.java                    # DTO with @ExcelColumn + JSR-380 annotations
 │   ├── TariffExemptionImportConfig.java           # ExcelImportConfig for tariff exemption
 │   ├── TariffExemptionCommonData.java             # Tariff template-specific commonData DTO
-│   ├── TariffExemption.java                       # JPA entity
-│   ├── TariffExemptionSummary.java                # Summary JPA entity (upload-level aggregate)
+│   ├── TariffExemptionId.java                     # Detail composite PK (@Embeddable)
+│   ├── TariffExemptionSummaryId.java              # Summary composite PK (@Embeddable)
+│   ├── TariffExemption.java                       # Detail JPA entity (@EmbeddedId)
+│   ├── TariffExemptionSummary.java                # Summary JPA entity (@EmbeddedId, upload aggregate)
 │   ├── TariffExemptionRepository.java             # Spring Data JPA repository
 │   ├── TariffExemptionSummaryRepository.java      # Spring Data JPA repository for summary table
 │   ├── TariffExemptionService.java                # Implements PersistenceHandler
-│   ├── TariffExemptionDbUniquenessChecker.java    # Implements DatabaseUniquenessChecker
-│   └── TariffExemptionTemplateConfig.java         # Wires the TemplateDefinition bean
+│   ├── TariffExemptionDbUniquenessChecker.java    # Optional DatabaseUniquenessChecker implementation
+│   └── TariffExemptionTemplateConfig.java         # Wires the TemplateDefinition bean (currently checker is null)
 ├── util/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
 │   ├── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)
@@ -131,7 +133,7 @@ src/main/java/com/foo/excel/
 8. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
 9. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
 10. **Within-file uniqueness** -- `@ExcelUnique` (single field), `@ExcelCompositeUnique` (composite key)
-11. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker`
+11. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker` (for current tariff wiring, this step is skipped because checker is `null`)
 12. **Error merge** -- parse errors, validation errors, and DB uniqueness errors are combined
 13. **Result** -- success with row counts, or format-preserving error report Excel with `_ERRORS` column, red-highlighted error cells, original filename in download, and disclaimer footer
 
@@ -170,7 +172,7 @@ See `application.properties` for a detailed security checklist and configuration
 3. **CommonData** -- 템플릿별 DTO를 만들고 `CommonData`를 구현한다 (strict JSON + Bean Validation 대상)
 4. **Persistence** -- Implement `PersistenceHandler<T, C>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)` to save parsed rows merged with common fields
 5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T>` if duplicates should be checked against existing data
-6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, C>` `@Bean` with `commonDataClass`; the orchestrator discovers it automatically
+6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, C>` `@Bean` with `commonDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
 
 See the `TariffExemption*` classes for a complete example (`TariffExemptionDto`, `TariffExemptionImportConfig`, `TariffExemptionService`, `TariffExemptionDbUniquenessChecker`, `TariffExemptionTemplateConfig`).
 

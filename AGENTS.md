@@ -9,7 +9,7 @@ Minimal operating rules for coding agents in this repository.
 When documents conflict, use this order:
 
 1. Runtime behavior in code under `src/main/java`
-2. `docs/SPEC-final.md` (explicitly "as implemented")
+2. `docs/SPEC-final.md` (if present, and explicitly "as implemented")
 3. `README.md`
 4. `CLAUDE.md` (advisory, not canonical)
 
@@ -32,13 +32,16 @@ When documents conflict, use this order:
 - Hide internal exception details for unexpected/system failures in controller responses.
 - Keep user-facing messages and logs in Korean.
 - Use Thymeleaf escaping (`th:text`) for user content.
-- Keep REST `commonData` contract strict: reject unknown JSON fields (`FAIL_ON_UNKNOWN_PROPERTIES`).
+- Keep REST `commonData` contract strict:
+  - reject unknown JSON fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
+  - disable scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
 - Add new Excel templates under `com.foo.excel.templates...` using the existing pattern:
   - DTO (`@ExcelColumn` + validation)
   - `ExcelImportConfig`
-  - `PersistenceHandler` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, UploadCommonData commonData)`)
+  - template-specific `CommonData` DTO + bean validation
+  - `PersistenceHandler<T, C extends CommonData>` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)`)
   - optional `DatabaseUniquenessChecker`
-  - `TemplateDefinition` bean wiring
+  - `TemplateDefinition<T, C>` bean wiring (`commonDataClass` 포함)
   - include summary entity/repository where the template uses upload-level aggregate persistence
 
 ## Guardrails for Changes
