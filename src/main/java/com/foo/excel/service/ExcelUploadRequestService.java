@@ -77,8 +77,10 @@ public class ExcelUploadRequestService {
 
         try {
             ObjectMapper strictMapper = objectMapper.copy()
-                    .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                    .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);
+                    .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+            strictMapper.setConfig(
+                    strictMapper.getDeserializationConfig()
+                            .without(MapperFeature.ALLOW_COERCION_OF_SCALARS));
             strictMapper.coercionConfigFor(LogicalType.Textual)
                     .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
                     .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)

@@ -39,19 +39,17 @@ public class ExcelErrorReportService {
         // 1. Open source read-only via SecureExcelUtils (security: no write access needed)
         try (Workbook sourceWb = SecureExcelUtils.createWorkbook(originalXlsx)) {
 
-            // 2. Create target XSSFWorkbook + build style mapping
-            var targetXssf = new XSSFWorkbook();
-            var styleMap = WorkbookCopyUtils.buildStyleMapping(sourceWb, targetXssf);
+            // 2. Create target workbook and wrap with SXSSF streaming window
+            try (XSSFWorkbook targetXssf = new XSSFWorkbook();
+                 SXSSFWorkbook sxssfWb = new SXSSFWorkbook(targetXssf, 100)) {
+                var styleMap = WorkbookCopyUtils.buildStyleMapping(sourceWb, targetXssf);
 
-            // 3. Build error lookup: Map<Integer, RowError> keyed by 1-based row number
-            var errorsByRow = new HashMap<Integer, RowError>();
-            for (RowError rowError : validationResult.getRowErrors()) {
-                errorsByRow.put(rowError.getRowNumber(), rowError);
-            }
+                // 3. Build error lookup: Map<Integer, RowError> keyed by 1-based row number
+                var errorsByRow = new HashMap<Integer, RowError>();
+                for (RowError rowError : validationResult.getRowErrors()) {
+                    errorsByRow.put(rowError.getRowNumber(), rowError);
+                }
 
-            // 4. Wrap with SXSSFWorkbook (100-row streaming window)
-            var sxssfWb = new SXSSFWorkbook(targetXssf, 100);
-            try {
                 int dataSheetIndex = config.getSheetIndex();
                 int headerRowIdx = config.getHeaderRow() - 1;
                 var errorStyleCache = new HashMap<Integer, CellStyle>();
@@ -183,10 +181,6 @@ public class ExcelErrorReportService {
 
                 log.info("Error report generated: {}", errorFilePath);
                 return errorFilePath;
-
-            } finally {
-                // CRITICAL: dispose() cleans up SXSSF temporary files on disk
-                sxssfWb.dispose();
             }
         }
     }

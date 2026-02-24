@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -336,6 +337,30 @@ class ExcelErrorReportServiceTest {
         }
     }
 
+    @Test
+    void errorReport_repeatedGeneration_doesNotLeakSxssfTempFiles() throws IOException {
+        Path poiTempDir = Path.of(System.getProperty("java.io.tmpdir"), "poifiles");
+        Files.createDirectories(poiTempDir);
+        long beforeCount = countSxssfTempFiles(poiTempDir);
+
+        for (int i = 0; i < 10; i++) {
+            Path originalFile = createSimpleXlsx();
+            ExcelValidationResult validationResult = createValidationResult();
+            TestConfig config = new TestConfig();
+            List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+            Path errorFile = errorReportService.generateErrorReport(
+                    originalFile, validationResult, mappings, config, "cleanup-check.xlsx");
+
+            String fileId = errorFile.getFileName().toString().replace(".xlsx", "");
+            Files.deleteIfExists(errorFile);
+            Files.deleteIfExists(tempDir.resolve("errors").resolve(fileId + ".meta"));
+        }
+
+        long afterCount = countSxssfTempFiles(poiTempDir);
+        assertThat(afterCount).isEqualTo(beforeCount);
+    }
+
     // ===== Helpers =====
 
     static class TestConfig implements ExcelImportConfig {
@@ -516,5 +541,15 @@ class ExcelErrorReportServiceTest {
                 .build();
 
         return ExcelValidationResult.failure(2, List.of(rowError));
+    }
+
+    private long countSxssfTempFiles(Path poiTempDir) throws IOException {
+        try (Stream<Path> paths = Files.walk(poiTempDir)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .map(path -> path.getFileName().toString())
+                    .filter(name -> name.contains("poi-sxssf-sheet"))
+                    .count();
+        }
     }
 }

@@ -234,6 +234,33 @@ class ExcelImportIntegrationTest {
     }
 
     @Test
+    void upload_commonDataBooleanCoercion_rejected() throws Exception {
+        byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "tariff.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsxBytes);
+        MockMultipartFile invalidCommonData = new MockMultipartFile(
+                "commonData",
+                "commonData",
+                MediaType.APPLICATION_JSON_VALUE,
+                ("{" +
+                        "\"comeYear\":\"2026\"," +
+                        "\"comeSequence\":true," +
+                        "\"uploadSequence\":\"U001\"," +
+                        "\"equipCode\":\"EQ-01\"" +
+                        "}").getBytes()
+        );
+
+        mockMvc.perform(multipart(API_UPLOAD_TARIFF)
+                        .file(file)
+                        .file(invalidCommonData))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message", containsString("commonData")));
+    }
+
+    @Test
     void removedGenericUploadRoute_returns404() throws Exception {
         byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
         MockMultipartFile file = new MockMultipartFile(
