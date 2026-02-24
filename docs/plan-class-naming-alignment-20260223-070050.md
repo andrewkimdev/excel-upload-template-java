@@ -16,9 +16,9 @@
 
 ## Evidence (Current State)
 - 업로드 파일 저장/검증 서비스:
-  - `src/main/java/com/foo/excel/service/ExcelUploadFileService.java`
+  - `src/main/java/com/foo/excel/service/file/ExcelUploadFileService.java`
 - 오케스트레이터 주입/호출:
-  - `src/main/java/com/foo/excel/service/ExcelImportOrchestrator.java`
+  - `src/main/java/com/foo/excel/service/pipeline/ExcelImportOrchestrator.java`
 - within-file 유니크 검증기:
   - `src/main/java/com/foo/excel/validation/WithinFileUniqueConstraintValidator.java`
 - 컨트롤러:

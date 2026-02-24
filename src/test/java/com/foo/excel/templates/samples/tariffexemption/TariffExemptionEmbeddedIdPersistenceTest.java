@@ -1,7 +1,16 @@
 package com.foo.excel.templates.samples.tariffexemption;
 
 import com.foo.excel.ExcelUploadApplication;
-import com.foo.excel.service.PersistenceHandler.SaveResult;
+import com.foo.excel.service.contract.PersistenceHandler.SaveResult;
+import com.foo.excel.templates.samples.tariffexemption.dto.TariffExemptionCommonData;
+import com.foo.excel.templates.samples.tariffexemption.dto.TariffExemptionDto;
+import com.foo.excel.templates.samples.tariffexemption.persistence.entity.TariffExemption;
+import com.foo.excel.templates.samples.tariffexemption.persistence.entity.TariffExemptionId;
+import com.foo.excel.templates.samples.tariffexemption.persistence.entity.TariffExemptionSummary;
+import com.foo.excel.templates.samples.tariffexemption.persistence.entity.TariffExemptionSummaryId;
+import com.foo.excel.templates.samples.tariffexemption.persistence.repository.TariffExemptionRepository;
+import com.foo.excel.templates.samples.tariffexemption.persistence.repository.TariffExemptionSummaryRepository;
+import com.foo.excel.templates.samples.tariffexemption.service.TariffExemptionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

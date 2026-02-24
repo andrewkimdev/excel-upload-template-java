@@ -33,7 +33,7 @@
 
 ## Implementation Steps
 1. 공통 마커 도입
-- `com.foo.excel.service.CommonData` 인터페이스 추가 (마커 인터페이스)
+- `com.foo.excel.service.contract.CommonData` 인터페이스 추가 (마커 인터페이스)
 
 2. Tariff commonData 분리
 - `TariffExemptionCommonData` DTO 추가

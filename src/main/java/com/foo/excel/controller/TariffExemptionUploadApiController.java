@@ -1,7 +1,7 @@
 package com.foo.excel.controller;
 
-import com.foo.excel.service.ExcelImportOrchestrator.ImportResult;
-import com.foo.excel.service.ExcelUploadRequestService;
+import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
+import com.foo.excel.service.pipeline.ExcelUploadRequestService;
 import com.foo.excel.templates.TemplateTypes;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

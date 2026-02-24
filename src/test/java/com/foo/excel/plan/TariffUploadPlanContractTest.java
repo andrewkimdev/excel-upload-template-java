@@ -1,12 +1,12 @@
 package com.foo.excel.plan;
 
 import com.foo.excel.ExcelUploadApplication;
-import com.foo.excel.service.CommonData;
-import com.foo.excel.service.ExcelImportOrchestrator;
-import com.foo.excel.service.PersistenceHandler;
-import com.foo.excel.service.TemplateDefinition;
+import com.foo.excel.service.contract.CommonData;
+import com.foo.excel.service.pipeline.ExcelImportOrchestrator;
+import com.foo.excel.service.contract.PersistenceHandler;
+import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.templates.TemplateTypes;
-import com.foo.excel.templates.samples.tariffexemption.TariffExemption;
+import com.foo.excel.templates.samples.tariffexemption.persistence.entity.TariffExemption;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;

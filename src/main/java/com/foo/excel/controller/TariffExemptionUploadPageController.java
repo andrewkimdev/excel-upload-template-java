@@ -1,10 +1,10 @@
 package com.foo.excel.controller;
 
-import com.foo.excel.service.ExcelImportOrchestrator.ImportResult;
-import com.foo.excel.service.ExcelUploadRequestService;
+import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
+import com.foo.excel.service.pipeline.ExcelUploadRequestService;
 import com.foo.excel.templates.TemplateTypes;
-import com.foo.excel.templates.samples.tariffexemption.TariffExemptionCommonData;
-import com.foo.excel.templates.samples.tariffexemption.TariffExemptionCommonDataFormMapper;
+import com.foo.excel.templates.samples.tariffexemption.dto.TariffExemptionCommonData;
+import com.foo.excel.templates.samples.tariffexemption.mapper.TariffExemptionCommonDataFormMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;

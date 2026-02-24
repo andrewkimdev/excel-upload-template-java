@@ -1,6 +1,8 @@
 package com.foo.excel.service;
 
 import com.foo.excel.annotation.HeaderMatchMode;
+import com.foo.excel.service.pipeline.parse.ColumnResolutionBatchException;
+import com.foo.excel.service.pipeline.parse.ColumnResolutionException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

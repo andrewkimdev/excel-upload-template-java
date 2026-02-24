@@ -7,12 +7,12 @@
 
 ## Current State Evidence
 - 상세 엔티티는 `Long id` + 복합 유니크 제약 조합을 사용 중:
-  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemption.java`
+  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/persistence/entity/TariffExemption.java`
 - 요약 엔티티는 `Long id` + 복합 유니크 제약 조합을 사용 중:
-  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionSummary.java`
+  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/persistence/entity/TariffExemptionSummary.java`
 - 저장소 제네릭 PK 타입은 둘 다 `Long`:
-  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionRepository.java`
-  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionSummaryRepository.java`
+  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/persistence/repository/TariffExemptionRepository.java`
+  - `src/main/java/com/foo/excel/templates/samples/tariffexemption/persistence/repository/TariffExemptionSummaryRepository.java`
 - 업서트는 현재 자연키 조건 조회 메서드 기반:
   - `TariffExemptionService#upsertDetailWithRetry`
   - `TariffExemptionService#upsertSummaryWithRetry`

@@ -162,14 +162,14 @@ Response includes `downloadUrl=/api/excel/download/{uuid}`.
 ## 5) Key classes map
 
 - Controller: `src/main/java/com/foo/excel/controller/ExcelFileController.java`
-- Orchestrator: `src/main/java/com/foo/excel/service/ExcelImportOrchestrator.java`
-- Conversion: `src/main/java/com/foo/excel/service/ExcelUploadFileService.java`
-- Parser: `src/main/java/com/foo/excel/service/ExcelParserService.java`
-- Validation: `src/main/java/com/foo/excel/service/ExcelValidationService.java`
+- Orchestrator: `src/main/java/com/foo/excel/service/pipeline/ExcelImportOrchestrator.java`
+- Conversion: `src/main/java/com/foo/excel/service/file/ExcelUploadFileService.java`
+- Parser: `src/main/java/com/foo/excel/service/pipeline/parse/ExcelParserService.java`
+- Validation: `src/main/java/com/foo/excel/service/pipeline/validation/ExcelValidationService.java`
 - Uniqueness validator: `src/main/java/com/foo/excel/validation/WithinFileUniqueConstraintValidator.java`
-- Error report: `src/main/java/com/foo/excel/service/ExcelErrorReportService.java`
+- Error report: `src/main/java/com/foo/excel/service/pipeline/report/ExcelErrorReportService.java`
 - Security utilities: `src/main/java/com/foo/excel/util/SecureExcelUtils.java`
-- Template wiring example: `src/main/java/com/foo/excel/templates/samples/tariffexemption/TariffExemptionTemplateConfig.java`
+- Template wiring example: `src/main/java/com/foo/excel/templates/samples/tariffexemption/config/TariffExemptionTemplateConfig.java`
 
 ## 6) Configuration reference
 

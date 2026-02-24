@@ -1,6 +1,6 @@
 package com.foo.excel.controller;
 
-import com.foo.excel.service.ExcelUploadRequestService;
+import com.foo.excel.service.pipeline.ExcelUploadRequestService;
 import com.foo.excel.templates.TemplateTypes;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

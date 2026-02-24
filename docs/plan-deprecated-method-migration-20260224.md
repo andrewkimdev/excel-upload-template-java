@@ -19,7 +19,7 @@ Remove current deprecation usage while preserving implemented behavior and contr
 ## Migration Design
 
 ### 1) Jackson (`ExcelUploadRequestService`)
-- File: `src/main/java/com/foo/excel/service/ExcelUploadRequestService.java`
+- File: `src/main/java/com/foo/excel/service/pipeline/ExcelUploadRequestService.java`
 - Current:
   - `strictMapper.disable(MapperFeature.ALLOW_COERCION_OF_SCALARS);`
 - Revised:
@@ -32,7 +32,7 @@ Remove current deprecation usage while preserving implemented behavior and contr
   - Keep behavior limited to parse-time strict deserialization path; no controller/API contract changes.
 
 ### 2) Apache POI (`ExcelErrorReportService`)
-- File: `src/main/java/com/foo/excel/service/ExcelErrorReportService.java`
+- File: `src/main/java/com/foo/excel/service/pipeline/report/ExcelErrorReportService.java`
 - Current:
   - explicit `sxssfWb.dispose();`
 - Revised:
