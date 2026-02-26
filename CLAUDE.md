@@ -23,7 +23,11 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 - `commonData` is template-specific via `TemplateDefinition<T, C extends CommonData>.commonDataClass`
 - For current tariff template, required fields are:
   - `comeYear`, `comeOrder`, `uploadSeq`, `equipCode`
+  - `equipMean`, `hsno`, `spec`, `taxRate`
+- Optional fields are:
+  - `filePath`, `approvalYn`, `approvalDate`
   - `customId`는 런타임 계약(`CommonData#getCustomId`)상 필수이며, 현재 컨트롤러에서 `CUSTOM01`로 주입됨
+- `approvalYn`가 비어 있으면 기본값 `N`을 사용하며, 유효 승인값이 `Y`이면 `approvalDate`는 저장 시 현재 날짜를 사용한다.
 - Strict parsing is enabled:
   - `FAIL_ON_UNKNOWN_PROPERTIES`
   - scalar coercion disabled for textual fields

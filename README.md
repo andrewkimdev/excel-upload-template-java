@@ -38,11 +38,19 @@ Open http://localhost:8080 to access the upload form.
   - `comeOrder`
   - `uploadSeq`
   - `equipCode`
+  - `equipMean`
+  - `hsno`
+  - `spec`
+  - `taxRate`
+- Optional `commonData` fields (현재 `aappcar` 템플릿 기준):
+  - `filePath`
+  - `approvalYn`
+  - `approvalDate`
 - Runtime contract fields (템플릿 `CommonData` 계약):
   - `customId` (`CommonData#getCustomId`) must resolve to a non-blank value for temp-path partitioning
 - Server-managed fields:
-  - `createdBy`: forced to `user01` on server
-  - `approvedYn`: forced to `N` on server
+  - `approvalYn`: defaults to `N` when omitted
+  - `approvalDate`: saved as `LocalDate.now()` only when effective `approvalYn` is `Y`, otherwise `null`
   - `companyId`: currently forced to `COMPANY01` on server-side controller
   - `customId`: currently forced to `CUSTOM01` on server-side controller
 - `commonData` is parsed in strict mode:
@@ -57,9 +65,16 @@ Open http://localhost:8080 to access the upload form.
   - `comeOrder`
   - `uploadSeq`
   - `equipCode`
+  - `equipMean`
+  - `hsno`
+  - `spec`
+  - `taxRate`
+  - `filePath` (optional)
+  - `approvalYn` (optional)
+  - `approvalDate` (optional)
   - `file` (`.xlsx` only)
-- Form does not expose `createdBy` or `approvedYn`.
-- Server injects `createdBy=user01`, `approvedYn=N`.
+- Form does not expose `companyId` or `customId`.
+- Server injects `companyId=COMPANY01`, `customId=CUSTOM01`.
 
 ### Upload Response (success)
 
