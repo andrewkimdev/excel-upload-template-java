@@ -37,11 +37,29 @@ public class AAppcarItemUploadPageController {
       @RequestParam("comeOrder") String comeOrder,
       @RequestParam("uploadSeq") String uploadSeq,
       @RequestParam("equipCode") String equipCode,
+      @RequestParam("equipMean") String equipMean,
+      @RequestParam("hsno") String hsno,
+      @RequestParam("spec") String spec,
+      @RequestParam("taxRate") String taxRate,
+      @RequestParam(value = "filePath", required = false) String filePath,
+      @RequestParam(value = "approvalYn", required = false) String approvalYn,
+      @RequestParam(value = "approvalDate", required = false) String approvalDate,
       @RequestParam("file") MultipartFile file,
       Model model) {
     try {
       AAppcarItemCommonData commonData =
-          commonDataFormMapper.toCommonData(comeYear, comeOrder, uploadSeq, equipCode);
+          commonDataFormMapper.toCommonData(
+              comeYear,
+              comeOrder,
+              uploadSeq,
+              equipCode,
+              equipMean,
+              hsno,
+              spec,
+              taxRate,
+              filePath,
+              approvalYn,
+              approvalDate);
       commonData.setCompanyId(DEFAULT_COMPANY_ID);
       commonData.setCustomId(DEFAULT_CUSTOM_ID);
       ImportResult result =

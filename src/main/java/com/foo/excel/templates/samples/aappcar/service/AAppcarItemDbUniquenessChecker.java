@@ -24,7 +24,7 @@ public class AAppcarItemDbUniquenessChecker
 
   private static final int ID_COLUMN_INDEX = 1;
   private static final String ID_COLUMN_LETTER = "B";
-  private static final String ID_FIELD_NAME = "sequenceNo";
+  private static final String ID_FIELD_NAME = "goodsSeqNo";
   private static final String ID_HEADER_NAME = "순번";
   private static final String EQUIP_DUPLICATE_MESSAGE =
       "동일 업로드 식별자(회사/세관/반입연도/차수/업로드순번/설비코드)가 이미 존재합니다.";
@@ -94,6 +94,8 @@ public class AAppcarItemDbUniquenessChecker
 
   private AAppcarItemId buildItemId(AAppcarItemCommonData commonData, int rowNumber) {
     return new AAppcarItemId(
+        commonData.getCompanyId(),
+        commonData.getCustomId(),
         commonData.getComeYear(),
         commonData.getComeOrder(),
         commonData.getUploadSeq(),

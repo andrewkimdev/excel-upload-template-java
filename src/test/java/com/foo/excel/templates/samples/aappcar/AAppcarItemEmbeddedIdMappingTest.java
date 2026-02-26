@@ -20,7 +20,14 @@ class AAppcarItemEmbeddedIdMappingTest {
 
     assertThat(columns).doesNotContain("ID");
     assertThat(columns)
-        .contains("COME_YEAR", "COME_ORDER", "UPLOAD_SEQ", "EQUIP_CODE", "ROW_NUMBER");
+        .contains(
+            "COMPANY_ID",
+            "CUSTOM_ID",
+            "COME_YEAR",
+            "COME_ORDER",
+            "UPLOAD_SEQ",
+            "EQUIP_CODE",
+            "GOODS_SEQ_NO");
   }
 
   @Test
@@ -28,9 +35,22 @@ class AAppcarItemEmbeddedIdMappingTest {
     List<String> columns = columnsOf("A_APPCAR_EQUIP");
 
     assertThat(columns).doesNotContain("ID");
+    assertThat(columns).doesNotContain("UPLOADED_ROWS", "APPROVED_YN", "CREATED_AT", "CREATED_BY");
     assertThat(columns)
         .contains(
-            "COMPANY_ID", "CUSTOM_ID", "COME_YEAR", "COME_ORDER", "UPLOAD_SEQ", "EQUIP_CODE");
+            "COMPANY_ID",
+            "CUSTOM_ID",
+            "COME_YEAR",
+            "COME_ORDER",
+            "UPLOAD_SEQ",
+            "EQUIP_CODE",
+            "EQUIP_MEAN",
+            "HSNO",
+            "SPEC",
+            "TAX_RATE",
+            "FILE_PATH",
+            "APPROVAL_YN",
+            "APPROVAL_DATE");
   }
 
   private List<String> columnsOf(String tableName) {

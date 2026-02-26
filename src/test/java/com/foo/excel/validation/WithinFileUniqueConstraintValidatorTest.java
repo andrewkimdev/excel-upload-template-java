@@ -86,7 +86,7 @@ class WithinFileUniqueConstraintValidatorTest {
   @Test
   void compositeUnique_differentCombination_noErrors() {
     AAppcarItemDto dto1 = createDto("Item1", "Spec1", "8481.80-2000");
-    AAppcarItemDto dto2 = createDto("Item2", "Spec1", "8481.80-2000"); // itemName이 다름
+    AAppcarItemDto dto2 = createDto("Item2", "Spec1", "8481.80-2000"); // goodsDes가 다름
 
     List<RowError> errors =
         validator.checkWithinFileUniqueness(
@@ -104,7 +104,7 @@ class WithinFileUniqueConstraintValidatorTest {
         validator.checkWithinFileUniqueness(
             List.of(dto1, dto2), AAppcarItemDto.class, List.of(7, 8));
 
-    // specification이 null이면 복합 키는 [Item1, null, 8481.80-2000]
+    // spec이 null이면 복합 키는 [Item1, null, 8481.80-2000]
     // 이 키가 일치하므로 중복으로 올바르게 감지된다
     assertThat(errors).isNotEmpty();
   }
@@ -120,12 +120,12 @@ class WithinFileUniqueConstraintValidatorTest {
 
   // ===== 헬퍼 =====
 
-  private AAppcarItemDto createDto(String itemName, String specification, String hsCode) {
+  private AAppcarItemDto createDto(String goodsDes, String spec, String hsno) {
     AAppcarItemDto dto = new AAppcarItemDto();
-    dto.setItemName(itemName);
-    dto.setSpecification(specification);
-    dto.setHsCode(hsCode);
-    dto.setTariffRate(new BigDecimal("8"));
+    dto.setGoodsDes(goodsDes);
+    dto.setSpec(spec);
+    dto.setHsno(hsno);
+    dto.setTaxRate(new BigDecimal("8"));
     return dto;
   }
 }

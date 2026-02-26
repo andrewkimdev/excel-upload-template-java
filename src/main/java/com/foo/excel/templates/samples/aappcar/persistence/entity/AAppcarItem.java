@@ -4,8 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,48 +23,59 @@ public class AAppcarItem {
 
   @EmbeddedId private AAppcarItemId id;
 
-  @Column(name = "sequence_no")
-  private Integer sequenceNo;
+  @Size(max = 35)
+  @Column(name = "goods_code", length = 35)
+  private String goodsCode;
 
-  @Column(name = "item_name", length = 100)
-  private String itemName;
+  @Size(max = 100)
+  @Column(name = "goods_des", length = 100)
+  private String goodsDes;
 
-  @Column(name = "specification", length = 200)
-  private String specification;
+  @Size(max = 100)
+  @Column(name = "spec", length = 100)
+  private String spec;
 
-  @Column(name = "model_name", length = 100)
-  private String modelName;
+  @Size(max = 100)
+  @Column(name = "model_des", length = 100)
+  private String modelDes;
 
-  @Column(name = "hs_code", length = 20)
-  private String hsCode;
+  @Size(max = 12)
+  @Column(name = "hsno", length = 12)
+  private String hsno;
 
-  @Column(name = "tariff_rate", precision = 5, scale = 2)
-  private BigDecimal tariffRate;
+  @Column(name = "tax_rate", precision = 10, scale = 4)
+  private BigDecimal taxRate;
 
-  @Column(name = "unit_price", precision = 15, scale = 2)
-  private BigDecimal unitPrice;
+  @Column(name = "unitprice", precision = 15, scale = 4)
+  private BigDecimal unitprice;
 
-  @Column(name = "qty_for_manufacturing")
-  private Integer qtyForManufacturing;
+  @Size(max = 3)
+  @Column(name = "unitprice_unit", length = 3)
+  private String unitpriceUnit;
 
-  @Column(name = "qty_for_repair")
-  private Integer qtyForRepair;
+  @Column(name = "prod_qty")
+  private Integer prodQty;
 
-  @Column(name = "annual_import_estimate", precision = 15, scale = 2)
-  private BigDecimal annualImportEstimate;
+  @Column(name = "repair_qty")
+  private Integer repairQty;
 
-  @Column(name = "review_result", length = 100)
-  private String reviewResult;
+  @Column(name = "import_amt", precision = 15, scale = 4)
+  private BigDecimal importAmt;
 
-  @Column(name = "annual_expected_qty")
-  private Integer annualExpectedQty;
+  @Size(max = 3)
+  @Column(name = "exch", length = 3)
+  private String exch;
 
-  @Column(name = "approved_yn", nullable = false, length = 1)
-  private String approvedYn;
+  @Column(name = "import_qty")
+  private Integer importQty;
 
-  @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt;
+  @Size(max = 1)
+  @Column(name = "approval_yn", nullable = false, length = 1)
+  private String approvalYn;
 
-  @Column(name = "created_by", nullable = false, length = 50)
-  private String createdBy;
+  @Column(name = "old_qty")
+  private Integer oldQty;
+
+  @Column(name = "old_amt", precision = 15, scale = 4)
+  private BigDecimal oldAmt;
 }

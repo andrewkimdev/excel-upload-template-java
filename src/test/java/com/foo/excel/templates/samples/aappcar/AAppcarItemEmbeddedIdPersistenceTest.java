@@ -14,6 +14,7 @@ import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarIte
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.templates.samples.aappcar.service.AAppcarItemService;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +38,8 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     AAppcarItemDto first = dto("Item1", "Model-A");
     SaveResult firstResult = service.saveAll(List.of(first), List.of(7), commonData);
 
-    AAppcarItemId itemId = new AAppcarItemId("2026", "001", "1", "EQ-01", 7);
+    AAppcarItemId itemId =
+        new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 7);
     AAppcarEquipId equipId =
         new AAppcarEquipId("COMPANY01", "CUSTOM01", "2026", 1, 1, "EQ-01");
 
@@ -53,25 +55,37 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     assertThat(secondResult.updated()).isEqualTo(1);
     assertThat(itemRepository.findById(itemId))
         .get()
-        .extracting(AAppcarItem::getItemName, AAppcarItem::getModelName)
+        .extracting(AAppcarItem::getGoodsDes, AAppcarItem::getModelDes)
         .containsExactly("Item1-Updated", "Model-B");
     assertThat(equipRepository.findById(equipId)).isPresent();
   }
 
   @Test
-  void saveAll_sameEquipId_updatesUploadedRows() {
+  void saveAll_sameEquipId_updatesEquipFields() {
     AAppcarItemCommonData commonData = commonData();
     AAppcarEquipId equipId =
         new AAppcarEquipId("COMPANY01", "CUSTOM01", "2026", 1, 1, "EQ-01");
 
     service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), commonData);
+    commonData.setEquipMean("설비B");
+    commonData.setSpec("규격B");
+    commonData.setHsno("999999999999");
+    commonData.setTaxRate(new BigDecimal("9.50"));
+    commonData.setApprovalYn("Y");
     service.saveAll(
         List.of(dto("Item1", "Model-A"), dto("Item2", "Model-B")), List.of(7, 8), commonData);
 
     assertThat(equipRepository.findById(equipId))
         .get()
-        .extracting(AAppcarEquip::getUploadedRows)
-        .isEqualTo(2);
+        .extracting(
+            AAppcarEquip::getEquipMean,
+            AAppcarEquip::getSpec,
+            AAppcarEquip::getHsno,
+            AAppcarEquip::getTaxRate,
+            AAppcarEquip::getApprovalYn,
+            AAppcarEquip::getApprovalDate)
+        .containsExactly(
+            "설비B", "규격B", "999999999999", new BigDecimal("9.50"), "Y", LocalDate.now());
   }
 
   private AAppcarItemCommonData commonData() {
@@ -80,6 +94,10 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     commonData.setComeOrder("001");
     commonData.setUploadSeq("1");
     commonData.setEquipCode("EQ-01");
+    commonData.setEquipMean("설비A");
+    commonData.setHsno("8481802000");
+    commonData.setSpec("규격A");
+    commonData.setTaxRate(new BigDecimal("8.50"));
     commonData.setCompanyId("COMPANY01");
     commonData.setCustomId("CUSTOM01");
     return commonData;
@@ -87,18 +105,18 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   private AAppcarItemDto dto(String itemName, String modelName) {
     AAppcarItemDto dto = new AAppcarItemDto();
-    dto.setSequenceNo(1);
-    dto.setItemName(itemName);
-    dto.setSpecification("Spec");
-    dto.setModelName(modelName);
-    dto.setHsCode("8481.80-2000");
-    dto.setTariffRate(new BigDecimal("8.00"));
-    dto.setUnitPrice(new BigDecimal("100.00"));
-    dto.setQtyForManufacturing(10);
-    dto.setQtyForRepair(5);
-    dto.setAnnualImportEstimate(new BigDecimal("1000.00"));
-    dto.setReviewResult("통과");
-    dto.setAnnualExpectedQty(100);
+    dto.setGoodsSeqNo(1);
+    dto.setGoodsDes(itemName);
+    dto.setSpec("Spec");
+    dto.setModelDes(modelName);
+    dto.setHsno("8481.80-2000");
+    dto.setTaxRate(new BigDecimal("8.00"));
+    dto.setUnitprice(new BigDecimal("100.00"));
+    dto.setProdQty(10);
+    dto.setRepairQty(5);
+    dto.setImportAmt(new BigDecimal("1000.00"));
+    dto.setApprovalYn("통과");
+    dto.setImportQty(100);
     return dto;
   }
 }

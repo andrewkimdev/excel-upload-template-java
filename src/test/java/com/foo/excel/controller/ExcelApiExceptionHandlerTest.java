@@ -78,7 +78,11 @@ class ExcelApiExceptionHandlerTest {
                 + "\"comeYear\":\"2026\","
                 + "\"comeOrder\":\"001\","
                 + "\"uploadSeq\":\"U001\","
-                + "\"equipCode\":\"EQ-01\""
+                + "\"equipCode\":\"EQ-01\","
+                + "\"equipMean\":\"설비A\","
+                + "\"hsno\":\"8481802000\","
+                + "\"spec\":\"규격A\","
+                + "\"taxRate\":8.50"
                 + "}")
             .getBytes());
   }

@@ -79,7 +79,7 @@ class ExcelParserServiceTest {
 
     assertThat(result.rows()).isNotEmpty();
     // 병합 셀 값은 F열에서 읽혀야 함
-    assertThat(result.rows().get(0).getHsCode()).isEqualTo("8481.80-2000");
+    assertThat(result.rows().get(0).getHsno()).isEqualTo("8481.80-2000");
   }
 
   @Test
@@ -89,7 +89,7 @@ class ExcelParserServiceTest {
     ExcelParserService.ParseResult<AAppcarItemDto> result =
         parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
-    assertThat(result.rows().get(0).getItemName()).isEqualTo("TestItem1");
+    assertThat(result.rows().get(0).getGoodsDes()).isEqualTo("TestItem1");
   }
 
   @Test
@@ -99,7 +99,7 @@ class ExcelParserServiceTest {
     ExcelParserService.ParseResult<AAppcarItemDto> result =
         parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
-    assertThat(result.rows().get(0).getSequenceNo()).isEqualTo(1);
+    assertThat(result.rows().get(0).getGoodsSeqNo()).isEqualTo(1);
   }
 
   @Test
@@ -109,8 +109,8 @@ class ExcelParserServiceTest {
     ExcelParserService.ParseResult<AAppcarItemDto> result =
         parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
-    assertThat(result.rows().get(0).getTariffRate()).isNotNull();
-    assertThat(result.rows().get(0).getTariffRate().doubleValue()).isCloseTo(8.0, within(0.01));
+    assertThat(result.rows().get(0).getTaxRate()).isNotNull();
+    assertThat(result.rows().get(0).getTaxRate().doubleValue()).isCloseTo(8.0, within(0.01));
   }
 
   @Test
@@ -382,18 +382,18 @@ class ExcelParserServiceTest {
         }
         Row row = sheet.createRow(currentRow);
         row.createCell(0).setCellValue(i + 1); // Column A
-        row.createCell(1).setCellValue(i + 1); // B열 - sequenceNo
-        row.createCell(2).setCellValue("TestItem" + (i + 1)); // C열 - itemName
-        row.createCell(3).setCellValue("Spec" + (i + 1)); // D열 - specification
-        row.createCell(4).setCellValue("Model" + (i + 1)); // E열 - modelName
-        row.createCell(5).setCellValue("8481.80-200" + i); // F열 - hsCode
-        row.createCell(7).setCellValue(8.0); // H열 - tariffRate
-        row.createCell(8).setCellValue(100.0); // I열 - unitPrice
-        row.createCell(9).setCellValue(10); // J열 - qtyForManufacturing
-        row.createCell(11).setCellValue(5); // L열 - qtyForRepair
-        row.createCell(13).setCellValue(50000.0); // N열 - annualImportEstimate
-        row.createCell(14).setCellValue("통과"); // O열 - reviewResult
-        row.createCell(16).setCellValue(100); // Q열 - annualExpectedQty
+        row.createCell(1).setCellValue(i + 1); // B열 - goodsSeqNo
+        row.createCell(2).setCellValue("TestItem" + (i + 1)); // C열 - goodsDes
+        row.createCell(3).setCellValue("Spec" + (i + 1)); // D열 - spec
+        row.createCell(4).setCellValue("Model" + (i + 1)); // E열 - modelDes
+        row.createCell(5).setCellValue("8481.80-200" + i); // F열 - hsno
+        row.createCell(7).setCellValue(8.0); // H열 - taxRate
+        row.createCell(8).setCellValue(100.0); // I열 - unitprice
+        row.createCell(9).setCellValue(10); // J열 - prodQty
+        row.createCell(11).setCellValue(5); // L열 - repairQty
+        row.createCell(13).setCellValue(50000.0); // N열 - importAmt
+        row.createCell(14).setCellValue("통과"); // O열 - approvalYn
+        row.createCell(16).setCellValue(100); // Q열 - importQty
         currentRow++;
       }
 

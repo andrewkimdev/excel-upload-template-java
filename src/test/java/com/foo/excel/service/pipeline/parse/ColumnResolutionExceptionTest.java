@@ -11,7 +11,7 @@ class ColumnResolutionExceptionTest {
   @Test
   void toKoreanMessage_headerMismatch_includesExpectedAndActual() {
     var ex =
-        new ColumnResolutionException("tariffRate", "관세율", "단가", "H", HeaderMatchMode.CONTAINS);
+        new ColumnResolutionException("taxRate", "관세율", "단가", "H", HeaderMatchMode.CONTAINS);
 
     assertThat(ex.toKoreanMessage()).contains("컬럼 H").contains("예상: '관세율'").contains("실제: '단가'");
   }
@@ -19,7 +19,7 @@ class ColumnResolutionExceptionTest {
   @Test
   void toKoreanMessage_emptyHeader_mentionsEmpty() {
     var ex =
-        new ColumnResolutionException("tariffRate", "관세율", null, "H", HeaderMatchMode.CONTAINS);
+        new ColumnResolutionException("taxRate", "관세율", null, "H", HeaderMatchMode.CONTAINS);
 
     assertThat(ex.toKoreanMessage()).contains("컬럼 H").contains("비어있습니다").contains("예상: '관세율'");
   }

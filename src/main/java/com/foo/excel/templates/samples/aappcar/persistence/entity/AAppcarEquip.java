@@ -4,7 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,15 +24,29 @@ public class AAppcarEquip {
 
   @EmbeddedId private AAppcarEquipId id;
 
-  @Column(name = "uploaded_rows", nullable = false)
-  private Integer uploadedRows;
+  @Size(max = 70)
+  @Column(name = "equip_mean", length = 70)
+  private String equipMean;
 
-  @Column(name = "approved_yn", nullable = false, length = 1)
-  private String approvedYn;
+  @Size(max = 12)
+  @Column(name = "hsno", length = 12)
+  private String hsno;
 
-  @Column(name = "created_at", nullable = false)
-  private LocalDateTime createdAt;
+  @Size(max = 70)
+  @Column(name = "spec", length = 70)
+  private String spec;
 
-  @Column(name = "created_by", nullable = false, length = 50)
-  private String createdBy;
+  @Column(name = "tax_rate", precision = 16, scale = 2)
+  private BigDecimal taxRate;
+
+  @Size(max = 100)
+  @Column(name = "file_path", length = 100)
+  private String filePath;
+
+  @Size(max = 1)
+  @Column(name = "approval_yn", length = 1)
+  private String approvalYn;
+
+  @Column(name = "approval_date")
+  private LocalDate approvalDate;
 }

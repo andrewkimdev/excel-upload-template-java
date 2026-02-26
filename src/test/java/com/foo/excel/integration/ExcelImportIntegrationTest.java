@@ -23,6 +23,7 @@ import com.foo.excel.templates.TemplateTypes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.Optional;
@@ -85,7 +86,11 @@ class ExcelImportIntegrationTest {
     assertThat(itemRepository.count()).isEqualTo(2);
     Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredCommonDataEquipId());
     assertThat(savedEquip).isPresent();
-    assertThat(savedEquip.orElseThrow().getUploadedRows()).isEqualTo(2);
+    assertThat(savedEquip.orElseThrow().getEquipMean()).isEqualTo("설비A");
+    assertThat(savedEquip.orElseThrow().getHsno()).isEqualTo("8481802000");
+    assertThat(savedEquip.orElseThrow().getSpec()).isEqualTo("규격A");
+    assertThat(savedEquip.orElseThrow().getApprovalYn()).isEqualTo("N");
+    assertThat(savedEquip.orElseThrow().getApprovalDate()).isNull();
   }
 
   @Test
@@ -121,7 +126,7 @@ class ExcelImportIntegrationTest {
     assertThat(itemRepository.count()).isEqualTo(2);
     Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredCommonDataEquipId());
     assertThat(savedEquip).isPresent();
-    assertThat(savedEquip.orElseThrow().getUploadedRows()).isEqualTo(2);
+    assertThat(savedEquip.orElseThrow().getEquipMean()).isEqualTo("설비A");
   }
 
   @Test
@@ -349,7 +354,13 @@ class ExcelImportIntegrationTest {
                 .param("comeYear", "2026")
                 .param("comeOrder", "001")
                 .param("uploadSeq", "U001")
-                .param("equipCode", "EQ-01"))
+                .param("equipCode", "EQ-01")
+                .param("equipMean", "설비A")
+                .param("hsno", "8481802000")
+                .param("spec", "규격A")
+                .param("taxRate", "8.50")
+                .param("approvalYn", "Y")
+                .param("approvalDate", LocalDate.now().toString()))
         .andExpect(status().isOk())
         .andExpect(view().name("result"))
         .andExpect(model().attributeExists("result"));
@@ -549,7 +560,11 @@ class ExcelImportIntegrationTest {
                 + "\"comeYear\":\"2026\","
                 + "\"comeOrder\":\"001\","
                 + "\"uploadSeq\":\"1\","
-                + "\"equipCode\":\"EQ-01\""
+                + "\"equipCode\":\"EQ-01\","
+                + "\"equipMean\":\"설비A\","
+                + "\"hsno\":\"8481802000\","
+                + "\"spec\":\"규격A\","
+                + "\"taxRate\":8.50"
                 + "}")
             .getBytes());
   }

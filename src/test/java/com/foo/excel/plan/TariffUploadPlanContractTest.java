@@ -165,13 +165,13 @@ class TariffUploadPlanContractTest {
 
   @Test
   void tariffEntity_includesAuditColumns_withServiceDefaults() {
-    List<String> expectedFields = List.of("approvedYn", "createdAt", "createdBy");
+    List<String> expectedFields = List.of("approvalYn");
     List<String> actualFields =
         Arrays.stream(AAppcarItem.class.getDeclaredFields()).map(Field::getName).toList();
 
     assertTrue(
         actualFields.containsAll(expectedFields),
-        "AAppcarItem must include approvedYn, createdAt, createdBy");
+        "AAppcarItem must include approvalYn");
   }
 
   private String requiredCommonDataJson() {
@@ -179,7 +179,11 @@ class TariffUploadPlanContractTest {
         + "\"comeYear\":\"2026\","
         + "\"comeOrder\":\"001\","
         + "\"uploadSeq\":\"U001\","
-        + "\"equipCode\":\"EQ-01\""
+        + "\"equipCode\":\"EQ-01\","
+        + "\"equipMean\":\"설비A\","
+        + "\"hsno\":\"8481802000\","
+        + "\"spec\":\"규격A\","
+        + "\"taxRate\":8.50"
         + "}";
   }
 

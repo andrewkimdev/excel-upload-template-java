@@ -67,7 +67,9 @@ class AAppcarItemDbUniquenessCheckerTest {
   void check_whenItemIdExists_marksOnlyConflictingRows() {
     when(equipRepository.existsById(any())).thenReturn(false);
     AAppcarItem existing =
-        AAppcarItem.builder().id(new AAppcarItemId("2026", "1", "1", "EQ-01", 8)).build();
+        AAppcarItem.builder()
+            .id(new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "1", "1", "EQ-01", 8))
+            .build();
     when(itemRepository.findAllById(any())).thenReturn(List.of(existing));
 
     List<RowError> result =
