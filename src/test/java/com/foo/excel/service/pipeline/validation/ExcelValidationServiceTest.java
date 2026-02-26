@@ -2,7 +2,7 @@ package com.foo.excel.service.pipeline.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.foo.excel.templates.samples.tariffexemption.dto.TariffExemptionDto;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.WithinFileUniqueConstraintValidator;
 import jakarta.validation.Validation;
@@ -27,11 +27,11 @@ class ExcelValidationServiceTest {
 
   @Test
   void validRow_passesWithZeroErrors() {
-    TariffExemptionDto dto = createValidDto();
-    List<TariffExemptionDto> rows = List.of(dto);
+    AAppcarItemDto dto = createValidDto();
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isTrue();
     assertThat(result.getTotalErrorCount()).isEqualTo(0);
@@ -39,12 +39,12 @@ class ExcelValidationServiceTest {
 
   @Test
   void notBlank_itemName_blank_producesError() {
-    TariffExemptionDto dto = createValidDto();
-    dto.setItemName(""); // blank
-    List<TariffExemptionDto> rows = List.of(dto);
+    AAppcarItemDto dto = createValidDto();
+    dto.setItemName(""); // 빈 값
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isFalse();
     assertThat(result.getRowErrors()).isNotEmpty();
@@ -53,12 +53,12 @@ class ExcelValidationServiceTest {
 
   @Test
   void size_itemName_over100_producesError() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setItemName("a".repeat(101));
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "itemName")).contains("물품명은 100자 이내로 입력하세요");
@@ -66,24 +66,24 @@ class ExcelValidationServiceTest {
 
   @Test
   void pattern_hsCode_valid_passes() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setHsCode("1234.56-7890");
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isTrue();
   }
 
   @Test
   void pattern_hsCode_invalid_fails() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setHsCode("invalid");
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "hsCode")).contains("HSK 형식이 올바르지 않습니다");
@@ -91,12 +91,12 @@ class ExcelValidationServiceTest {
 
   @Test
   void decimalMin_tariffRate_belowZero_producesError() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setTariffRate(new BigDecimal("-1"));
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "tariffRate")).contains("관세율은 0 이상이어야 합니다");
@@ -104,12 +104,12 @@ class ExcelValidationServiceTest {
 
   @Test
   void decimalMax_tariffRate_above100_producesError() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setTariffRate(new BigDecimal("101"));
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "tariffRate")).contains("관세율은 100 이하여야 합니다");
@@ -117,50 +117,50 @@ class ExcelValidationServiceTest {
 
   @Test
   void decimalMin_tariffRate_boundary_zero_passes() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setTariffRate(BigDecimal.ZERO);
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isTrue();
   }
 
   @Test
   void decimalMax_tariffRate_boundary_100_passes() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setTariffRate(new BigDecimal("100"));
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isTrue();
   }
 
   @Test
   void required_itemName_null_producesError() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setItemName(null);
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isFalse();
   }
 
   @Test
   void errorMessages_matchKoreanText() {
-    TariffExemptionDto dto = createValidDto();
+    AAppcarItemDto dto = createValidDto();
     dto.setItemName("");
     dto.setHsCode("bad");
     dto.setTariffRate(new BigDecimal("-5"));
-    List<TariffExemptionDto> rows = List.of(dto);
+    List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, TariffExemptionDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
 
     assertThat(result.isValid()).isFalse();
     List<String> allMessages =
@@ -174,10 +174,10 @@ class ExcelValidationServiceTest {
     assertThat(allMessages).anyMatch(m -> m.contains("관세율은 0 이상이어야 합니다"));
   }
 
-  // ===== Helpers =====
+  // ===== 헬퍼 =====
 
-  private TariffExemptionDto createValidDto() {
-    TariffExemptionDto dto = new TariffExemptionDto();
+  private AAppcarItemDto createValidDto() {
+    AAppcarItemDto dto = new AAppcarItemDto();
     dto.setSequenceNo(1);
     dto.setItemName("테스트 물품");
     dto.setSpecification("규격A");

@@ -12,7 +12,9 @@ import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator;
 import com.foo.excel.templates.TemplateTypes;
-import com.foo.excel.templates.samples.tariffexemption.persistence.entity.TariffExemption;
+import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
+import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
+import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -38,7 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class TariffUploadPlanContractTest {
 
   private static final String API_UPLOAD_TARIFF =
-      "/api/excel/upload/" + TemplateTypes.TARIFF_EXEMPTION;
+      "/api/excel/upload/" + TemplateTypes.AAPPCAR;
 
   @Autowired private MockMvc mockMvc;
 
@@ -51,7 +53,7 @@ class TariffUploadPlanContractTest {
             "file",
             "tariff.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            createValidTariffExemptionXlsx());
+            createValidAAppcarItemXlsx());
 
     mockMvc
         .perform(multipart(API_UPLOAD_TARIFF).file(file))
@@ -66,7 +68,7 @@ class TariffUploadPlanContractTest {
             "file",
             "tariff.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            createValidTariffExemptionXlsx());
+            createValidAAppcarItemXlsx());
 
     MockMultipartFile commonData =
         new MockMultipartFile(
@@ -75,8 +77,8 @@ class TariffUploadPlanContractTest {
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":\"2026\","
-                    + "\"comeSequence\":\"001\","
-                    + "\"uploadSequence\":\"U001\","
+                    + "\"comeOrder\":\"001\","
+                    + "\"uploadSeq\":\"U001\","
                     + "\"equipCode\":\"EQ-01\","
                     + "\"unknownField\":\"X\""
                     + "}")
@@ -91,7 +93,7 @@ class TariffUploadPlanContractTest {
   void tariffApiUpload_rejectsXlsFile() throws Exception {
     MockMultipartFile file =
         new MockMultipartFile(
-            "file", "tariff.xls", "application/vnd.ms-excel", createValidTariffExemptionXls());
+            "file", "tariff.xls", "application/vnd.ms-excel", createValidAAppcarItemXls());
 
     MockMultipartFile commonData =
         new MockMultipartFile(
@@ -153,38 +155,35 @@ class TariffUploadPlanContractTest {
 
   @Test
   void tariffModule_hasTwoRepositoryBeans_forEntityAAndEntityBTransactionalPersistence() {
-    long tariffRepositoryBeanCount =
-        Arrays.stream(applicationContext.getBeanDefinitionNames())
-            .filter(name -> name.toLowerCase().contains("tariff"))
-            .filter(name -> name.toLowerCase().contains("repository"))
-            .count();
-
     assertTrue(
-        tariffRepositoryBeanCount >= 2,
-        "Expected at least two tariff repository beans for A/B transactional save");
+        !applicationContext.getBeansOfType(AAppcarItemRepository.class).isEmpty(),
+        "Expected AAppcarItem repository bean for item persistence");
+    assertTrue(
+        !applicationContext.getBeansOfType(AAppcarEquipRepository.class).isEmpty(),
+        "Expected AAppcarEquip repository bean for equip persistence");
   }
 
   @Test
   void tariffEntity_includesAuditColumns_withServiceDefaults() {
     List<String> expectedFields = List.of("approvedYn", "createdAt", "createdBy");
     List<String> actualFields =
-        Arrays.stream(TariffExemption.class.getDeclaredFields()).map(Field::getName).toList();
+        Arrays.stream(AAppcarItem.class.getDeclaredFields()).map(Field::getName).toList();
 
     assertTrue(
         actualFields.containsAll(expectedFields),
-        "TariffExemption must include approvedYn, createdAt, createdBy");
+        "AAppcarItem must include approvedYn, createdAt, createdBy");
   }
 
   private String requiredCommonDataJson() {
     return "{"
         + "\"comeYear\":\"2026\","
-        + "\"comeSequence\":\"001\","
-        + "\"uploadSequence\":\"U001\","
+        + "\"comeOrder\":\"001\","
+        + "\"uploadSeq\":\"U001\","
         + "\"equipCode\":\"EQ-01\""
         + "}";
   }
 
-  private byte[] createValidTariffExemptionXlsx() throws IOException {
+  private byte[] createValidAAppcarItemXlsx() throws IOException {
     try (XSSFWorkbook workbook = new XSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Sheet1");
 
@@ -228,7 +227,7 @@ class TariffUploadPlanContractTest {
     }
   }
 
-  private byte[] createValidTariffExemptionXls() throws IOException {
+  private byte[] createValidAAppcarItemXls() throws IOException {
     try (HSSFWorkbook workbook = new HSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Sheet1");
 

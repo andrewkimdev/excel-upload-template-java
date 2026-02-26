@@ -1,4 +1,4 @@
-package com.foo.excel.templates.samples.tariffexemption;
+package com.foo.excel.templates.samples.aappcar;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,25 +10,27 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @DataJpaTest
-class TariffExemptionEmbeddedIdMappingTest {
+class AAppcarItemEmbeddedIdMappingTest {
 
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
-  void tariffDetailTable_usesCompositePrimaryKeyColumns_withoutSurrogateIdColumn() {
-    List<String> columns = columnsOf("TARIFF_EXEMPTION");
+  void tariffItemTable_usesCompositePrimaryKeyColumns_withoutSurrogateIdColumn() {
+    List<String> columns = columnsOf("A_APPCAR_ITEM");
 
     assertThat(columns).doesNotContain("ID");
     assertThat(columns)
-        .contains("COME_YEAR", "COME_SEQUENCE", "UPLOAD_SEQUENCE", "EQUIP_CODE", "ROW_NUMBER");
+        .contains("COME_YEAR", "COME_ORDER", "UPLOAD_SEQ", "EQUIP_CODE", "ROW_NUMBER");
   }
 
   @Test
-  void tariffSummaryTable_usesCompositePrimaryKeyColumns_withoutSurrogateIdColumn() {
-    List<String> columns = columnsOf("TARIFF_EXEMPTION_SUMMARY");
+  void tariffEquipTable_usesCompositePrimaryKeyColumns_withoutSurrogateIdColumn() {
+    List<String> columns = columnsOf("A_APPCAR_EQUIP");
 
     assertThat(columns).doesNotContain("ID");
-    assertThat(columns).contains("COME_YEAR", "COME_SEQUENCE", "UPLOAD_SEQUENCE", "EQUIP_CODE");
+    assertThat(columns)
+        .contains(
+            "COMPANY_ID", "CUSTOM_ID", "COME_YEAR", "COME_ORDER", "UPLOAD_SEQ", "EQUIP_CODE");
   }
 
   private List<String> columnsOf(String tableName) {

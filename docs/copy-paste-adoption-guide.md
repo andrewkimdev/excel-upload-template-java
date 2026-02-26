@@ -40,30 +40,30 @@ And copy:
 ### Step B: One working template (required)
 
 Copy:
-- `com.foo.excel.templates.samples.tariffexemption`
+- `com.foo.excel.templates.samples.aappcar`
 
 This gives the full pattern:
 - row DTO (`@ExcelColumn` + validation)
 - `ExcelImportConfig`
 - template `CommonData`
 - `PersistenceHandler<T, C extends CommonData>`
-- optional `DatabaseUniquenessChecker<T>`
+- optional `DatabaseUniquenessChecker<T, C>`
 - `TemplateDefinition<T, C>` bean with `commonDataClass`
 - upload-level summary entity/repository
 
 ### Step C: Controller layer (choose one)
 
 API only:
-- `TariffExemptionUploadApiController`
+- `AAppcarItemUploadApiController`
 - `ExcelFileController`
 - `ExcelApiExceptionHandler`
 - `ExcelUploadRequestService`
 
 API + Thymeleaf pages:
-- add `TariffExemptionUploadPageController`
+- add `AAppcarItemUploadPageController`
 - add `UploadIndexController`
 - add `templates/*.html`, `static/style.css`
-- add `TariffExemptionCommonDataFormMapper`
+- add `AAppcarItemCommonDataFormMapper`
 
 ## 3. Security and Contract Rules You Must Keep
 
@@ -80,7 +80,7 @@ API + Thymeleaf pages:
 ## 4. Required Wiring Notes (Easy to Miss)
 
 - Enable scheduling in your app (`@EnableScheduling`) if you copy `TempFileCleanupService` and want cleanup job execution.
-- `ExcelApiExceptionHandler` is scoped to `TariffExemptionUploadApiController`. If you replace that controller, update advice scope accordingly.
+- `ExcelApiExceptionHandler` is scoped to `AAppcarItemUploadApiController`. If you replace that controller, update advice scope accordingly.
 - If you do not use Lombok in your target project, you must replace Lombok annotations with explicit Java code.
 
 ## 5. Properties to Carry

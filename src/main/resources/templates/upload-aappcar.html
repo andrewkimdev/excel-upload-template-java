@@ -10,20 +10,20 @@
 <div class="container">
     <h1>관세면제 업로드</h1>
 
-    <form method="post" th:action="@{/upload/tariff-exemption}" enctype="multipart/form-data">
+    <form method="post" th:action="@{/upload/aappcar}" enctype="multipart/form-data">
         <div class="form-group">
             <label for="comeYear">반입연도 (comeYear)</label>
             <input type="text" id="comeYear" name="comeYear" required>
         </div>
 
         <div class="form-group">
-            <label for="comeSequence">반입순번 (comeSequence)</label>
-            <input type="text" id="comeSequence" name="comeSequence" required>
+            <label for="comeOrder">반입순번 (comeOrder)</label>
+            <input type="text" id="comeOrder" name="comeOrder" required>
         </div>
 
         <div class="form-group">
-            <label for="uploadSequence">업로드순번 (uploadSequence)</label>
-            <input type="text" id="uploadSequence" name="uploadSequence" required>
+            <label for="uploadSeq">업로드순번 (uploadSeq)</label>
+            <input type="text" id="uploadSeq" name="uploadSeq" required>
         </div>
 
         <div class="form-group">

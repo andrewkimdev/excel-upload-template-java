@@ -1,4 +1,4 @@
-package com.foo.excel.templates.samples.tariffexemption.persistence.entity;
+package com.foo.excel.templates.samples.aappcar.persistence.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -15,17 +15,20 @@ import lombok.Setter;
 @AllArgsConstructor
 @EqualsAndHashCode
 @Embeddable
-public class TariffExemptionSummaryId implements Serializable {
+public class AAppcarItemId implements Serializable {
 
   @Column(name = "come_year", nullable = false, length = 20)
   private String comeYear;
 
-  @Column(name = "come_sequence", nullable = false, length = 50)
-  private String comeSequence;
+  @Column(name = "come_order", nullable = false, length = 50)
+  private String comeOrder;
 
-  @Column(name = "upload_sequence", nullable = false, length = 50)
-  private String uploadSequence;
+  @Column(name = "upload_seq", nullable = false, length = 50)
+  private String uploadSeq;
 
   @Column(name = "equip_code", nullable = false, length = 50)
   private String equipCode;
+
+  @Column(name = "row_number", nullable = false)
+  private Integer rowNumber;
 }

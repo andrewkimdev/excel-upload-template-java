@@ -19,39 +19,43 @@ Open http://localhost:8080 to access the upload form.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/excel/upload/tariff-exemption` | Upload and process an Excel file (tariff template) |
+| `POST` | `/api/excel/upload/aappcar` | Upload and process an Excel file (tariff template) |
 | `GET` | `/api/excel/download/{fileId}` | Download an error report |
-| `GET` | `/upload/tariff-exemption` | Template-specific upload form (Thymeleaf) |
-| `POST` | `/upload/tariff-exemption` | Template-specific form submission (Thymeleaf) |
+| `GET` | `/upload/aappcar` | Template-specific upload form (Thymeleaf) |
+| `POST` | `/upload/aappcar` | Template-specific form submission (Thymeleaf) |
 | `GET` | `/` | Template selector (Thymeleaf) |
 
 ### Upload Request Contract (REST)
 
-- Endpoint: `POST /api/excel/upload/tariff-exemption`
+- Endpoint: `POST /api/excel/upload/aappcar`
 - Content type: `multipart/form-data`
 - Parts:
   - `file`: Excel file (`.xlsx` only)
   - `commonData`: JSON (`application/json`)
 - `commonData` schema is template-specific (`TemplateDefinition<T, C>`의 `commonDataClass` 기준)
-- Required `commonData` fields (현재 `tariff-exemption` 템플릿 기준):
+- Required `commonData` fields (현재 `aappcar` 템플릿 기준):
   - `comeYear`
-  - `comeSequence`
-  - `uploadSequence`
+  - `comeOrder`
+  - `uploadSeq`
   - `equipCode`
+- Runtime contract fields (템플릿 `CommonData` 계약):
+  - `customId` (`CommonData#getCustomId`) must resolve to a non-blank value for temp-path partitioning
 - Server-managed fields:
   - `createdBy`: forced to `user01` on server
   - `approvedYn`: forced to `N` on server
+  - `companyId`: currently forced to `COMPANY01` on server-side controller
+  - `customId`: currently forced to `CUSTOM01` on server-side controller
 - `commonData` is parsed in strict mode:
   - reject unknown fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
   - reject scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
 
 ### Upload Request Contract (Thymeleaf)
 
-- Endpoint: `POST /upload/tariff-exemption`
+- Endpoint: `POST /upload/aappcar`
 - Form fields include:
   - `comeYear`
-  - `comeSequence`
-  - `uploadSequence`
+  - `comeOrder`
+  - `uploadSeq`
   - `equipCode`
   - `file` (`.xlsx` only)
 - Form does not expose `createdBy` or `approvedYn`.
@@ -112,27 +116,27 @@ src/main/java/com/foo/excel/
 │       │   └── ExcelErrorReportService.java       # Format-preserving error report generation (SXSSFWorkbook)
 │       └── validation/
 │           └── ExcelValidationService.java        # JSR-380 + within-file uniqueness validation
-├── templates/samples/tariffexemption/             # Example template implementation
+├── templates/samples/aappcar/             # Example template implementation
 │   ├── config/
-│   │   ├── TariffExemptionImportConfig.java       # ExcelImportConfig for tariff exemption
-│   │   └── TariffExemptionTemplateConfig.java     # Wires the TemplateDefinition bean (currently checker is null)
+│   │   ├── AAppcarItemImportConfig.java       # ExcelImportConfig for tariff exemption
+│   │   └── AAppcarItemTemplateConfig.java     # Wires the TemplateDefinition bean (includes DB checker)
 │   ├── dto/
-│   │   ├── TariffExemptionDto.java                # DTO with @ExcelColumn + JSR-380 annotations
-│   │   └── TariffExemptionCommonData.java         # Tariff template-specific commonData DTO
+│   │   ├── AAppcarItemDto.java                # DTO with @ExcelColumn + JSR-380 annotations
+│   │   └── AAppcarItemCommonData.java         # Tariff template-specific commonData DTO
 │   ├── mapper/
-│   │   └── TariffExemptionCommonDataFormMapper.java # Thymeleaf form -> TariffExemptionCommonData mapper
+│   │   └── AAppcarItemCommonDataFormMapper.java # Thymeleaf form -> AAppcarItemCommonData mapper
 │   ├── persistence/
 │   │   ├── entity/
-│   │   │   ├── TariffExemptionId.java             # Detail composite PK (@Embeddable)
-│   │   │   ├── TariffExemptionSummaryId.java      # Summary composite PK (@Embeddable)
-│   │   │   ├── TariffExemption.java               # Detail JPA entity (@EmbeddedId)
-│   │   │   └── TariffExemptionSummary.java        # Summary JPA entity (@EmbeddedId, upload aggregate)
+│   │   │   ├── AAppcarItemId.java             # Item composite PK (@Embeddable)
+│   │   │   ├── AAppcarEquipId.java      # Equip composite PK (@Embeddable)
+│   │   │   ├── AAppcarItem.java               # Item JPA entity (@EmbeddedId)
+│   │   │   └── AAppcarEquip.java        # Equip JPA entity (@EmbeddedId, upload aggregate)
 │   │   └── repository/
-│   │       ├── TariffExemptionRepository.java     # Spring Data JPA repository
-│   │       └── TariffExemptionSummaryRepository.java # Summary repository
+│   │       ├── AAppcarItemRepository.java     # Spring Data JPA repository
+│   │       └── AAppcarEquipRepository.java # Equip repository
 │   └── service/
-│       ├── TariffExemptionService.java            # Implements PersistenceHandler
-│       └── TariffExemptionDbUniquenessChecker.java# Optional DatabaseUniquenessChecker implementation
+│       ├── AAppcarItemService.java            # Implements PersistenceHandler
+│       └── AAppcarItemDbUniquenessChecker.java# Optional DatabaseUniquenessChecker implementation
 ├── util/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
 │   ├── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)
@@ -152,7 +156,7 @@ src/main/java/com/foo/excel/
 8. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
 9. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
 10. **Within-file uniqueness** -- `@ExcelUnique` (single field), `@ExcelCompositeUnique` (composite key)
-11. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker` (for current tariff wiring, this step is skipped because checker is `null`)
+11. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker`
 12. **Error merge** -- parse errors, validation errors, and DB uniqueness errors are combined
 13. **Result** -- success with row counts, or format-preserving error report Excel with `_ERRORS` column, red-highlighted error cells, original filename in download, and disclaimer footer
 
@@ -189,11 +193,12 @@ See `application.properties` for a detailed security checklist and configuration
 1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
 2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
 3. **CommonData** -- 템플릿별 DTO를 만들고 `CommonData`를 구현한다 (strict JSON + Bean Validation 대상)
+   - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)
 4. **Persistence** -- Implement `PersistenceHandler<T, C>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)` to save parsed rows merged with common fields
-5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T>` if duplicates should be checked against existing data
+5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, C>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, C commonData)` if duplicates should be checked against existing data
 6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, C>` `@Bean` with `commonDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
 
-See the `TariffExemption*` classes for a complete example (`TariffExemptionDto`, `TariffExemptionImportConfig`, `TariffExemptionService`, `TariffExemptionDbUniquenessChecker`, `TariffExemptionTemplateConfig`).
+See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemImportConfig`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
 
 ## Configuration
 
@@ -206,7 +211,6 @@ Key properties in `application.properties`:
 | `excel.import.pre-count-buffer` | `100` | Extra rows allowed in SAX pre-count to account for headers/blanks |
 | `excel.import.retention-days` | `30` | Days to keep temp/error files (shorter = more secure) |
 | `excel.import.temp-directory` | `${java.io.tmpdir}/excel-imports` | Temp file storage path |
-| `excel.import.error-column-name` | `_ERRORS` | Name of the error column in error reports |
 
 ## Testing
 
@@ -230,5 +234,5 @@ Tests cover all layers:
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `commonData`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
 | `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `CommonData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |
-| `TariffExemptionEmbeddedIdMappingTest` | Template Unit | Detail/Summary embedded ID 매핑 및 엔티티 구성 검증 |
-| `TariffExemptionEmbeddedIdPersistenceTest` | Template Integration | Embedded ID 기반 upsert/요약 집계 persistence 동작 검증 |
+| `AAppcarItemEmbeddedIdMappingTest` | Template Unit | Item/Equip embedded ID 매핑 및 엔티티 구성 검증 |
+| `AAppcarItemEmbeddedIdPersistenceTest` | Template Integration | Embedded ID 기반 upsert/요약 집계 persistence 동작 검증 |

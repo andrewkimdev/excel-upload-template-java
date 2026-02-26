@@ -55,13 +55,13 @@ public class ExcelParserService {
   public <T> ParseResult<T> parse(
       Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config, int maxRows) throws IOException {
 
-    int headerRowNum = config.getHeaderRow() - 1; // Convert to 0-based
+    int headerRowNum = config.getHeaderRow() - 1; // 0-based로 변환
     int dataStartRowNum = config.getDataStartRow() - 1;
     int sheetIndex = config.getSheetIndex();
     String footerMarker = config.getFooterMarker();
 
-    // SECURITY: Use SecureExcelUtils to protect against XXE and Zip Bomb attacks.
-    // See SecureExcelUtils for configured limits and protections.
+    // 보안: XXE 및 Zip Bomb 공격 방지를 위해 SecureExcelUtils 사용.
+    // 설정된 제한과 보호 내용은 SecureExcelUtils를 참고.
     try (Workbook workbook = SecureExcelUtils.createWorkbook(xlsxFile)) {
       Sheet sheet = workbook.getSheetAt(sheetIndex);
       Row headerRow = sheet.getRow(headerRowNum);
@@ -104,7 +104,7 @@ public class ExcelParserService {
         int resolvedIndex = resolveColumnIndex(annotation, field.getName(), headerMap);
 
         if (resolvedIndex < 0) {
-          // optional field, not found
+          // 선택 필드이며 찾지 못함
           continue;
         }
 
@@ -142,7 +142,7 @@ public class ExcelParserService {
 
   private int resolveColumnIndex(
       ExcelColumn annotation, String fieldName, Map<Integer, String> headerMap) {
-    // Mode 1: Fixed column with header verification
+    // 모드 1: 헤더 검증이 포함된 고정 컬럼
     if (!annotation.column().isEmpty()) {
       int index = ExcelColumnUtil.letterToIndex(annotation.column());
       String actual = headerMap.get(index);
@@ -151,7 +151,7 @@ public class ExcelParserService {
         return index;
       }
 
-      // Header mismatch
+      // 헤더 불일치
       if (annotation.required()) {
         throw new ColumnResolutionException(
             fieldName, annotation.header(), actual, annotation.column(), annotation.matchMode());
@@ -165,14 +165,14 @@ public class ExcelParserService {
       return -1;
     }
 
-    // Mode 2: Auto-detect from header text
+    // 모드 2: 헤더 텍스트 기반 자동 탐지
     for (var entry : headerMap.entrySet()) {
       if (matchHeader(entry.getValue(), annotation.header(), annotation.matchMode())) {
         return entry.getKey();
       }
     }
 
-    // Not found
+    // 찾지 못함
     if (annotation.required()) {
       throw new ColumnResolutionException(
           fieldName, annotation.header(), null, null, annotation.matchMode());
@@ -219,13 +219,13 @@ public class ExcelParserService {
         continue;
       }
 
-      // Footer detection
+      // 푸터 감지
       if (isFooterRow(row, footerMarker)) {
         log.debug("Footer marker found at row {}, stopping", i + 1);
         break;
       }
 
-      // Skip blank rows
+      // 빈 행 건너뛰기
       if (isBlankRow(row)) {
         continue;
       }
@@ -237,7 +237,7 @@ public class ExcelParserService {
         throw new RuntimeException("Cannot instantiate DTO", e);
       }
 
-      int excelRowNumber = i + 1; // 1-based
+      int excelRowNumber = i + 1; // 1-based 기준
       List<CellError> cellErrors = new ArrayList<>();
 
       for (ColumnMapping mapping : columnMappings) {

@@ -7,8 +7,8 @@ import static org.assertj.core.api.Assertions.within;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
 import com.foo.excel.config.ExcelImportConfig;
-import com.foo.excel.templates.samples.tariffexemption.config.TariffExemptionImportConfig;
-import com.foo.excel.templates.samples.tariffexemption.dto.TariffExemptionDto;
+import com.foo.excel.templates.samples.aappcar.config.AAppcarItemImportConfig;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -33,15 +33,15 @@ class ExcelParserServiceTest {
   @BeforeEach
   void setUp() {
     parserService = new ExcelParserService();
-    tariffConfig = new TariffExemptionImportConfig();
+    tariffConfig = new AAppcarItemImportConfig();
   }
 
   @Test
   void parse_correctNumberOfRows() throws IOException {
-    Path file = createTariffExemptionFile(3, false, false);
+    Path file = createAAppcarItemFile(3, false, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
     assertThat(result.rows()).hasSize(3);
     assertThat(result.sourceRowNumbers()).hasSize(3);
@@ -49,65 +49,65 @@ class ExcelParserServiceTest {
 
   @Test
   void parse_footerMarker_stopsReading() throws IOException {
-    Path file = createTariffExemptionFile(3, true, false);
+    Path file = createAAppcarItemFile(3, true, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
-    // Footer after 3 data rows means only 3 rows read
+    // 데이터 3행 뒤 푸터가 오므로 3행만 읽음
     assertThat(result.rows()).hasSize(3);
   }
 
   @Test
   void parse_blankRows_skipped() throws IOException {
-    Path file = createTariffExemptionFile(3, false, true);
+    Path file = createAAppcarItemFile(3, false, true);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
-    // 3 data rows + 1 blank row inserted = only 3 parsed
+    // 데이터 3행 + 빈 행 1개 삽입 = 3행만 파싱
     assertThat(result.rows()).hasSize(3);
   }
 
   @Test
   void parse_mergedCellResolution() throws IOException {
-    // Create a file with merged cell F-G (HSK No column)
+    // 병합 셀 F-G(HSK No 컬럼)가 있는 파일 생성
     Path file = createFileWithMergedCells();
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
     assertThat(result.rows()).isNotEmpty();
-    // The merged cell value should be readable from column F
+    // 병합 셀 값은 F열에서 읽혀야 함
     assertThat(result.rows().get(0).getHsCode()).isEqualTo("8481.80-2000");
   }
 
   @Test
   void parse_typeCoercion_string_trimmed() throws IOException {
-    Path file = createTariffExemptionFile(1, false, false);
+    Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
     assertThat(result.rows().get(0).getItemName()).isEqualTo("TestItem1");
   }
 
   @Test
   void parse_typeCoercion_integer() throws IOException {
-    Path file = createTariffExemptionFile(1, false, false);
+    Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
     assertThat(result.rows().get(0).getSequenceNo()).isEqualTo(1);
   }
 
   @Test
   void parse_typeCoercion_bigDecimal() throws IOException {
-    Path file = createTariffExemptionFile(1, false, false);
+    Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
     assertThat(result.rows().get(0).getTariffRate()).isNotNull();
     assertThat(result.rows().get(0).getTariffRate().doubleValue()).isCloseTo(8.0, within(0.01));
@@ -129,13 +129,13 @@ class ExcelParserServiceTest {
 
   @Test
   void parse_columnA_skipped() throws IOException {
-    Path file = createTariffExemptionFile(1, false, false);
+    Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
 
-    // Column A is decorative — the parser skips it, so no field maps to column A
-    // Verify that column mappings don't include column A (index 0)
+    // A열은 장식용이라 파서가 건너뛰며 어떤 필드도 매핑되지 않음
+    // 컬럼 매핑에 A열(index 0)이 없는지 확인
     assertThat(result.columnMappings()).noneMatch(m -> m.resolvedColumnIndex() == 0);
   }
 
@@ -166,21 +166,21 @@ class ExcelParserServiceTest {
 
   @Test
   void parse_maxRows_stopsEarly() throws IOException {
-    Path file = createTariffExemptionFile(20, false, false);
+    Path file = createAAppcarItemFile(20, false, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig, 5);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig, 5);
 
-    // Should stop after maxRows + 1 = 6 rows
+    // maxRows + 1 = 6행에서 중단되어야 함
     assertThat(result.rows()).hasSize(6);
   }
 
   @Test
   void parse_maxRows_noEffectWhenUnderLimit() throws IOException {
-    Path file = createTariffExemptionFile(3, false, false);
+    Path file = createAAppcarItemFile(3, false, false);
 
-    ExcelParserService.ParseResult<TariffExemptionDto> result =
-        parserService.parse(file, TariffExemptionDto.class, tariffConfig, 100);
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig, 100);
 
     assertThat(result.rows()).hasSize(3);
   }
@@ -199,7 +199,7 @@ class ExcelParserServiceTest {
     assertThat(result.parseErrors().get(0).getCellErrors().get(0).message()).contains("Integer");
   }
 
-  // ===== Header verification tests =====
+  // ===== 헤더 검증 테스트 =====
 
   @Test
   void parse_fixedColumn_headerMismatch_requiredColumn_throwsException() throws Exception {
@@ -270,7 +270,7 @@ class ExcelParserServiceTest {
             });
   }
 
-  // ===== Helper DTOs =====
+  // ===== 헬퍼 DTO =====
 
   @Data
   public static class SimpleDto {
@@ -343,61 +343,57 @@ class ExcelParserServiceTest {
       return 2;
     }
 
-    @Override
-    public String[] getNaturalKeyFields() {
-      return new String[] {""};
-    }
   }
 
-  // ===== File creation helpers =====
+  // ===== 파일 생성 헬퍼 =====
 
-  private Path createTariffExemptionFile(int dataRows, boolean addFooter, boolean addBlankRow)
+  private Path createAAppcarItemFile(int dataRows, boolean addFooter, boolean addBlankRow)
       throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
 
-      // Header row at row 4 (0-based: row 3)
+      // 헤더 행은 4행(0-based: 3행)
       Row headerRow = sheet.createRow(3);
-      headerRow.createCell(0).setCellValue("No"); // Column A - decorative
-      headerRow.createCell(1).setCellValue("순번"); // Column B
-      headerRow.createCell(2).setCellValue("물품명"); // Column C
-      headerRow.createCell(3).setCellValue("규격1)"); // Column D
-      headerRow.createCell(4).setCellValue("모델명1)"); // Column E
-      headerRow.createCell(5).setCellValue("HSK No"); // Column F
-      headerRow.createCell(6).setCellValue(""); // Column G - merged slave
-      headerRow.createCell(7).setCellValue("관세율"); // Column H
-      headerRow.createCell(8).setCellValue("단가($)"); // Column I
-      headerRow.createCell(9).setCellValue("제조용"); // Column J
-      headerRow.createCell(10).setCellValue(""); // Column K - merged slave
-      headerRow.createCell(11).setCellValue("수리용"); // Column L
-      headerRow.createCell(12).setCellValue(""); // Column M - merged slave
-      headerRow.createCell(13).setCellValue("연간수입예상금액($)"); // Column N
-      headerRow.createCell(14).setCellValue("심의결과"); // Column O
-      headerRow.createCell(15).setCellValue(""); // Column P - merged slave
-      headerRow.createCell(16).setCellValue("연간 예상소요량"); // Column Q
+      headerRow.createCell(0).setCellValue("No"); // A열 - 장식용
+      headerRow.createCell(1).setCellValue("순번"); // B열
+      headerRow.createCell(2).setCellValue("물품명"); // C열
+      headerRow.createCell(3).setCellValue("규격1)"); // D열
+      headerRow.createCell(4).setCellValue("모델명1)"); // E열
+      headerRow.createCell(5).setCellValue("HSK No"); // F열
+      headerRow.createCell(6).setCellValue(""); // G열 - 병합 종속 셀
+      headerRow.createCell(7).setCellValue("관세율"); // H열
+      headerRow.createCell(8).setCellValue("단가($)"); // I열
+      headerRow.createCell(9).setCellValue("제조용"); // J열
+      headerRow.createCell(10).setCellValue(""); // K열 - 병합 종속 셀
+      headerRow.createCell(11).setCellValue("수리용"); // L열
+      headerRow.createCell(12).setCellValue(""); // M열 - 병합 종속 셀
+      headerRow.createCell(13).setCellValue("연간수입예상금액($)"); // N열
+      headerRow.createCell(14).setCellValue("심의결과"); // O열
+      headerRow.createCell(15).setCellValue(""); // P열 - 병합 종속 셀
+      headerRow.createCell(16).setCellValue("연간 예상소요량"); // Q열
 
-      // Data rows start at row 7 (0-based: row 6)
+      // 데이터 행은 7행(0-based: 6행)부터 시작
       int currentRow = 6;
       for (int i = 0; i < dataRows; i++) {
         if (addBlankRow && i == 1) {
-          // Insert a blank row
+          // 빈 행 삽입
           sheet.createRow(currentRow);
           currentRow++;
         }
         Row row = sheet.createRow(currentRow);
         row.createCell(0).setCellValue(i + 1); // Column A
-        row.createCell(1).setCellValue(i + 1); // Column B - sequenceNo
-        row.createCell(2).setCellValue("TestItem" + (i + 1)); // Column C - itemName
-        row.createCell(3).setCellValue("Spec" + (i + 1)); // Column D - specification
-        row.createCell(4).setCellValue("Model" + (i + 1)); // Column E - modelName
-        row.createCell(5).setCellValue("8481.80-200" + i); // Column F - hsCode
-        row.createCell(7).setCellValue(8.0); // Column H - tariffRate
-        row.createCell(8).setCellValue(100.0); // Column I - unitPrice
-        row.createCell(9).setCellValue(10); // Column J - qtyForManufacturing
-        row.createCell(11).setCellValue(5); // Column L - qtyForRepair
-        row.createCell(13).setCellValue(50000.0); // Column N - annualImportEstimate
-        row.createCell(14).setCellValue("통과"); // Column O - reviewResult
-        row.createCell(16).setCellValue(100); // Column Q - annualExpectedQty
+        row.createCell(1).setCellValue(i + 1); // B열 - sequenceNo
+        row.createCell(2).setCellValue("TestItem" + (i + 1)); // C열 - itemName
+        row.createCell(3).setCellValue("Spec" + (i + 1)); // D열 - specification
+        row.createCell(4).setCellValue("Model" + (i + 1)); // E열 - modelName
+        row.createCell(5).setCellValue("8481.80-200" + i); // F열 - hsCode
+        row.createCell(7).setCellValue(8.0); // H열 - tariffRate
+        row.createCell(8).setCellValue(100.0); // I열 - unitPrice
+        row.createCell(9).setCellValue(10); // J열 - qtyForManufacturing
+        row.createCell(11).setCellValue(5); // L열 - qtyForRepair
+        row.createCell(13).setCellValue(50000.0); // N열 - annualImportEstimate
+        row.createCell(14).setCellValue("통과"); // O열 - reviewResult
+        row.createCell(16).setCellValue(100); // Q열 - annualExpectedQty
         currentRow++;
       }
 
@@ -418,7 +414,7 @@ class ExcelParserServiceTest {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
 
-      // Header row at row 4 (0-based: row 3)
+      // 헤더 행은 4행(0-based: 3행)
       Row headerRow = sheet.createRow(3);
       headerRow.createCell(0).setCellValue("No");
       headerRow.createCell(1).setCellValue("순번");
@@ -434,15 +430,15 @@ class ExcelParserServiceTest {
       headerRow.createCell(14).setCellValue("심의결과");
       headerRow.createCell(16).setCellValue("연간 예상소요량");
 
-      // Data row at row 7 (0-based: row 6) with merged F-G
+      // F-G 병합이 있는 데이터 행은 7행(0-based: 6행)
       Row dataRow = sheet.createRow(6);
       dataRow.createCell(0).setCellValue(1);
       dataRow.createCell(1).setCellValue(1);
       dataRow.createCell(2).setCellValue("MergedItem");
       dataRow.createCell(3).setCellValue("Spec1");
       dataRow.createCell(4).setCellValue("Model1");
-      dataRow.createCell(5).setCellValue("8481.80-2000"); // Master cell of F-G merge
-      // Column G is merged slave - don't write to it
+      dataRow.createCell(5).setCellValue("8481.80-2000"); // F-G 병합의 마스터 셀
+      // G열은 병합 종속 셀이므로 쓰지 않음
       dataRow.createCell(7).setCellValue(5.0);
       dataRow.createCell(8).setCellValue(200.0);
       dataRow.createCell(9).setCellValue(20);
@@ -451,7 +447,7 @@ class ExcelParserServiceTest {
       dataRow.createCell(14).setCellValue("통과");
       dataRow.createCell(16).setCellValue(50);
 
-      // Add merged region for F-G in data row
+      // 데이터 행에 F-G 병합 영역 추가
       sheet.addMergedRegion(new CellRangeAddress(6, 6, 5, 6));
 
       Path file = tempDir.resolve("merged_test.xlsx");
@@ -500,7 +496,7 @@ class ExcelParserServiceTest {
 
       Row dataRow2 = sheet.createRow(2);
       dataRow2.createCell(0).setCellValue(2);
-      dataRow2.createCell(1).setCellValue(""); // blank -> false
+      dataRow2.createCell(1).setCellValue(""); // 빈 값 -> false
 
       Path file = tempDir.resolve("boolean_test.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
@@ -556,7 +552,7 @@ class ExcelParserServiceTest {
 
       Row headerRow = sheet.createRow(0);
       headerRow.createCell(0).setCellValue("Deco");
-      headerRow.createCell(1).setCellValue("WRONG_HEADER"); // Column B: expected "ExactHeader"
+      headerRow.createCell(1).setCellValue("WRONG_HEADER"); // B열: expected "ExactHeader"
       headerRow.createCell(2).setCellValue("SomeContainsText");
       headerRow.createCell(3).setCellValue("StartsWithSuffix");
 
@@ -580,7 +576,7 @@ class ExcelParserServiceTest {
       Row headerRow = sheet.createRow(0);
       headerRow.createCell(0).setCellValue("Deco");
       headerRow.createCell(1).setCellValue("Name");
-      headerRow.createCell(2).setCellValue("WRONG"); // Column C: expected "Optional"
+      headerRow.createCell(2).setCellValue("WRONG"); // C열: expected "Optional"
 
       Row dataRow = sheet.createRow(1);
       dataRow.createCell(1).setCellValue("TestName");
@@ -600,8 +596,8 @@ class ExcelParserServiceTest {
 
       Row headerRow = sheet.createRow(0);
       headerRow.createCell(0).setCellValue("Deco");
-      headerRow.createCell(1).setCellValue("WRONG_B"); // Expected "First"
-      headerRow.createCell(2).setCellValue("WRONG_C"); // Expected "Second"
+      headerRow.createCell(1).setCellValue("WRONG_B"); // "First" 기대
+      headerRow.createCell(2).setCellValue("WRONG_C"); // "Second" 기대
 
       Row dataRow = sheet.createRow(1);
       dataRow.createCell(1).setCellValue("val1");

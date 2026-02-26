@@ -17,40 +17,42 @@ import org.apache.poi.xssf.eventusermodel.XSSFReader;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
- * Secure utilities for Excel file handling. Provides protection against XXE (XML External Entity)
- * attacks and Zip Bombs.
+ * Excel 파일 처리를 위한 보안 유틸리티.
+ *
+ * <p>XXE(XML External Entity) 공격과 Zip Bomb 공격을 방어한다.
  */
 public final class SecureExcelUtils {
 
-  // Maximum bytes for a single record (100 MB)
+  // 단일 레코드 최대 바이트 수(100MB)
   private static final int MAX_RECORD_LENGTH = 100_000_000;
 
-  // Maximum size for byte array allocation (200 MB)
+  // 바이트 배열 할당 최대 크기(200MB)
   private static final int MAX_BYTE_ARRAY_SIZE = 200_000_000;
 
-  // Maximum text size in cells (10 MB)
+  // 셀 내 텍스트 최대 크기(10MB)
   private static final int MAX_TEXT_SIZE = 10_000_000;
 
-  // XLSX magic bytes (ZIP format: PK)
+  // XLSX 매직 바이트(ZIP 형식: PK)
   private static final byte[] XLSX_MAGIC = {0x50, 0x4B, 0x03, 0x04};
 
   static {
-    // Configure Apache POI security limits globally
+    // Apache POI 보안 제한을 전역으로 설정
     IOUtils.setByteArrayMaxOverride(MAX_BYTE_ARRAY_SIZE);
   }
 
   private SecureExcelUtils() {
-    // Utility class
+    // 유틸리티 클래스
   }
 
   /**
-   * Creates a Workbook from a file with security protections enabled. Protects against XXE and Zip
-   * Bomb attacks.
+   * 보안 보호를 적용하여 파일에서 Workbook을 생성한다.
    *
-   * @param file the Excel file to open
-   * @return a Workbook instance
-   * @throws IOException if the file cannot be read or is invalid
-   * @throws SecurityException if the file fails security validation
+   * <p>XXE와 Zip Bomb 공격을 방어한다.
+   *
+   * @param file 열 Excel 파일
+   * @return Workbook 인스턴스
+   * @throws IOException 파일을 읽을 수 없거나 유효하지 않은 경우
+   * @throws SecurityException 파일이 보안 검증을 통과하지 못한 경우
    */
   public static Workbook createWorkbook(File file) throws IOException {
     validateFileContent(file.toPath());
@@ -64,24 +66,25 @@ public final class SecureExcelUtils {
   }
 
   /**
-   * Creates a Workbook from a Path with security protections enabled.
+   * 보안 보호를 적용하여 Path에서 Workbook을 생성한다.
    *
-   * @param path the path to the Excel file
-   * @return a Workbook instance
-   * @throws IOException if the file cannot be read or is invalid
-   * @throws SecurityException if the file fails security validation
+   * @param path Excel 파일 경로
+   * @return Workbook 인스턴스
+   * @throws IOException 파일을 읽을 수 없거나 유효하지 않은 경우
+   * @throws SecurityException 파일이 보안 검증을 통과하지 못한 경우
    */
   public static Workbook createWorkbook(Path path) throws IOException {
     return createWorkbook(path.toFile());
   }
 
   /**
-   * Validates that a file's content matches its extension. Checks magic bytes to prevent disguised
-   * malicious files.
+   * 파일 내용이 확장자와 일치하는지 검증한다.
    *
-   * @param path the file to validate
-   * @throws IOException if the file cannot be read
-   * @throws SecurityException if the file content doesn't match expected format
+   * <p>위장된 악성 파일을 막기 위해 매직 바이트를 확인한다.
+   *
+   * @param path 검증할 파일
+   * @throws IOException 파일을 읽을 수 없는 경우
+   * @throws SecurityException 파일 내용이 기대 형식과 일치하지 않는 경우
    */
   public static void validateFileContent(Path path) throws IOException {
     String fileName = path.getFileName().toString().toLowerCase();
@@ -99,13 +102,14 @@ public final class SecureExcelUtils {
   }
 
   /**
-   * Validates that an InputStream contains valid Excel content. Note: This consumes bytes from the
-   * stream, so use with mark/reset or a fresh stream.
+   * InputStream이 유효한 Excel 내용을 포함하는지 검증한다.
    *
-   * @param inputStream the stream to validate
-   * @param expectedExtension the expected file extension (xlsx or xls)
-   * @throws IOException if the stream cannot be read
-   * @throws SecurityException if the content doesn't match expected format
+   * <p>참고: 이 과정은 스트림 바이트를 소모하므로 mark/reset 또는 새 스트림과 함께 사용해야 한다.
+   *
+   * @param inputStream 검증할 스트림
+   * @param expectedExtension 기대 파일 확장자(xlsx 또는 xls)
+   * @throws IOException 스트림을 읽을 수 없는 경우
+   * @throws SecurityException 내용이 기대 형식과 일치하지 않는 경우
    */
   public static void validateStreamContent(InputStream inputStream, String expectedExtension)
       throws IOException {
@@ -126,47 +130,48 @@ public final class SecureExcelUtils {
   }
 
   /**
-   * Sanitizes a filename to prevent path traversal attacks. Removes directory components and
-   * dangerous characters.
+   * 경로 순회 공격 방지를 위해 파일명을 정규화한다.
    *
-   * @param originalFilename the original filename from user input
-   * @return a sanitized filename safe for use in file operations
-   * @throws IllegalArgumentException if the filename is null or empty after sanitization
+   * <p>디렉터리 구성 요소와 위험 문자를 제거한다.
+   *
+   * @param originalFilename 사용자 입력의 원본 파일명
+   * @return 파일 작업에 안전하게 사용할 수 있는 정규화된 파일명
+   * @throws IllegalArgumentException 정규화 후 파일명이 null이거나 비어 있는 경우
    */
   public static String sanitizeFilename(String originalFilename) {
     if (originalFilename == null || originalFilename.isBlank()) {
       throw new IllegalArgumentException("Filename cannot be null or empty");
     }
 
-    // Extract just the filename, removing any path components
+    // 경로 구성 요소를 제거하고 파일명만 추출
     String filename = originalFilename;
 
-    // Handle both Unix and Windows path separators
+    // Unix와 Windows 경로 구분자를 모두 처리
     int lastSlash = Math.max(filename.lastIndexOf('/'), filename.lastIndexOf('\\'));
     if (lastSlash >= 0) {
       filename = filename.substring(lastSlash + 1);
     }
 
-    // Remove null bytes and other control characters
+    // null 바이트와 기타 제어 문자 제거
     filename = filename.replaceAll("[\\x00-\\x1F\\x7F]", "");
 
-    // Remove or replace potentially dangerous characters
-    // Allow only alphanumeric, dots, hyphens, underscores, spaces, and Korean characters
+    // 잠재적으로 위험한 문자 제거 또는 치환
+    // 영숫자, 점, 하이픈, 밑줄, 공백, 한글만 허용
     filename =
         filename.replaceAll(
             "[^a-zA-Z0-9.\\-_\\s\\uAC00-\\uD7AF\\u1100-\\u11FF\\u3130-\\u318F]", "_");
 
-    // Prevent multiple consecutive dots (e.g., ".." for path traversal)
+    // 연속된 점 여러 개를 방지(예: 경로 순회용 "..")
     filename = filename.replaceAll("\\.{2,}", ".");
 
-    // Remove leading/trailing dots and spaces
+    // 앞뒤 점 및 공백 제거
     filename = filename.replaceAll("^[.\\s]+|[.\\s]+$", "");
 
     if (filename.isBlank()) {
       throw new IllegalArgumentException("Filename is invalid after sanitization");
     }
 
-    // Ensure the filename has a valid Excel extension
+    // 파일명이 유효한 Excel 확장자를 갖는지 확인
     String lowerFilename = filename.toLowerCase();
     if (!lowerFilename.endsWith(".xlsx")) {
       throw new IllegalArgumentException("Invalid file extension");
@@ -176,17 +181,19 @@ public final class SecureExcelUtils {
   }
 
   /**
-   * Sanitizes a string value for safe inclusion in Excel cells. Prevents formula injection attacks.
+   * Excel 셀에 안전하게 포함되도록 문자열 값을 정규화한다.
    *
-   * @param value the value to sanitize
-   * @return a sanitized value safe for Excel cells
+   * <p>수식 인젝션 공격을 방지한다.
+   *
+   * @param value 정규화할 값
+   * @return Excel 셀에 안전한 정규화 값
    */
   public static String sanitizeForExcelCell(String value) {
     if (value == null || value.isEmpty()) {
       return value;
     }
 
-    // Characters that can trigger formula interpretation in Excel
+    // Excel에서 수식 해석을 유발할 수 있는 문자
     char firstChar = value.charAt(0);
     if (firstChar == '='
         || firstChar == '+'
@@ -195,7 +202,7 @@ public final class SecureExcelUtils {
         || firstChar == '\t'
         || firstChar == '\r'
         || firstChar == '\n') {
-      // Prefix with single quote to prevent formula interpretation
+      // 수식 해석 방지를 위해 작은따옴표 접두어 추가
       return "'" + value;
     }
 
@@ -203,13 +210,14 @@ public final class SecureExcelUtils {
   }
 
   /**
-   * Counts the number of rows in an xlsx sheet using lightweight StAX streaming. Does NOT load the
-   * full workbook DOM — uses constant memory regardless of file size.
+   * 경량 StAX 스트리밍으로 xlsx 시트의 행 수를 센다.
    *
-   * @param xlsxFile the xlsx file to count rows in
-   * @param sheetIndex 0-based sheet index
-   * @return the number of row elements in the sheet XML
-   * @throws IOException if the file cannot be read or the sheet is not found
+   * <p>전체 워크북 DOM을 로드하지 않으므로 파일 크기와 무관하게 상수 메모리를 사용한다.
+   *
+   * @param xlsxFile 행 수를 셀 xlsx 파일
+   * @param sheetIndex 0-based 시트 인덱스
+   * @return 시트 XML 내 row 요소 개수
+   * @throws IOException 파일을 읽을 수 없거나 시트를 찾을 수 없는 경우
    */
   public static int countRows(Path xlsxFile, int sheetIndex) throws IOException {
     try (OPCPackage pkg = OPCPackage.open(xlsxFile.toFile(), PackageAccess.READ)) {

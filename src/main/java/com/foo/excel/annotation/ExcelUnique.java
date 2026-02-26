@@ -9,12 +9,12 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ExcelUnique {
 
-  /** Error message when uniqueness is violated. */
+  /** 유일성이 위반되었을 때의 오류 메시지. */
   String message() default "중복된 값입니다";
 
-  /** Whether to check against existing database records. */
+  /** 기존 데이터베이스 레코드와 비교 검사할지 여부. */
   boolean checkDatabase() default true;
 
-  /** Whether to check for duplicates within the uploaded file. */
+  /** 업로드된 파일 내부 중복을 검사할지 여부. */
   boolean checkWithinFile() default true;
 }

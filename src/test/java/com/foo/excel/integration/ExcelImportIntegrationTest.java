@@ -3,6 +3,7 @@ package com.foo.excel.integration;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,11 +14,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import com.foo.excel.ExcelUploadApplication;
+import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquip;
+import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
+import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
+import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.templates.TemplateTypes;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Map;
+import java.util.Optional;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -39,12 +47,15 @@ import org.springframework.test.web.servlet.MvcResult;
 class ExcelImportIntegrationTest {
 
   private static final String API_UPLOAD_TARIFF =
-      "/api/excel/upload/" + TemplateTypes.TARIFF_EXEMPTION;
-  private static final String PAGE_UPLOAD_TARIFF = "/upload/" + TemplateTypes.TARIFF_EXEMPTION;
+      "/api/excel/upload/" + TemplateTypes.AAPPCAR;
+  private static final String PAGE_UPLOAD_TARIFF = "/upload/" + TemplateTypes.AAPPCAR;
 
   @Autowired private MockMvc mockMvc;
 
   @Autowired private ExcelImportProperties properties;
+  @Autowired private AAppcarItemRepository itemRepository;
+  @Autowired private AAppcarEquipRepository equipRepository;
+  @Autowired private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() throws IOException {
@@ -53,7 +64,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void upload_validXlsx_returnsSuccess_blackBoxLiteralRoute() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(2);
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(2);
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -63,18 +74,23 @@ class ExcelImportIntegrationTest {
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/tariff-exemption")
+            multipart("/api/excel/upload/aappcar")
                 .file(file)
                 .file(requiredCommonDataPart()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.rowsProcessed").value(2))
         .andExpect(jsonPath("$.message").value("데이터 업로드 완료"));
+
+    assertThat(itemRepository.count()).isEqualTo(2);
+    Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredCommonDataEquipId());
+    assertThat(savedEquip).isPresent();
+    assertThat(savedEquip.orElseThrow().getUploadedRows()).isEqualTo(2);
   }
 
   @Test
-  void upload_sameFileAndCommonData_twice_switchesCreatedToUpdated() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(2);
+  void upload_sameFileAndCommonData_twice_returnsDuplicateErrorReport() throws Exception {
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(2);
     MockMultipartFile firstFile =
         new MockMultipartFile(
             "file",
@@ -97,15 +113,20 @@ class ExcelImportIntegrationTest {
 
     mockMvc
         .perform(multipart(API_UPLOAD_TARIFF).file(secondFile).file(requiredCommonDataPart()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.success").value(true))
-        .andExpect(jsonPath("$.rowsCreated").value(0))
-        .andExpect(jsonPath("$.rowsUpdated").value(2));
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.success").value(false))
+        .andExpect(jsonPath("$.errorRows").value(greaterThan(0)))
+        .andExpect(jsonPath("$.downloadUrl").value(startsWith("/api/excel/download/")));
+
+    assertThat(itemRepository.count()).isEqualTo(2);
+    Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredCommonDataEquipId());
+    assertThat(savedEquip).isPresent();
+    assertThat(savedEquip.orElseThrow().getUploadedRows()).isEqualTo(2);
   }
 
   @Test
   void upload_invalidData_returnsErrorWithDownloadUrl() throws Exception {
-    byte[] xlsxBytes = createInvalidTariffExemptionXlsx();
+    byte[] xlsxBytes = createInvalidAAppcarItemXlsx();
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -123,7 +144,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void download_existingErrorFile_returnsXlsxContentType() throws Exception {
-    byte[] xlsxBytes = createInvalidTariffExemptionXlsx();
+    byte[] xlsxBytes = createInvalidAAppcarItemXlsx();
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -157,8 +178,13 @@ class ExcelImportIntegrationTest {
   }
 
   @Test
+  void download_malformedFileId_returns400() throws Exception {
+    mockMvc.perform(get("/api/excel/download/not-a-uuid")).andExpect(status().isBadRequest());
+  }
+
+  @Test
   void upload_xlsFile_rejected() throws Exception {
-    byte[] xlsBytes = createValidTariffExemptionXls(2);
+    byte[] xlsBytes = createValidAAppcarItemXls(2);
     MockMultipartFile file =
         new MockMultipartFile("file", "tariff.xls", "application/vnd.ms-excel", xlsBytes);
 
@@ -171,7 +197,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void upload_missingCommonData_rejected() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -188,7 +214,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void upload_commonDataUnknownField_rejected() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -202,8 +228,8 @@ class ExcelImportIntegrationTest {
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":\"2026\","
-                    + "\"comeSequence\":\"001\","
-                    + "\"uploadSequence\":\"U001\","
+                    + "\"comeOrder\":\"001\","
+                    + "\"uploadSeq\":\"U001\","
                     + "\"equipCode\":\"EQ-01\","
                     + "\"unknown\":\"x\""
                     + "}")
@@ -218,7 +244,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void upload_commonDataScalarCoercion_rejected() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -232,8 +258,8 @@ class ExcelImportIntegrationTest {
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":2026,"
-                    + "\"comeSequence\":\"001\","
-                    + "\"uploadSequence\":\"U001\","
+                    + "\"comeOrder\":\"001\","
+                    + "\"uploadSeq\":\"U001\","
                     + "\"equipCode\":\"EQ-01\""
                     + "}")
                 .getBytes());
@@ -247,7 +273,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void upload_commonDataBooleanCoercion_rejected() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -261,8 +287,8 @@ class ExcelImportIntegrationTest {
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":\"2026\","
-                    + "\"comeSequence\":true,"
-                    + "\"uploadSequence\":\"U001\","
+                    + "\"comeOrder\":true,"
+                    + "\"uploadSeq\":\"U001\","
                     + "\"equipCode\":\"EQ-01\""
                     + "}")
                 .getBytes());
@@ -276,7 +302,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void removedGenericUploadRoute_returns404() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -293,7 +319,7 @@ class ExcelImportIntegrationTest {
   @Test
   void removedTemplateDownloadRoute_returns404() throws Exception {
     mockMvc
-        .perform(get("/api/excel/template/" + TemplateTypes.TARIFF_EXEMPTION))
+        .perform(get("/api/excel/template/" + TemplateTypes.AAPPCAR))
         .andExpect(status().isNotFound());
   }
 
@@ -302,13 +328,13 @@ class ExcelImportIntegrationTest {
     mockMvc
         .perform(get(PAGE_UPLOAD_TARIFF))
         .andExpect(status().isOk())
-        .andExpect(view().name("upload-tariff-exemption"))
+        .andExpect(view().name("upload-aappcar"))
         .andExpect(content().string(containsString("관세면제 업로드")));
   }
 
   @Test
   void page_formSubmission_success_rendersResultModel() throws Exception {
-    byte[] xlsxBytes = createValidTariffExemptionXlsx(1);
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -321,8 +347,8 @@ class ExcelImportIntegrationTest {
             multipart(PAGE_UPLOAD_TARIFF)
                 .file(file)
                 .param("comeYear", "2026")
-                .param("comeSequence", "001")
-                .param("uploadSequence", "U001")
+                .param("comeOrder", "001")
+                .param("uploadSeq", "U001")
                 .param("equipCode", "EQ-01"))
         .andExpect(status().isOk())
         .andExpect(view().name("result"))
@@ -336,7 +362,7 @@ class ExcelImportIntegrationTest {
     try {
       properties.setMaxRows(5);
       properties.setPreCountBuffer(10);
-      byte[] xlsxBytes = createValidTariffExemptionXlsx(25);
+      byte[] xlsxBytes = createValidAAppcarItemXlsx(25);
       MockMultipartFile file =
           new MockMultipartFile(
               "file",
@@ -388,7 +414,7 @@ class ExcelImportIntegrationTest {
 
   @Test
   void upload_wrongTemplate_returnsColumnMismatchError() throws Exception {
-    byte[] xlsxBytes = createWrongTemplateTariffExemptionXlsx();
+    byte[] xlsxBytes = createWrongTemplateAAppcarItemXlsx();
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -403,37 +429,37 @@ class ExcelImportIntegrationTest {
         .andExpect(jsonPath("$.message").value(containsString("헤더가 일치하지 않습니다")));
   }
 
-  private byte[] createValidTariffExemptionXlsx(int dataRows) throws IOException {
+  private byte[] createValidAAppcarItemXlsx(int dataRows) throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
-      fillTariffExemptionSheet(sheet, dataRows, false);
+      fillAAppcarItemSheet(sheet, dataRows, false);
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       wb.write(bos);
       return bos.toByteArray();
     }
   }
 
-  private byte[] createInvalidTariffExemptionXlsx() throws IOException {
+  private byte[] createInvalidAAppcarItemXlsx() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
-      fillTariffExemptionSheet(sheet, 1, true);
+      fillAAppcarItemSheet(sheet, 1, true);
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       wb.write(bos);
       return bos.toByteArray();
     }
   }
 
-  private byte[] createValidTariffExemptionXls(int dataRows) throws IOException {
+  private byte[] createValidAAppcarItemXls(int dataRows) throws IOException {
     try (HSSFWorkbook wb = new HSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
-      fillTariffExemptionSheet(sheet, dataRows, false);
+      fillAAppcarItemSheet(sheet, dataRows, false);
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       wb.write(bos);
       return bos.toByteArray();
     }
   }
 
-  private void fillTariffExemptionSheet(Sheet sheet, int dataRows, boolean makeInvalid) {
+  private void fillAAppcarItemSheet(Sheet sheet, int dataRows, boolean makeInvalid) {
     Row headerRow = sheet.createRow(3);
     headerRow.createCell(0).setCellValue("No");
     headerRow.createCell(1).setCellValue("순번");
@@ -476,7 +502,7 @@ class ExcelImportIntegrationTest {
     }
   }
 
-  private byte[] createWrongTemplateTariffExemptionXlsx() throws IOException {
+  private byte[] createWrongTemplateAAppcarItemXlsx() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
 
@@ -505,10 +531,13 @@ class ExcelImportIntegrationTest {
     }
   }
 
-  private String extractDownloadUrl(String jsonResponse) {
-    int start = jsonResponse.indexOf("\"downloadUrl\":\"") + "\"downloadUrl\":\"".length();
-    int end = jsonResponse.indexOf("\"", start);
-    return jsonResponse.substring(start, end);
+  private String extractDownloadUrl(String jsonResponse) throws Exception {
+    Map<?, ?> response = objectMapper.readValue(jsonResponse, Map.class);
+    return String.valueOf(response.get("downloadUrl"));
+  }
+
+  private AAppcarEquipId requiredCommonDataEquipId() {
+    return new AAppcarEquipId("COMPANY01", "CUSTOM01", "2026", 1, 1, "EQ-01");
   }
 
   private MockMultipartFile requiredCommonDataPart() {
@@ -518,8 +547,8 @@ class ExcelImportIntegrationTest {
         MediaType.APPLICATION_JSON_VALUE,
         ("{"
                 + "\"comeYear\":\"2026\","
-                + "\"comeSequence\":\"001\","
-                + "\"uploadSequence\":\"U001\","
+                + "\"comeOrder\":\"001\","
+                + "\"uploadSeq\":\"1\","
                 + "\"equipCode\":\"EQ-01\""
                 + "}")
             .getBytes());

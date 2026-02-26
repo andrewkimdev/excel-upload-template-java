@@ -46,15 +46,15 @@ public class ExcelErrorReportService {
       String originalFilename)
       throws IOException {
 
-    // 1. Open source read-only via SecureExcelUtils (security: no write access needed)
+    // 1. SecureExcelUtils로 원본을 읽기 전용으로 열기(보안: 쓰기 권한 불필요)
     try (Workbook sourceWb = SecureExcelUtils.createWorkbook(originalXlsx)) {
 
-      // 2. Create target workbook and wrap with SXSSF streaming window
+      // 2. 대상 워크북 생성 후 SXSSF 스트리밍 윈도우로 래핑
       try (XSSFWorkbook targetXssf = new XSSFWorkbook();
           SXSSFWorkbook sxssfWb = new SXSSFWorkbook(targetXssf, 100)) {
         var styleMap = WorkbookCopyUtils.buildStyleMapping(sourceWb, targetXssf);
 
-        // 3. Build error lookup: Map<Integer, RowError> keyed by 1-based row number
+        // 3. 오류 조회 맵 생성: 1-based 행 번호를 키로 하는 Map<Integer, RowError>
         var errorsByRow = new HashMap<Integer, RowError>();
         for (RowError rowError : validationResult.getRowErrors()) {
           errorsByRow.put(rowError.getRowNumber(), rowError);
@@ -64,18 +64,18 @@ public class ExcelErrorReportService {
         int headerRowIdx = config.getHeaderRow() - 1;
         var errorStyleCache = new HashMap<Integer, CellStyle>();
 
-        // 5. Copy ALL sheets
+        // 5. 모든 시트 복사
         for (int sheetIdx = 0; sheetIdx < sourceWb.getNumberOfSheets(); sheetIdx++) {
           Sheet srcSheet = sourceWb.getSheetAt(sheetIdx);
           SXSSFSheet tgtSheet = sxssfWb.createSheet(srcSheet.getSheetName());
 
-          // Compute max column across all rows
+          // 모든 행을 기준으로 최대 컬럼 계산
           int maxCol = 0;
           for (Row row : srcSheet) {
             maxCol = Math.max(maxCol, row.getLastCellNum());
           }
 
-          // Sheet-level metadata (delegates to underlying XSSFSheet, safe in SXSSF)
+          // 시트 수준 메타데이터 복사(내부 XSSFSheet에 위임되며 SXSSF에서 안전)
           WorkbookCopyUtils.copyColumnWidths(srcSheet, tgtSheet, maxCol);
           WorkbookCopyUtils.copyMergedRegions(srcSheet, tgtSheet);
 
@@ -83,7 +83,7 @@ public class ExcelErrorReportService {
           int errorColIndex = isDataSheet ? maxCol : -1;
           int lastRowNum = srcSheet.getLastRowNum();
 
-          // 6. Stream-copy all rows top-to-bottom (SXSSF: sequential writes only)
+          // 6. 모든 행을 위에서 아래로 스트림 복사(SXSSF: 순차 쓰기만 지원)
           for (int rowIdx = 0; rowIdx <= lastRowNum; rowIdx++) {
             Row srcRow = srcSheet.getRow(rowIdx);
             Row tgtRow = tgtSheet.createRow(rowIdx);
@@ -97,7 +97,7 @@ public class ExcelErrorReportService {
             boolean isHeaderRow = isDataSheet && rowIdx == headerRowIdx;
             RowError rowError = isDataSheet ? errorsByRow.get(rowIdx + 1) : null;
 
-            // Build set of error column indices for O(1) lookup
+            // O(1) 조회를 위한 오류 컬럼 인덱스 집합 구성
             var errorColIndices = new HashSet<Integer>();
             if (rowError != null) {
               for (var cellError : rowError.getCellErrors()) {
@@ -107,7 +107,7 @@ public class ExcelErrorReportService {
               }
             }
 
-            // Copy each cell with mapped style
+            // 매핑된 스타일로 각 셀 복사
             for (int colIdx = 0; colIdx < srcRow.getLastCellNum(); colIdx++) {
               Cell srcCell = srcRow.getCell(colIdx);
               Cell tgtCell = tgtRow.createCell(colIdx);
@@ -128,7 +128,7 @@ public class ExcelErrorReportService {
               }
             }
 
-            // Data sheet: add _ERRORS column
+            // 데이터 시트: _ERRORS 컬럼 추가
             if (isDataSheet) {
               if (isHeaderRow) {
                 Cell errorHeaderCell = tgtRow.createCell(errorColIndex);
@@ -143,7 +143,7 @@ public class ExcelErrorReportService {
 
               if (rowError != null) {
                 Cell errorMsgCell = tgtRow.createCell(errorColIndex);
-                // SECURITY: Sanitize to prevent Excel formula injection
+                // 보안: Excel 수식 인젝션 방지를 위해 정규화
                 String sanitizedMessage =
                     SecureExcelUtils.sanitizeForExcelCell(rowError.getFormattedMessage());
                 errorMsgCell.setCellValue(sanitizedMessage);
@@ -151,7 +151,7 @@ public class ExcelErrorReportService {
             }
           }
 
-          // 7. Add disclaimer on data sheet (2 rows below last row)
+          // 7. 데이터 시트에 안내문 추가(마지막 행 아래 2행)
           if (isDataSheet) {
             int disclaimerRowIdx = lastRowNum + 2;
             Row disclaimerRow = tgtSheet.createRow(disclaimerRowIdx);
@@ -173,7 +173,7 @@ public class ExcelErrorReportService {
           }
         }
 
-        // 8. Save to temp directory
+        // 8. 임시 디렉터리에 저장
         String fileId = UUID.randomUUID().toString();
         Path errorsDir = properties.getTempDirectoryPath().resolve("errors");
         Files.createDirectories(errorsDir);
@@ -183,7 +183,7 @@ public class ExcelErrorReportService {
           sxssfWb.write(os);
         }
 
-        // 9. Save .meta file with original filename
+        // 9. 원본 파일명으로 .meta 파일 저장
         if (originalFilename != null && !originalFilename.isBlank()) {
           Path metaFilePath = errorsDir.resolve(fileId + ".meta");
           Files.writeString(metaFilePath, originalFilename, StandardCharsets.UTF_8);

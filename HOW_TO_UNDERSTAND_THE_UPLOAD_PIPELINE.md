@@ -6,7 +6,8 @@ This document describes the upload pipeline as currently implemented.
 
 ```
 HTTP (REST/Thymeleaf)
-  -> ExcelFileController
+  -> AAppcarItemUploadApiController / AAppcarItemUploadPageController
+    -> ExcelUploadRequestService
     -> ExcelImportOrchestrator
       -> ExcelUploadFileService (.xlsx-only gate)
       -> SecureExcelUtils.countRows (pre-check)
@@ -21,16 +22,17 @@ HTTP (REST/Thymeleaf)
 
 ### REST
 
-- `POST /api/excel/upload/tariff-exemption`
+- `POST /api/excel/upload/aappcar`
 - Parts:
   - `file` (`multipart/form-data`)
   - `commonData` (`application/json`, required)
 
 `commonData` required fields:
 - `comeYear`
-- `comeSequence`
-- `uploadSequence`
+- `comeOrder`
+- `uploadSeq`
 - `equipCode`
+- (`companyId`, `customId`는 컨트롤러에서 주입)
 
 Behavior:
 - strict JSON parsing (`FAIL_ON_UNKNOWN_PROPERTIES`, scalar coercion disabled)
@@ -42,8 +44,8 @@ Behavior:
 ### Thymeleaf
 
 - `GET /` -> `index`
-- `GET /upload/tariff-exemption` -> `upload-tariff-exemption`
-- `POST /upload/tariff-exemption` -> `result`
+- `GET /upload/aappcar` -> `upload-aappcar`
+- `POST /upload/aappcar` -> `result`
 
 Form fields map to template-specific `CommonData` fields and file.
 
@@ -54,15 +56,11 @@ Form fields map to template-specific `CommonData` fields and file.
 - downloads `errors/{fileId}.xlsx`
 - if `{fileId}.meta` exists, download name uses original filename with `오류_` prefix
 
-### Template download placeholder
-
-- `GET /api/excel/template/{templateType}` currently returns `501 Not Implemented`.
-
 ## 3) Detailed pipeline steps
 
-### Step 0: request-level size gate (controller)
+### Step 0: request-level size gate (request service)
 
-`ExcelFileController` checks file size against `excel.import.max-file-size-mb` before orchestrator call.
+`ExcelUploadRequestService` checks file size against `excel.import.max-file-size-mb` before orchestrator call.
 
 ### Step 1: template resolution (orchestrator)
 
@@ -118,7 +116,7 @@ Orchestrator rejects if parsed row count is greater than `maxRows`.
 Orchestrator calls `template.checkDbUniqueness(...)`.
 If template has no checker (`null`), this returns empty errors.
 
-Current tariff template wiring (`TariffExemptionTemplateConfig`) passes `null`, so orchestrator-level DB uniqueness is disabled for active wiring.
+Current tariff template wiring (`AAppcarItemTemplateConfig`) injects `AAppcarItemDbUniquenessChecker`, so DB uniqueness is active.
 
 ### Step 7: merge parse errors
 
@@ -129,9 +127,9 @@ Orchestrator merges parser conversion errors into `ExcelValidationResult`.
 If valid, orchestrator calls:
 - `PersistenceHandler.saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)`
 
-Current tariff implementation (`TariffExemptionService`):
-- upserts detail rows by `(comeYear, comeSequence, uploadSequence, equipCode, rowNumber)`
-- upserts summary row by `(comeYear, comeSequence, uploadSequence, equipCode)`
+Current tariff implementation (`AAppcarItemService`):
+- upserts detail rows by `(comeYear, comeOrder, uploadSeq, equipCode, rowNumber)`
+- upserts upload aggregate row by `(companyId, customId, comeYear, comeOrder, uploadSeq, equipCode)`
 - applies audit defaults (`createdBy`, `approvedYn`, `createdAt`)
 - retries on `DataIntegrityViolationException` up to retry limit
 
@@ -162,7 +160,9 @@ Response includes `downloadUrl=/api/excel/download/{uuid}`.
 
 ## 5) Key classes map
 
-- Controller: `src/main/java/com/foo/excel/controller/ExcelFileController.java`
+- API Controller: `src/main/java/com/foo/excel/controller/AAppcarItemUploadApiController.java`
+- Page Controller: `src/main/java/com/foo/excel/controller/AAppcarItemUploadPageController.java`
+- Download Controller: `src/main/java/com/foo/excel/controller/ExcelFileController.java`
 - Orchestrator: `src/main/java/com/foo/excel/service/pipeline/ExcelImportOrchestrator.java`
 - Conversion: `src/main/java/com/foo/excel/service/file/ExcelUploadFileService.java`
 - Parser: `src/main/java/com/foo/excel/service/pipeline/parse/ExcelParserService.java`
@@ -170,7 +170,7 @@ Response includes `downloadUrl=/api/excel/download/{uuid}`.
 - Uniqueness validator: `src/main/java/com/foo/excel/validation/WithinFileUniqueConstraintValidator.java`
 - Error report: `src/main/java/com/foo/excel/service/pipeline/report/ExcelErrorReportService.java`
 - Security utilities: `src/main/java/com/foo/excel/util/SecureExcelUtils.java`
-- Template wiring example: `src/main/java/com/foo/excel/templates/samples/tariffexemption/config/TariffExemptionTemplateConfig.java`
+- Template wiring example: `src/main/java/com/foo/excel/templates/samples/aappcar/config/AAppcarItemTemplateConfig.java`
 
 ## 6) Configuration reference
 

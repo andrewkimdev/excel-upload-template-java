@@ -21,7 +21,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-@WebMvcTest(TariffExemptionUploadApiController.class)
+@WebMvcTest(AAppcarItemUploadApiController.class)
 @Import(ExcelApiExceptionHandler.class)
 class ExcelApiExceptionHandlerTest {
 
@@ -36,7 +36,7 @@ class ExcelApiExceptionHandlerTest {
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/" + TemplateTypes.TARIFF_EXEMPTION)
+            multipart("/api/excel/upload/" + TemplateTypes.AAPPCAR)
                 .file(filePart())
                 .file(commonDataPart()))
         .andExpect(status().isInternalServerError())
@@ -53,7 +53,7 @@ class ExcelApiExceptionHandlerTest {
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/" + TemplateTypes.TARIFF_EXEMPTION)
+            multipart("/api/excel/upload/" + TemplateTypes.AAPPCAR)
                 .file(filePart())
                 .file(commonDataPart()))
         .andExpect(status().isPayloadTooLarge())
@@ -76,8 +76,8 @@ class ExcelApiExceptionHandlerTest {
         MediaType.APPLICATION_JSON_VALUE,
         ("{"
                 + "\"comeYear\":\"2026\","
-                + "\"comeSequence\":\"001\","
-                + "\"uploadSequence\":\"U001\","
+                + "\"comeOrder\":\"001\","
+                + "\"uploadSeq\":\"U001\","
                 + "\"equipCode\":\"EQ-01\""
                 + "}")
             .getBytes());

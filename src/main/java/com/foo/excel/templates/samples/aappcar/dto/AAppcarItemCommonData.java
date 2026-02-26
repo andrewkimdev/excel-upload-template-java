@@ -1,4 +1,4 @@
-package com.foo.excel.templates.samples.tariffexemption.dto;
+package com.foo.excel.templates.samples.aappcar.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.foo.excel.service.contract.CommonData;
@@ -10,7 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class TariffExemptionCommonData implements CommonData {
+public class AAppcarItemCommonData implements CommonData {
 
   private static final String DEFAULT_CREATED_BY = "user01";
   private static final String DEFAULT_APPROVED_YN = "N";
@@ -18,14 +18,18 @@ public class TariffExemptionCommonData implements CommonData {
   @NotBlank(message = "comeYear는 필수입니다")
   private String comeYear;
 
-  @NotBlank(message = "comeSequence는 필수입니다")
-  private String comeSequence;
+  @NotBlank(message = "comeOrder는 필수입니다")
+  private String comeOrder;
 
-  @NotBlank(message = "uploadSequence는 필수입니다")
-  private String uploadSequence;
+  @NotBlank(message = "uploadSeq는 필수입니다")
+  private String uploadSeq;
 
   @NotBlank(message = "equipCode는 필수입니다")
   private String equipCode;
+
+  private String companyId;
+
+  private String customId;
 
   @JsonIgnore
   public String getCreatedBy() {

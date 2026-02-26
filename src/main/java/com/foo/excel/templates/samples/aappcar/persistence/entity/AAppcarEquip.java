@@ -1,4 +1,4 @@
-package com.foo.excel.templates.samples.tariffexemption.persistence.entity;
+package com.foo.excel.templates.samples.aappcar.persistence.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -17,10 +17,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "tariff_exemption_summary")
-public class TariffExemptionSummary {
+@Table(name = "a_appcar_equip")
+public class AAppcarEquip {
 
-  @EmbeddedId private TariffExemptionSummaryId id;
+  @EmbeddedId private AAppcarEquipId id;
 
   @Column(name = "uploaded_rows", nullable = false)
   private Integer uploadedRows;

@@ -3,8 +3,8 @@ package com.foo.excel.controller;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import com.foo.excel.service.pipeline.ExcelUploadRequestService;
 import com.foo.excel.templates.TemplateTypes;
-import com.foo.excel.templates.samples.tariffexemption.dto.TariffExemptionCommonData;
-import com.foo.excel.templates.samples.tariffexemption.mapper.TariffExemptionCommonDataFormMapper;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemCommonData;
+import com.foo.excel.templates.samples.aappcar.mapper.AAppcarItemCommonDataFormMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -18,29 +18,34 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-public class TariffExemptionUploadPageController {
+public class AAppcarItemUploadPageController {
+
+  private static final String DEFAULT_COMPANY_ID = "COMPANY01";
+  private static final String DEFAULT_CUSTOM_ID = "CUSTOM01";
 
   private final ExcelUploadRequestService uploadRequestService;
-  private final TariffExemptionCommonDataFormMapper commonDataFormMapper;
+  private final AAppcarItemCommonDataFormMapper commonDataFormMapper;
 
-  @GetMapping("/upload/" + TemplateTypes.TARIFF_EXEMPTION)
+  @GetMapping("/upload/" + TemplateTypes.AAPPCAR)
   public String uploadForm() {
-    return "upload-tariff-exemption";
+    return "upload-aappcar";
   }
 
-  @PostMapping("/upload/" + TemplateTypes.TARIFF_EXEMPTION)
+  @PostMapping("/upload/" + TemplateTypes.AAPPCAR)
   public String upload(
       @RequestParam("comeYear") String comeYear,
-      @RequestParam("comeSequence") String comeSequence,
-      @RequestParam("uploadSequence") String uploadSequence,
+      @RequestParam("comeOrder") String comeOrder,
+      @RequestParam("uploadSeq") String uploadSeq,
       @RequestParam("equipCode") String equipCode,
       @RequestParam("file") MultipartFile file,
       Model model) {
     try {
-      TariffExemptionCommonData commonData =
-          commonDataFormMapper.toCommonData(comeYear, comeSequence, uploadSequence, equipCode);
+      AAppcarItemCommonData commonData =
+          commonDataFormMapper.toCommonData(comeYear, comeOrder, uploadSeq, equipCode);
+      commonData.setCompanyId(DEFAULT_COMPANY_ID);
+      commonData.setCustomId(DEFAULT_CUSTOM_ID);
       ImportResult result =
-          uploadRequestService.upload(file, TemplateTypes.TARIFF_EXEMPTION, commonData);
+          uploadRequestService.upload(file, TemplateTypes.AAPPCAR, commonData);
       model.addAttribute("result", result);
     } catch (IllegalArgumentException e) {
       log.warn("업로드 요청 오류: {}", e.getMessage());

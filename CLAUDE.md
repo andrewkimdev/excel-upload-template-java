@@ -14,7 +14,7 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 
 ## Runtime Contracts To Preserve
 
-### Upload contract (`POST /api/excel/upload/tariff-exemption`)
+### Upload contract (`POST /api/excel/upload/aappcar`)
 
 - Multipart parts:
   - `file` (`.xlsx` only; `.xls` rejected)
@@ -22,7 +22,8 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 - Current runtime wiring uses explicit template routes (not a generic `{templateType}` catch-all).
 - `commonData` is template-specific via `TemplateDefinition<T, C extends CommonData>.commonDataClass`
 - For current tariff template, required fields are:
-  - `comeYear`, `comeSequence`, `uploadSequence`, `equipCode`
+  - `comeYear`, `comeOrder`, `uploadSeq`, `equipCode`
+  - `customId`는 런타임 계약(`CommonData#getCustomId`)상 필수이며, 현재 컨트롤러에서 `CUSTOM01`로 주입됨
 - Strict parsing is enabled:
   - `FAIL_ON_UNKNOWN_PROPERTIES`
   - scalar coercion disabled for textual fields
@@ -46,15 +47,15 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 ## Current Architectural Shape
 
 - Core orchestration:
-  - Upload: `TariffExemptionUploadApiController` -> `ExcelUploadRequestService` -> `ExcelImportOrchestrator`
+  - Upload: `AAppcarItemUploadApiController` -> `ExcelUploadRequestService` -> `ExcelImportOrchestrator`
   - Download: `ExcelFileController` serves `/api/excel/download/{fileId}`
 - Template wiring:
   - `TemplateDefinition<T, C extends CommonData>`
   - `PersistenceHandler<T, C extends CommonData>`
-  - optional `DatabaseUniquenessChecker<T>`
+  - optional `DatabaseUniquenessChecker<T, C extends CommonData>`
 - Current sample template:
-  - `templates/samples/tariffexemption/*`
-  - Note: `TariffExemptionTemplateConfig` currently wires `dbUniquenessChecker` as `null`.
+  - `templates/samples/aappcar/*`
+  - `AAppcarItemTemplateConfig` wires `AAppcarItemDbUniquenessChecker` bean.
 
 ## Guidance For New Template Work
 
@@ -65,7 +66,7 @@ Create a subpackage under `com.foo.excel.templates...` with:
 3. `*CommonData` (implements `CommonData`, validated by Bean Validation)
 4. Persistence entity/repository classes as needed
 5. `*Service` implementing `PersistenceHandler<Dto, CommonDataType>`
-6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<Dto>`
+6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<Dto, CommonDataType>`
 7. `*TemplateConfig` producing `TemplateDefinition<Dto, CommonDataType>` with `commonDataClass`
 
 ## Testing Guidance

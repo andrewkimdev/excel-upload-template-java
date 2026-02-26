@@ -42,7 +42,7 @@ class ExcelErrorReportServiceTest {
   void setUp() throws IOException {
     ExcelImportProperties properties = new ExcelImportProperties();
     properties.setTempDirectory(tempDir.toString());
-    // Create the errors subdirectory
+    // 오류 하위 디렉터리 생성
     Files.createDirectories(tempDir.resolve("errors"));
     errorReportService = new ExcelErrorReportService(properties);
   }
@@ -60,8 +60,8 @@ class ExcelErrorReportServiceTest {
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
-      Row headerRow = sheet.getRow(0); // header row 1 (0-based: 0)
-      // Find _ERRORS column
+      Row headerRow = sheet.getRow(0); // 헤더 1행(0-based: 0)
+      // _ERRORS 컬럼 찾기
       boolean found = false;
       for (Cell cell : headerRow) {
         if ("_ERRORS".equals(cell.getStringCellValue())) {
@@ -86,7 +86,7 @@ class ExcelErrorReportServiceTest {
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
-      Row dataRow = sheet.getRow(1); // row 2 (0-based: 1) has error at column 1
+      Row dataRow = sheet.getRow(1); // 2행(0-based: 1)의 1번 컬럼에 오류 존재
       Cell errorCell = dataRow.getCell(1);
       assertThat(errorCell).isNotNull();
       assertThat(errorCell.getCellStyle().getFillPattern())
@@ -110,7 +110,7 @@ class ExcelErrorReportServiceTest {
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
       Row dataRow = sheet.getRow(1);
-      // Error column should be at last column
+      // 오류 컬럼은 마지막 컬럼에 있어야 함
       int lastCol = sheet.getRow(0).getLastCellNum();
       Cell errMsgCell = dataRow.getCell(lastCol - 1);
       assertThat(errMsgCell).isNotNull();
@@ -133,7 +133,7 @@ class ExcelErrorReportServiceTest {
 
     assertThat(errorFile).exists();
     assertThat(errorFile.toString()).endsWith(".xlsx");
-    // Verify it can be opened as a valid workbook
+    // 유효한 워크북으로 열 수 있는지 확인
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       assertThat(wb.getNumberOfSheets()).isGreaterThan(0);
     }
@@ -158,9 +158,9 @@ class ExcelErrorReportServiceTest {
 
       assertThat(errMsgCell).isNotNull();
       String cellValue = errMsgCell.getStringCellValue();
-      // The formatted message starts with "[B]" which is safe
+      // 포맷된 메시지는 안전한 "[B]"로 시작
       assertThat(cellValue).startsWith("[");
-      // Verify the formula content is still present (not stripped)
+      // 수식 내용이 제거되지 않고 유지되는지 확인
       assertThat(cellValue).contains("SUM");
     }
   }
@@ -184,7 +184,7 @@ class ExcelErrorReportServiceTest {
 
       assertThat(errMsgCell).isNotNull();
       String cellValue = errMsgCell.getStringCellValue();
-      // The formatted message includes the column letter prefix
+      // 포맷된 메시지에 컬럼 문자 접두어가 포함되는지 확인
       assertThat(cellValue).startsWith("[B]");
     }
   }
@@ -208,13 +208,13 @@ class ExcelErrorReportServiceTest {
 
       assertThat(errMsgCell).isNotNull();
       String cellValue = errMsgCell.getStringCellValue();
-      // Normal messages should be formatted with column prefix
+      // 일반 메시지는 컬럼 접두어와 함께 포맷되어야 함
       assertThat(cellValue).startsWith("[B]");
       assertThat(cellValue).contains("필수 입력 항목입니다");
     }
   }
 
-  // ===== New tests for format preservation =====
+  // ===== 서식 보존 신규 테스트 =====
 
   @Test
   void errorReport_preservesOriginalCellFormatting_withRoseFillAdded() throws IOException {
@@ -230,15 +230,15 @@ class ExcelErrorReportServiceTest {
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
       Row dataRow = sheet.getRow(1);
-      Cell errorCell = dataRow.getCell(1); // column B has error AND bold+border style
+      Cell errorCell = dataRow.getCell(1); // B열은 오류가 있고 굵게+테두리 스타일 적용
 
-      // Error cell should have ROSE fill
+      // 오류 셀에는 ROSE 채우기가 적용되어야 함
       assertThat(errorCell.getCellStyle().getFillForegroundColor())
           .isEqualTo(IndexedColors.ROSE.getIndex());
       assertThat(errorCell.getCellStyle().getFillPattern())
           .isEqualTo(FillPatternType.SOLID_FOREGROUND);
 
-      // Original formatting should be preserved
+      // 원본 서식이 보존되어야 함
       assertThat(wb.getFontAt(errorCell.getCellStyle().getFontIndex()).getBold()).isTrue();
       assertThat(errorCell.getCellStyle().getBorderBottom()).isEqualTo(BorderStyle.THIN);
     }
@@ -293,14 +293,14 @@ class ExcelErrorReportServiceTest {
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
-      // Source has rows 0-2 (lastRowNum=2), disclaimer at row 4 (2+2)
+      // 원본은 0-2행(lastRowNum=2), 안내문은 4행(2+2)
       Row disclaimerRow = sheet.getRow(4);
       assertThat(disclaimerRow).isNotNull();
       Cell disclaimerCell = disclaimerRow.getCell(0);
       assertThat(disclaimerCell.getStringCellValue()).startsWith("※");
       assertThat(disclaimerCell.getStringCellValue()).contains("오류 확인용");
 
-      // Verify italic gray style
+      // 이탤릭 회색 스타일 확인
       Font font = wb.getFontAt(disclaimerCell.getCellStyle().getFontIndex());
       assertThat(font.getItalic()).isTrue();
       assertThat(font.getColor()).isEqualTo(IndexedColors.GREY_50_PERCENT.getIndex());
@@ -351,7 +351,7 @@ class ExcelErrorReportServiceTest {
         errorReportService.generateErrorReport(
             originalFile, validationResult, mappings, config, "test.xlsx");
 
-    // Verify output is valid XLSX (WorkbookFactory returns XSSFWorkbook for .xlsx)
+    // 출력이 유효한 XLSX인지 확인(WorkbookFactory는 .xlsx에서 XSSFWorkbook 반환)
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       assertThat(wb).isInstanceOf(XSSFWorkbook.class);
       assertThat(wb.getNumberOfSheets()).isGreaterThan(0);
@@ -384,7 +384,7 @@ class ExcelErrorReportServiceTest {
     assertThat(afterCount).isEqualTo(beforeCount);
   }
 
-  // ===== Helpers =====
+  // ===== 헬퍼 =====
 
   static class TestConfig implements ExcelImportConfig {
     @Override
@@ -397,10 +397,6 @@ class ExcelErrorReportServiceTest {
       return 2;
     }
 
-    @Override
-    public String[] getNaturalKeyFields() {
-      return new String[] {"name"};
-    }
   }
 
   private Path createSimpleXlsx() throws IOException {
@@ -469,7 +465,7 @@ class ExcelErrorReportServiceTest {
 
   private Path createMultiSheetXlsx() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
-      // Data sheet (index 0)
+      // 데이터 시트(index 0)
       Sheet dataSheet = wb.createSheet("Data");
       Row headerRow = dataSheet.createRow(0);
       headerRow.createCell(0).setCellValue("No");
@@ -480,11 +476,11 @@ class ExcelErrorReportServiceTest {
       dataRow.createCell(1).setCellValue("Test");
       dataRow.createCell(2).setCellValue("abc");
 
-      // Reference sheet (index 1)
+      // 참조 시트(index 1)
       Sheet refSheet = wb.createSheet("Reference");
       refSheet.createRow(0).createCell(0).setCellValue("Ref Data");
 
-      // Instructions sheet (index 2)
+      // 안내 시트(index 2)
       Sheet instrSheet = wb.createSheet("Instructions");
       instrSheet.createRow(0).createCell(0).setCellValue("Instructions");
 

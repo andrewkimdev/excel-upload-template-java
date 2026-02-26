@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.UUID;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +77,7 @@ public class ExcelImportOrchestrator {
 
     ExcelImportConfig config = template.getConfig();
 
-    // Extract and sanitize original filename for error report
+    // 오류 리포트용 원본 파일명을 추출하고 정규화
     String sanitizedFilename = null;
     try {
       String originalName = file.getOriginalFilename();
@@ -89,16 +88,16 @@ public class ExcelImportOrchestrator {
       log.warn("원본 파일명 정규화에 실패했습니다: {}", e.getMessage());
     }
 
-    // 1. Create UUID-based temp subdirectory
-    String uploadId = UUID.randomUUID().toString();
-    Path tempSubDir = properties.getTempDirectoryPath().resolve(uploadId);
+    // 1. customId 기반 임시 하위 디렉터리 생성
+    String customIdPath = resolveCustomIdPath(typedCommonData);
+    Path tempSubDir = properties.getTempDirectoryPath().resolve(customIdPath);
     Files.createDirectories(tempSubDir);
 
     try {
-      // 2. Store and validate xlsx file
+      // 2. xlsx 파일 저장 및 검증
       Path xlsxFile = uploadFileService.storeAndValidateXlsx(file, tempSubDir);
 
-      // 2b. Quick row count pre-check (lightweight SAX — avoids full parse for oversized files)
+      // 2b. 빠른 행 수 사전 점검(경량 SAX, 대용량 파일의 전체 파싱 회피)
       int roughRowCount = SecureExcelUtils.countRows(xlsxFile, config.getSheetIndex());
       int preCountThreshold =
           properties.getMaxRows() + (config.getDataStartRow() - 1) + properties.getPreCountBuffer();
@@ -120,11 +119,11 @@ public class ExcelImportOrchestrator {
             .build();
       }
 
-      // 3. Parse
+      // 3. 파싱
       ExcelParserService.ParseResult<T> parseResult =
           parserService.parse(xlsxFile, template.getDtoClass(), config, properties.getMaxRows());
 
-      // 4. Check max rows
+      // 4. 최대 행 수 확인
       if (parseResult.rows().size() > properties.getMaxRows()) {
         return ImportResult.builder()
             .success(false)
@@ -138,21 +137,22 @@ public class ExcelImportOrchestrator {
             .build();
       }
 
-      // 5. Validate (JSR-380 + within-file uniqueness)
+      // 5. 검증(JSR-380 + 파일 내 유일성)
       ExcelValidationResult validationResult =
           validationService.validate(
               parseResult.rows(), template.getDtoClass(), parseResult.sourceRowNumbers());
 
-      // 6. DB uniqueness check
+      // 6. DB 유일성 검사
       List<RowError> dbErrors =
-          template.checkDbUniqueness(parseResult.rows(), parseResult.sourceRowNumbers());
+          template.checkDbUniqueness(
+              parseResult.rows(), parseResult.sourceRowNumbers(), typedCommonData);
       validationResult.merge(dbErrors);
 
-      // 7. Merge parse errors
+      // 7. 파싱 오류 병합
       validationResult.merge(parseResult.parseErrors());
 
       if (validationResult.isValid()) {
-        // 8. Persist
+        // 8. 저장
         PersistenceHandler.SaveResult saveResult =
             template
                 .getPersistenceHandler()
@@ -166,7 +166,7 @@ public class ExcelImportOrchestrator {
             .message("데이터 업로드 완료")
             .build();
       } else {
-        // 9. Generate error report
+        // 9. 오류 리포트 생성
         Path errorFile =
             errorReportService.generateErrorReport(
                 xlsxFile,
@@ -199,5 +199,27 @@ public class ExcelImportOrchestrator {
       log.error("업로드 처리 중 오류가 발생했습니다", e);
       throw e;
     }
+  }
+
+  private String resolveCustomIdPath(CommonData commonData) {
+    String customId = commonData.getCustomId();
+    if (customId == null || customId.isBlank()) {
+      throw new IllegalArgumentException("customId는 필수입니다.");
+    }
+
+    String sanitized =
+        customId
+            .trim()
+            .replaceAll("[\\x00-\\x1F\\x7F]", "")
+            .replaceAll(
+                "[^a-zA-Z0-9.\\-_\\s\\uAC00-\\uD7AF\\u1100-\\u11FF\\u3130-\\u318F]",
+                "_")
+            .replaceAll("\\.{2,}", ".")
+            .replaceAll("^[.\\s]+|[.\\s]+$", "");
+
+    if (sanitized.isBlank()) {
+      throw new IllegalArgumentException("customId 형식이 올바르지 않습니다.");
+    }
+    return sanitized;
   }
 }

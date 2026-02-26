@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class ExcelColumnUtilTest {
 
-  // ===== letterToIndex =====
+  // ===== letterToIndex 테스트 =====
 
   @ParameterizedTest
   @CsvSource({"A, 0", "B, 1", "Z, 25", "AA, 26", "AB, 27"})
@@ -38,7 +38,7 @@ class ExcelColumnUtilTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
-  // ===== indexToLetter =====
+  // ===== indexToLetter 테스트 =====
 
   @ParameterizedTest
   @CsvSource({"0, A", "25, Z", "26, AA"})

@@ -3,35 +3,33 @@ package com.foo.excel.config;
 public interface ExcelImportConfig {
 
   /**
-   * Row number where primary column headers are located (1-indexed). This is the row used for
-   * header matching.
+   * 기본 컬럼 헤더가 위치한 행 번호(1부터 시작).
+   *
+   * <p>헤더 매칭에 사용하는 행이다.
    */
   default int getHeaderRow() {
     return 1;
   }
 
-  /** Row number where data starts (1-indexed). */
+  /** 데이터가 시작되는 행 번호(1부터 시작). */
   default int getDataStartRow() {
     return 2;
   }
 
-  /** Sheet index to read (0-indexed). */
+  /** 읽을 시트 인덱스(0부터 시작). */
   default int getSheetIndex() {
     return 0;
   }
 
   /**
-   * Marker string that indicates start of footer/notes section. When found in any cell of a row,
-   * stop reading data.
+   * 푸터/메모 구간 시작을 나타내는 마커 문자열. 행의 어느 셀에서든 발견되면
+   * 데이터 읽기를 중단한다.
    */
   default String getFooterMarker() {
     return "※";
   }
 
-  /** Field names that form the natural key for upsert operations. */
-  String[] getNaturalKeyFields();
-
-  /** Name of the error column added to error report Excel. */
+  /** 오류 리포트 Excel에 추가되는 오류 컬럼명. */
   default String getErrorColumnName() {
     return "_ERRORS";
   }

@@ -28,7 +28,7 @@ public class ExcelValidationService {
       List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers) {
     List<RowError> allErrors = new ArrayList<>();
 
-    // Pass 1: JSR-380 validation
+    // 1차: JSR-380 검증
     for (int i = 0; i < rows.size(); i++) {
       T row = rows.get(i);
       int rowNumber = sourceRowNumbers.get(i);
@@ -47,7 +47,7 @@ public class ExcelValidationService {
       }
     }
 
-    // Pass 2: Within-file uniqueness
+    // 2차: 파일 내 유일성 검증
     List<RowError> uniqueErrors =
         withinFileUniqueConstraintValidator.checkWithinFileUniqueness(
             rows, dtoClass, sourceRowNumbers);

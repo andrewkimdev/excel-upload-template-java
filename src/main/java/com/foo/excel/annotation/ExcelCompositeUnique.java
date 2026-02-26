@@ -11,9 +11,9 @@ import java.lang.annotation.Target;
 @Repeatable(ExcelCompositeUniques.class)
 public @interface ExcelCompositeUnique {
 
-  /** Field names that together form a unique constraint. */
+  /** 함께 유일 제약을 구성하는 필드명 목록. */
   String[] fields();
 
-  /** Error message when composite uniqueness is violated. */
+  /** 복합 유일성이 위반되었을 때의 오류 메시지. */
   String message() default "중복된 조합입니다";
 }

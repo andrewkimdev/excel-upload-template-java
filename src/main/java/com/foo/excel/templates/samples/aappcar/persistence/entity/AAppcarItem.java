@@ -1,4 +1,4 @@
-package com.foo.excel.templates.samples.tariffexemption.persistence.entity;
+package com.foo.excel.templates.samples.aappcar.persistence.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -18,10 +18,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "tariff_exemption")
-public class TariffExemption {
+@Table(name = "a_appcar_item")
+public class AAppcarItem {
 
-  @EmbeddedId private TariffExemptionId id;
+  @EmbeddedId private AAppcarItemId id;
 
   @Column(name = "sequence_no")
   private Integer sequenceNo;

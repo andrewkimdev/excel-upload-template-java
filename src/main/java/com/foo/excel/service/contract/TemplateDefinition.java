@@ -14,7 +14,7 @@ public class TemplateDefinition<T, C extends CommonData> {
   private final Class<C> commonDataClass;
   private final ExcelImportConfig config;
   private final PersistenceHandler<T, C> persistenceHandler;
-  private final DatabaseUniquenessChecker<T> dbUniquenessChecker;
+  private final DatabaseUniquenessChecker<T, C> dbUniquenessChecker;
 
   public TemplateDefinition(
       String templateType,
@@ -22,7 +22,7 @@ public class TemplateDefinition<T, C extends CommonData> {
       Class<C> commonDataClass,
       ExcelImportConfig config,
       PersistenceHandler<T, C> persistenceHandler,
-      DatabaseUniquenessChecker<T> dbUniquenessChecker) {
+      DatabaseUniquenessChecker<T, C> dbUniquenessChecker) {
     this.templateType = templateType;
     this.dtoClass = dtoClass;
     this.commonDataClass = commonDataClass;
@@ -31,10 +31,11 @@ public class TemplateDefinition<T, C extends CommonData> {
     this.dbUniquenessChecker = dbUniquenessChecker;
   }
 
-  public List<RowError> checkDbUniqueness(List<T> rows, List<Integer> sourceRowNumbers) {
+  public List<RowError> checkDbUniqueness(
+      List<T> rows, List<Integer> sourceRowNumbers, C commonData) {
     if (dbUniquenessChecker == null) {
       return Collections.emptyList();
     }
-    return dbUniquenessChecker.check(rows, dtoClass, sourceRowNumbers);
+    return dbUniquenessChecker.check(rows, dtoClass, sourceRowNumbers, commonData);
   }
 }

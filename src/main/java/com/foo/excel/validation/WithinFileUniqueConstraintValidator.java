@@ -38,7 +38,7 @@ public class WithinFileUniqueConstraintValidator {
       field.setAccessible(true);
       ExcelColumn excelColumn = field.getAnnotation(ExcelColumn.class);
 
-      // Map: value -> first row number where it appeared
+      // 맵: 값 -> 처음 등장한 행 번호
       Map<Object, Integer> seenValues = new HashMap<>();
 
       for (int i = 0; i < rows.size(); i++) {
@@ -99,7 +99,7 @@ public class WithinFileUniqueConstraintValidator {
         }
       }
 
-      // Map: composite key -> first row number
+      // 맵: 복합 키 -> 처음 등장한 행 번호
       Map<List<Object>, Integer> seenKeys = new HashMap<>();
 
       for (int i = 0; i < rows.size(); i++) {
@@ -119,7 +119,7 @@ public class WithinFileUniqueConstraintValidator {
         if (seenKeys.containsKey(compositeKey)) {
           int firstRowNum = seenKeys.get(compositeKey);
 
-          // Add error to the first field in the composite
+          // 복합 키의 첫 번째 필드에 오류 추가
           Field firstField = fields.get(0);
           ExcelColumn excelColumn = firstField.getAnnotation(ExcelColumn.class);
 

@@ -46,17 +46,17 @@ class WorkbookCopyUtilsTest {
   void buildStyleMapping_defaultStyleIndex0_modifiedInPlace() throws IOException {
     try (var source = new XSSFWorkbook();
         var target = new XSSFWorkbook()) {
-      // Source has 1 default + 1 custom = 2 styles
+      // 원본은 기본 1개 + 커스텀 1개 = 스타일 2개
       source.createCellStyle();
 
       int targetStylesBefore = target.getNumCellStyles();
       var styleMap = WorkbookCopyUtils.buildStyleMapping(source, target);
 
-      // Target should have gained exactly (source styles - 1) new styles
-      // because index 0 is reused, not duplicated
+      // 대상은 정확히 (원본 스타일 수 - 1)개의 새 스타일이 증가해야 함
+      // 인덱스 0은 복제하지 않고 재사용하기 때문
       assertThat(target.getNumCellStyles())
           .isEqualTo(targetStylesBefore + source.getNumCellStyles() - 1);
-      // Verify index 0 maps to the default style (index 0 in target)
+      // 인덱스 0이 기본 스타일(대상의 index 0)에 매핑되는지 확인
       assertThat(styleMap.get(0).getIndex()).isEqualTo((short) 0);
     }
   }
@@ -98,37 +98,37 @@ class WorkbookCopyUtilsTest {
       Row srcRow = sheet.createRow(0);
       Row tgtRow = sheet.createRow(1);
 
-      // STRING
+      // 문자열
       srcRow.createCell(0).setCellValue("hello");
       Cell tgtString = tgtRow.createCell(0);
       WorkbookCopyUtils.copyCellValue(srcRow.getCell(0), tgtString);
       assertThat(tgtString.getStringCellValue()).isEqualTo("hello");
 
-      // NUMERIC
+      // 숫자
       srcRow.createCell(1).setCellValue(42.5);
       Cell tgtNumeric = tgtRow.createCell(1);
       WorkbookCopyUtils.copyCellValue(srcRow.getCell(1), tgtNumeric);
       assertThat(tgtNumeric.getNumericCellValue()).isEqualTo(42.5);
 
-      // BOOLEAN
+      // 불리언
       srcRow.createCell(2).setCellValue(true);
       Cell tgtBool = tgtRow.createCell(2);
       WorkbookCopyUtils.copyCellValue(srcRow.getCell(2), tgtBool);
       assertThat(tgtBool.getBooleanCellValue()).isTrue();
 
-      // FORMULA
+      // 수식
       srcRow.createCell(3).setCellFormula("SUM(A1:B1)");
       Cell tgtFormula = tgtRow.createCell(3);
       WorkbookCopyUtils.copyCellValue(srcRow.getCell(3), tgtFormula);
       assertThat(tgtFormula.getCellFormula()).isEqualTo("SUM(A1:B1)");
 
-      // BLANK
+      // 빈 셀
       srcRow.createCell(4).setBlank();
       Cell tgtBlank = tgtRow.createCell(4);
       WorkbookCopyUtils.copyCellValue(srcRow.getCell(4), tgtBlank);
       assertThat(tgtBlank.getCellType()).isEqualTo(CellType.BLANK);
 
-      // ERROR
+      // 오류
       srcRow.createCell(5).setCellErrorValue(FormulaError.DIV0.getCode());
       Cell tgtError = tgtRow.createCell(5);
       WorkbookCopyUtils.copyCellValue(srcRow.getCell(5), tgtError);
@@ -153,7 +153,7 @@ class WorkbookCopyUtilsTest {
       srcCell.setCellStyle(dateStyle);
 
       Cell tgtCell = tgtRow.createCell(0);
-      tgtCell.setCellStyle(dateStyle); // need same format for DateUtil check
+      tgtCell.setCellStyle(dateStyle); // DateUtil 확인을 위해 동일한 포맷 필요
       WorkbookCopyUtils.copyCellValue(srcCell, tgtCell);
 
       assertThat(tgtCell.getCellType()).isEqualTo(CellType.NUMERIC);
@@ -173,7 +173,7 @@ class WorkbookCopyUtilsTest {
       src.setDefaultRowHeight((short) 400);
       src.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
       src.addMergedRegion(new CellRangeAddress(1, 2, 1, 3));
-      // Create rows so the sheet is valid
+      // 시트가 유효하도록 행 생성
       src.createRow(0).createCell(0).setCellValue("merged");
       src.createRow(1).createCell(1).setCellValue("merged2");
 

