@@ -248,12 +248,13 @@ public final class SecureExcelUtils {
   }
 
   private static int countRowElements(InputStream sheetStream) throws IOException {
+    XMLStreamReader xmlReader = null;
     try {
       XMLInputFactory factory = XMLInputFactory.newInstance();
       factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
       factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
 
-      XMLStreamReader xmlReader = factory.createXMLStreamReader(sheetStream);
+      xmlReader = factory.createXMLStreamReader(sheetStream);
       int rowCount = 0;
       while (xmlReader.hasNext()) {
         if (xmlReader.next() == XMLStreamConstants.START_ELEMENT
@@ -261,10 +262,17 @@ public final class SecureExcelUtils {
           rowCount++;
         }
       }
-      xmlReader.close();
       return rowCount;
     } catch (Exception e) {
       throw new IOException("Failed to parse sheet XML: " + e.getMessage(), e);
+    } finally {
+      if (xmlReader != null) {
+        try {
+          xmlReader.close();
+        } catch (Exception ignored) {
+          // 원본 예외를 유지하고 reader 정리 실패는 무시한다.
+        }
+      }
     }
   }
 
