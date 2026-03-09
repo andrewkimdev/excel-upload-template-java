@@ -57,10 +57,12 @@ public final class SecureExcelUtils {
   public static Workbook createWorkbook(File file) throws IOException {
     validateFileContent(file.toPath());
 
+    OPCPackage pkg = null;
     try {
-      OPCPackage pkg = OPCPackage.open(file, PackageAccess.READ);
+      pkg = OPCPackage.open(file, PackageAccess.READ);
       return new XSSFWorkbook(pkg);
     } catch (Exception e) {
+      closePackageQuietly(pkg, e);
       throw new IOException("Failed to open XLSX file securely: " + e.getMessage(), e);
     }
   }
@@ -287,5 +289,17 @@ public final class SecureExcelUtils {
       }
     }
     return true;
+  }
+
+  private static void closePackageQuietly(OPCPackage pkg, Exception original) {
+    if (pkg == null) {
+      return;
+    }
+
+    try {
+      pkg.close();
+    } catch (Exception closeException) {
+      original.addSuppressed(closeException);
+    }
   }
 }

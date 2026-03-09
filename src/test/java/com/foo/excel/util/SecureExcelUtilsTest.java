@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -387,6 +389,20 @@ class SecureExcelUtilsTest {
 
     assertThatThrownBy(() -> SecureExcelUtils.createWorkbook(fakeXlsx))
         .isInstanceOf(SecurityException.class);
+  }
+
+  @Test
+  void createWorkbook_invalidXlsxZip_closesPackageAndWrapsFailure() throws IOException {
+    Path fakeXlsx = tempDir.resolve("invalid-structure.xlsx");
+    try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(fakeXlsx))) {
+      zip.putNextEntry(new ZipEntry("dummy.txt"));
+      zip.write("not an xlsx workbook".getBytes());
+      zip.closeEntry();
+    }
+
+    assertThatThrownBy(() -> SecureExcelUtils.createWorkbook(fakeXlsx))
+        .isInstanceOf(IOException.class)
+        .hasMessageContaining("Failed to open XLSX file securely");
   }
 
   @Test
