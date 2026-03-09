@@ -35,13 +35,13 @@ public final class SecureExcelUtils {
   // XLSX 매직 바이트(ZIP 형식: PK)
   private static final byte[] XLSX_MAGIC = {0x50, 0x4B, 0x03, 0x04};
 
-  static {
-    // Apache POI 보안 제한을 전역으로 설정
-    IOUtils.setByteArrayMaxOverride(MAX_BYTE_ARRAY_SIZE);
-  }
-
   private SecureExcelUtils() {
     // 유틸리티 클래스
+  }
+
+  /** Apache POI 전역 보안 제한을 초기화한다. */
+  public static void initializePoiSecurity() {
+    IOUtils.setByteArrayMaxOverride(MAX_BYTE_ARRAY_SIZE);
   }
 
   /**
