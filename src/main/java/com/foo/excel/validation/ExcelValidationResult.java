@@ -40,19 +40,9 @@ public class ExcelValidationResult {
   }
 
   public void merge(List<RowError> additionalErrors) {
-    for (RowError srcError : additionalErrors) {
-      RowError existing =
-          rowErrors.stream()
-              .filter(r -> r.getRowNumber() == srcError.getRowNumber())
-              .findFirst()
-              .orElse(null);
-
-      if (existing != null) {
-        existing.getCellErrors().addAll(srcError.getCellErrors());
-      } else {
-        rowErrors.add(srcError);
-      }
-    }
+    RowErrorAccumulator accumulator = new RowErrorAccumulator(rowErrors);
+    accumulator.addAll(additionalErrors);
+    rowErrors = accumulator.toList();
 
     if (!rowErrors.isEmpty()) {
       this.valid = false;

@@ -18,16 +18,19 @@ public class WithinFileUniqueConstraintValidator {
 
   public <T> List<RowError> checkWithinFileUniqueness(
       List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers) {
-    List<RowError> errors = new ArrayList<>();
+    RowErrorAccumulator errors = new RowErrorAccumulator();
 
     checkSingleFieldUniqueness(rows, dtoClass, sourceRowNumbers, errors);
     checkCompositeUniqueness(rows, dtoClass, sourceRowNumbers, errors);
 
-    return errors;
+    return errors.toList();
   }
 
   private <T> void checkSingleFieldUniqueness(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, List<RowError> errors) {
+      List<T> rows,
+      Class<T> dtoClass,
+      List<Integer> sourceRowNumbers,
+      RowErrorAccumulator errors) {
 
     for (Field field : dtoClass.getDeclaredFields()) {
       ExcelUnique uniqueAnnotation = field.getAnnotation(ExcelUnique.class);
@@ -77,7 +80,10 @@ public class WithinFileUniqueConstraintValidator {
   }
 
   private <T> void checkCompositeUniqueness(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, List<RowError> errors) {
+      List<T> rows,
+      Class<T> dtoClass,
+      List<Integer> sourceRowNumbers,
+      RowErrorAccumulator errors) {
 
     ExcelCompositeUnique[] compositeAnnotations =
         dtoClass.getAnnotationsByType(ExcelCompositeUnique.class);
@@ -141,20 +147,8 @@ public class WithinFileUniqueConstraintValidator {
     }
   }
 
-  private void addErrorToRow(List<RowError> errors, int rowNumber, CellError cellError) {
-    RowError existing =
-        errors.stream().filter(r -> r.getRowNumber() == rowNumber).findFirst().orElse(null);
-
-    if (existing != null) {
-      existing.getCellErrors().add(cellError);
-    } else {
-      RowError rowError =
-          RowError.builder()
-              .rowNumber(rowNumber)
-              .cellErrors(new ArrayList<>(List.of(cellError)))
-              .build();
-      errors.add(rowError);
-    }
+  private void addErrorToRow(RowErrorAccumulator errors, int rowNumber, CellError cellError) {
+    errors.addCellError(rowNumber, cellError);
   }
 
   private int resolveColumnIndex(ExcelColumn annotation) {

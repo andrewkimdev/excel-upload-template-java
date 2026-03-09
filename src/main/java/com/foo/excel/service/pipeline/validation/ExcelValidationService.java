@@ -5,6 +5,7 @@ import com.foo.excel.util.ExcelColumnUtil;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.RowError;
+import com.foo.excel.validation.RowErrorAccumulator;
 import com.foo.excel.validation.WithinFileUniqueConstraintValidator;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -106,18 +107,9 @@ public class ExcelValidationService {
   }
 
   private void mergeErrors(List<RowError> target, List<RowError> source) {
-    for (RowError srcError : source) {
-      RowError existing =
-          target.stream()
-              .filter(r -> r.getRowNumber() == srcError.getRowNumber())
-              .findFirst()
-              .orElse(null);
-
-      if (existing != null) {
-        existing.getCellErrors().addAll(srcError.getCellErrors());
-      } else {
-        target.add(srcError);
-      }
-    }
+    RowErrorAccumulator accumulator = new RowErrorAccumulator(target);
+    accumulator.addAll(source);
+    target.clear();
+    target.addAll(accumulator.toList());
   }
 }

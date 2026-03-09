@@ -68,6 +68,28 @@ class WithinFileUniqueConstraintValidatorTest {
     assertThat(errors).isEmpty();
   }
 
+  @Test
+  void duplicateValuesAcrossTwoUniqueFields_mergeIntoSingleRowError() {
+    MultiUniqueTestDto dto1 = new MultiUniqueTestDto();
+    dto1.setCode("ABC");
+    dto1.setName("Item");
+
+    MultiUniqueTestDto dto2 = new MultiUniqueTestDto();
+    dto2.setCode("ABC");
+    dto2.setName("Item");
+
+    List<RowError> errors =
+        validator.checkWithinFileUniqueness(
+            List.of(dto1, dto2), MultiUniqueTestDto.class, List.of(7, 8));
+
+    assertThat(errors).hasSize(1);
+    assertThat(errors.get(0).getRowNumber()).isEqualTo(8);
+    assertThat(errors.get(0).getCellErrors())
+        .hasSize(2)
+        .anySatisfy(error -> assertThat(error.fieldName()).isEqualTo("code"))
+        .anySatisfy(error -> assertThat(error.fieldName()).isEqualTo("name"));
+  }
+
   // ===== @ExcelCompositeUnique 테스트 =====
 
   @Test
@@ -116,6 +138,17 @@ class WithinFileUniqueConstraintValidatorTest {
     @ExcelColumn(header = "Code", column = "B")
     @ExcelUnique(message = "중복된 값입니다")
     private String code;
+  }
+
+  @Data
+  public static class MultiUniqueTestDto {
+    @ExcelColumn(header = "Code", column = "B")
+    @ExcelUnique(message = "코드가 중복되었습니다")
+    private String code;
+
+    @ExcelColumn(header = "Name", column = "C")
+    @ExcelUnique(message = "이름이 중복되었습니다")
+    private String name;
   }
 
   // ===== 헬퍼 =====

@@ -174,6 +174,25 @@ class ExcelValidationServiceTest {
     assertThat(allMessages).anyMatch(m -> m.contains("관세율은 0 이상이어야 합니다"));
   }
 
+  @Test
+  void duplicateRow_mergesBeanValidationAndUniquenessErrorsIntoSingleRowError() {
+    AAppcarItemDto first = createValidDto();
+    AAppcarItemDto duplicate = createValidDto();
+    duplicate.setTaxRate(new BigDecimal("-1"));
+    List<AAppcarItemDto> rows = List.of(first, duplicate);
+
+    ExcelValidationResult result =
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7, 8));
+
+    assertThat(result.isValid()).isFalse();
+    assertThat(result.getRowErrors()).hasSize(1);
+    assertThat(result.getRowErrors().get(0).getRowNumber()).isEqualTo(8);
+    assertThat(result.getRowErrors().get(0).getCellErrors())
+        .hasSize(2)
+        .anySatisfy(error -> assertThat(error.fieldName()).isEqualTo("taxRate"))
+        .anySatisfy(error -> assertThat(error.fieldName()).isEqualTo("goodsDes"));
+  }
+
   // ===== 헬퍼 =====
 
   private AAppcarItemDto createValidDto() {
