@@ -37,10 +37,11 @@ class ExcelUploadFileServiceTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
 
-    Path result = uploadFileService.storeAndValidateXlsx(file, tempDir);
+    ExcelUploadFileService.StoredUpload result = uploadFileService.storeAndValidateXlsx(file, tempDir);
 
-    assertThat(result.getFileName().toString()).isEqualTo("test.xlsx");
-    try (Workbook wb = WorkbookFactory.create(result.toFile())) {
+    assertThat(result.sanitizedFilename()).isEqualTo("test.xlsx");
+    assertThat(result.path().getFileName().toString()).isEqualTo(result.sanitizedFilename());
+    try (Workbook wb = WorkbookFactory.create(result.path().toFile())) {
       Sheet sheet = wb.getSheetAt(0);
       assertThat(sheet.getRow(0).getCell(0).getStringCellValue()).isEqualTo("TestValue");
     }
@@ -54,7 +55,7 @@ class ExcelUploadFileServiceTest {
 
     assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining(".xlsx");
+        .hasMessage("지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.");
   }
 
   @Test
@@ -63,7 +64,8 @@ class ExcelUploadFileServiceTest {
         new MockMultipartFile("file", "test.csv", "text/csv", "a,b,c".getBytes());
 
     assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("유효하지 않은 파일 확장자입니다.");
   }
 
   @Test
@@ -72,7 +74,8 @@ class ExcelUploadFileServiceTest {
         new MockMultipartFile("file", null, "application/octet-stream", new byte[0]);
 
     assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("파일명이 없습니다");
   }
 
   @Test
@@ -85,11 +88,12 @@ class ExcelUploadFileServiceTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
 
-    Path result = uploadFileService.storeAndValidateXlsx(file, tempDir);
+    ExcelUploadFileService.StoredUpload result = uploadFileService.storeAndValidateXlsx(file, tempDir);
 
-    assertThat(result.getParent()).isEqualTo(tempDir);
-    assertThat(result.getFileName().toString()).doesNotContain("..");
-    assertThat(result.getFileName().toString()).doesNotContain("/");
+    assertThat(result.path().getParent()).isEqualTo(tempDir);
+    assertThat(result.path().getFileName().toString()).isEqualTo(result.sanitizedFilename());
+    assertThat(result.path().getFileName().toString()).doesNotContain("..");
+    assertThat(result.path().getFileName().toString()).doesNotContain("/");
   }
 
   @Test

@@ -140,7 +140,7 @@ public final class SecureExcelUtils {
    */
   public static String sanitizeFilename(String originalFilename) {
     if (originalFilename == null || originalFilename.isBlank()) {
-      throw new IllegalArgumentException("Filename cannot be null or empty");
+      throw new IllegalArgumentException("파일명이 없습니다");
     }
 
     // 경로 구성 요소를 제거하고 파일명만 추출
@@ -168,13 +168,16 @@ public final class SecureExcelUtils {
     filename = filename.replaceAll("^[.\\s]+|[.\\s]+$", "");
 
     if (filename.isBlank()) {
-      throw new IllegalArgumentException("Filename is invalid after sanitization");
+      throw new IllegalArgumentException("유효하지 않은 파일명입니다.");
     }
 
     // 파일명이 유효한 Excel 확장자를 갖는지 확인
     String lowerFilename = filename.toLowerCase();
+    if (lowerFilename.endsWith(".xls")) {
+      throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.");
+    }
     if (!lowerFilename.endsWith(".xlsx")) {
-      throw new IllegalArgumentException("Invalid file extension");
+      throw new IllegalArgumentException("유효하지 않은 파일 확장자입니다.");
     }
 
     return filename;

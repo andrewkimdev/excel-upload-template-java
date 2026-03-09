@@ -62,29 +62,33 @@ public class ExcelParserService {
 
     // 보안: XXE 및 Zip Bomb 공격 방지를 위해 SecureExcelUtils 사용.
     // 설정된 제한과 보호 내용은 SecureExcelUtils를 참고.
-    try (Workbook workbook = SecureExcelUtils.createWorkbook(xlsxFile)) {
-      Sheet sheet = workbook.getSheetAt(sheetIndex);
-      Row headerRow = sheet.getRow(headerRowNum);
+    try {
+      try (Workbook workbook = SecureExcelUtils.createWorkbook(xlsxFile)) {
+        Sheet sheet = workbook.getSheetAt(sheetIndex);
+        Row headerRow = sheet.getRow(headerRowNum);
 
-      if (headerRow == null) {
-        throw new IllegalStateException("Header row " + config.getHeaderRow() + " is empty");
+        if (headerRow == null) {
+          throw new IllegalStateException("Header row " + config.getHeaderRow() + " is empty");
+        }
+
+        List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, headerRow, sheet);
+        List<RowError> parseErrors = new ArrayList<>();
+        List<Integer> sourceRowNumbers = new ArrayList<>();
+        List<T> rows =
+            parseDataRows(
+                sheet,
+                dtoClass,
+                columnMappings,
+                dataStartRowNum,
+                footerMarker,
+                parseErrors,
+                sourceRowNumbers,
+                maxRows);
+
+        return new ParseResult<>(rows, sourceRowNumbers, columnMappings, parseErrors);
       }
-
-      List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, headerRow, sheet);
-      List<RowError> parseErrors = new ArrayList<>();
-      List<Integer> sourceRowNumbers = new ArrayList<>();
-      List<T> rows =
-          parseDataRows(
-              sheet,
-              dtoClass,
-              columnMappings,
-              dataStartRowNum,
-              footerMarker,
-              parseErrors,
-              sourceRowNumbers,
-              maxRows);
-
-      return new ParseResult<>(rows, sourceRowNumbers, columnMappings, parseErrors);
+    } finally {
+      DATA_FORMATTER.remove();
     }
   }
 

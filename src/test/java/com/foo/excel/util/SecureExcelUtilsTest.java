@@ -29,7 +29,8 @@ class SecureExcelUtilsTest {
   @ValueSource(strings = {"", "   ", "\t", "\n"})
   void sanitizeFilename_nullOrBlank_throws(String input) {
     assertThatThrownBy(() -> SecureExcelUtils.sanitizeFilename(input))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("파일명이 없습니다");
   }
 
   @Test
@@ -89,7 +90,7 @@ class SecureExcelUtilsTest {
   void sanitizeFilename_xlsExtension_rejected() {
     assertThatThrownBy(() -> SecureExcelUtils.sanitizeFilename("legacy_data.xls"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("extension");
+        .hasMessage("지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.");
   }
 
   @Test
@@ -103,7 +104,7 @@ class SecureExcelUtilsTest {
   void sanitizeFilename_invalidExtension_throws(String filename) {
     assertThatThrownBy(() -> SecureExcelUtils.sanitizeFilename(filename))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("extension");
+        .hasMessage("유효하지 않은 파일 확장자입니다.");
   }
 
   @Test

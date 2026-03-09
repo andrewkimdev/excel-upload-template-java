@@ -6,6 +6,7 @@ import com.foo.excel.service.contract.CommonData;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.service.file.ExcelUploadFileService;
+import com.foo.excel.service.file.ExcelUploadFileService.StoredUpload;
 import com.foo.excel.service.pipeline.parse.ColumnResolutionBatchException;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
 import com.foo.excel.service.pipeline.report.ExcelErrorReportService;
@@ -77,17 +78,6 @@ public class ExcelImportOrchestrator {
 
     ExcelImportConfig config = template.getConfig();
 
-    // 오류 리포트용 원본 파일명을 추출하고 정규화
-    String sanitizedFilename = null;
-    try {
-      String originalName = file.getOriginalFilename();
-      if (originalName != null && !originalName.isBlank()) {
-        sanitizedFilename = SecureExcelUtils.sanitizeFilename(originalName);
-      }
-    } catch (IllegalArgumentException e) {
-      log.warn("원본 파일명 정규화에 실패했습니다: {}", e.getMessage());
-    }
-
     // 1. customId 기반 임시 하위 디렉터리 생성
     String customIdPath = resolveCustomIdPath(typedCommonData);
     Path tempSubDir = properties.getTempDirectoryPath().resolve(customIdPath);
@@ -95,7 +85,9 @@ public class ExcelImportOrchestrator {
 
     try {
       // 2. xlsx 파일 저장 및 검증
-      Path xlsxFile = uploadFileService.storeAndValidateXlsx(file, tempSubDir);
+      StoredUpload storedUpload = uploadFileService.storeAndValidateXlsx(file, tempSubDir);
+      Path xlsxFile = storedUpload.path();
+      String sanitizedFilename = storedUpload.sanitizedFilename();
 
       // 2b. 빠른 행 수 사전 점검(경량 SAX, 대용량 파일의 전체 파싱 회피)
       int roughRowCount = SecureExcelUtils.countRows(xlsxFile, config.getSheetIndex());
