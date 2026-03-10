@@ -170,7 +170,7 @@ src/main/java/com/foo/excel/
 7. **Row parsing** -- read data rows, skip blanks, stop at footer marker (`※`)
 8. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
 9. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
-10. **Within-file uniqueness** -- `@ExcelUnique` (single field), `@ExcelCompositeUnique` (composite key)
+10. **Within-file uniqueness** -- `@ExcelUnique` (single field), `@ExcelCompositeUnique` (composite key); invalid `@ExcelCompositeUnique(fields=...)` declarations fail fast as developer configuration errors
 11. **Database uniqueness** -- optional per-template check via `DatabaseUniquenessChecker`
 12. **Error merge** -- parse errors, validation errors, and DB uniqueness errors are combined
 13. **Result** -- success with row counts, or format-preserving error report Excel with `_ERRORS` column, red-highlighted error cells, original filename in download, and disclaimer footer
@@ -206,6 +206,7 @@ See `application.properties` for a detailed security checklist and configuration
 ## Adding a New Template
 
 1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
+   - If you use `@ExcelCompositeUnique`, every field name in `fields()` must exist on the DTO class hierarchy; invalid declarations are treated as fail-fast configuration errors during within-file uniqueness validation
 2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
 3. **CommonData** -- 템플릿별 DTO를 만들고 `CommonData`를 구현한다 (strict JSON + Bean Validation 대상)
    - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)
@@ -245,7 +246,7 @@ Tests cover all layers:
 | `ExcelUploadFileServiceTest` | Component | `.xlsx` 전용 업로드 파일 저장 및 형식/매직바이트 검증 유지 |
 | `ExcelParserServiceTest` | Component | Row parsing, footer detection, blank row skipping, merged cells, type coercion, header matching, early-exit on row limit |
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
-| `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, DB uniqueness via checker |
+| `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, invalid `@ExcelCompositeUnique` declaration fail-fast behavior |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `commonData`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
 | `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `CommonData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |

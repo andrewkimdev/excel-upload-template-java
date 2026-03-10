@@ -1,8 +1,10 @@
 package com.foo.excel.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.foo.excel.annotation.ExcelColumn;
+import com.foo.excel.annotation.ExcelCompositeUnique;
 import com.foo.excel.annotation.ExcelUnique;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import java.math.BigDecimal;
@@ -131,6 +133,23 @@ class WithinFileUniqueConstraintValidatorTest {
     assertThat(errors).isNotEmpty();
   }
 
+  @Test
+  void compositeUnique_missingDeclaredField_throwsIllegalStateException() {
+    BrokenCompositeTestDto dto1 = new BrokenCompositeTestDto();
+    dto1.setField1("A");
+    BrokenCompositeTestDto dto2 = new BrokenCompositeTestDto();
+    dto2.setField1("B");
+
+    assertThatThrownBy(
+            () ->
+                validator.checkWithinFileUniqueness(
+                    List.of(dto1, dto2), BrokenCompositeTestDto.class, List.of(7, 8)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("복합 유니크 검증 설정이 올바르지 않습니다")
+        .hasMessageContaining(BrokenCompositeTestDto.class.getName())
+        .hasMessageContaining("missingField");
+  }
+
   // ===== 헬퍼 DTO =====
 
   @Data
@@ -149,6 +168,13 @@ class WithinFileUniqueConstraintValidatorTest {
     @ExcelColumn(header = "Name", column = "C")
     @ExcelUnique(message = "이름이 중복되었습니다")
     private String name;
+  }
+
+  @Data
+  @ExcelCompositeUnique(fields = {"field1", "missingField"}, message = "복합 중복입니다")
+  public static class BrokenCompositeTestDto {
+    @ExcelColumn(header = "Field1", column = "B")
+    private String field1;
   }
 
   // ===== 헬퍼 =====
