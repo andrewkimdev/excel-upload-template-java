@@ -3,6 +3,7 @@ package com.foo.excel.service.pipeline.validation;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.util.ExcelColumnUtil;
 import com.foo.excel.validation.CellError;
+import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.RowError;
 import com.foo.excel.validation.RowErrorAccumulator;
@@ -67,14 +68,14 @@ public class ExcelValidationService {
     ExcelColumn excelColumn = findExcelColumn(fieldName, dtoClass);
 
     int columnIndex = -1;
-    String columnLetter = "?";
+    ExcelColumnRef columnRef = ExcelColumnRef.unknown();
     String headerName = fieldName;
 
     if (excelColumn != null) {
       headerName = excelColumn.header();
       if (!excelColumn.column().isEmpty()) {
         columnIndex = ExcelColumnUtil.letterToIndex(excelColumn.column());
-        columnLetter = excelColumn.column();
+        columnRef = ExcelColumnRef.ofLetter(excelColumn.column());
       }
     }
 
@@ -85,7 +86,7 @@ public class ExcelValidationService {
 
     return CellError.builder()
         .columnIndex(columnIndex)
-        .columnLetter(columnLetter)
+        .columnRef(columnRef)
         .fieldName(fieldName)
         .headerName(headerName)
         .rejectedValue(violation.getInvalidValue())

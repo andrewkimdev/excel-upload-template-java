@@ -60,7 +60,10 @@ class AAppcarItemDbUniquenessCheckerTest {
             createCommonData("2026", "1", "1", "EQ-01"));
 
     assertThat(result).hasSize(2);
-    assertThat(result).allMatch(rowError -> rowError.getFormattedMessage().contains("동일 업로드 식별자"));
+    assertThat(result)
+        .allMatch(rowError -> rowError.getFormattedMessage().startsWith("B열 "))
+        .allMatch(rowError -> !rowError.getFormattedMessage().contains("B열열"))
+        .allMatch(rowError -> rowError.getFormattedMessage().contains("동일 업로드 식별자"));
   }
 
   @Test
@@ -81,7 +84,10 @@ class AAppcarItemDbUniquenessCheckerTest {
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).getRowNumber()).isEqualTo(8);
-    assertThat(result.get(0).getFormattedMessage()).contains("품목 테이블에 이미 존재하는 ID");
+    assertThat(result.get(0).getFormattedMessage())
+        .startsWith("B열 ")
+        .doesNotContain("B열열")
+        .contains("품목 테이블에 이미 존재하는 ID");
   }
 
   private AAppcarItemCommonData createCommonData(

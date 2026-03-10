@@ -52,6 +52,28 @@ class ExcelValidationResultTest {
     assertThat(result.getTotalErrorCount()).isEqualTo(3);
   }
 
+  @Test
+  void formattedMessage_displayReadyColumnLabel_doesNotDuplicateSuffix() {
+    RowError rowError =
+        RowError.builder()
+            .rowNumber(7)
+            .cellErrors(
+                List.of(
+                    CellError.builder()
+                        .columnIndex(1)
+                        .columnRef(ExcelColumnRef.ofLetter("B"))
+                        .fieldName("goodsDes")
+                        .headerName("물품명")
+                        .message("필수 입력 항목입니다")
+                        .build()))
+            .build();
+
+    assertThat(rowError.getFormattedMessage())
+        .startsWith("B열 ")
+        .doesNotContain("B열열")
+        .contains("필수 입력 항목입니다");
+  }
+
   private RowError rowError(int rowNumber, CellError cellError) {
     return RowError.builder().rowNumber(rowNumber).cellErrors(List.of(cellError)).build();
   }
@@ -59,7 +81,7 @@ class ExcelValidationResultTest {
   private CellError cellError(String fieldName, String message) {
     return CellError.builder()
         .columnIndex(-1)
-        .columnLetter("?")
+        .columnRef(ExcelColumnRef.unknown())
         .fieldName(fieldName)
         .headerName(fieldName)
         .message(message)

@@ -6,6 +6,7 @@ import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
 import com.foo.excel.validation.CellError;
+import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.RowError;
 import java.io.IOException;
@@ -115,8 +116,8 @@ class ExcelErrorReportServiceTest {
       Cell errMsgCell = dataRow.getCell(lastCol - 1);
       assertThat(errMsgCell).isNotNull();
       String msg = errMsgCell.getStringCellValue();
-      assertThat(msg).contains("[B]");
-      assertThat(msg).contains("[C]");
+      assertThat(msg).contains("B열");
+      assertThat(msg).contains("C열");
     }
   }
 
@@ -158,8 +159,8 @@ class ExcelErrorReportServiceTest {
 
       assertThat(errMsgCell).isNotNull();
       String cellValue = errMsgCell.getStringCellValue();
-      // 포맷된 메시지는 안전한 "[B]"로 시작
-      assertThat(cellValue).startsWith("[");
+      // 포맷된 메시지는 안전한 "B열"로 시작
+      assertThat(cellValue).startsWith("B열");
       // 수식 내용이 제거되지 않고 유지되는지 확인
       assertThat(cellValue).contains("SUM");
     }
@@ -185,7 +186,7 @@ class ExcelErrorReportServiceTest {
       assertThat(errMsgCell).isNotNull();
       String cellValue = errMsgCell.getStringCellValue();
       // 포맷된 메시지에 컬럼 문자 접두어가 포함되는지 확인
-      assertThat(cellValue).startsWith("[B]");
+      assertThat(cellValue).startsWith("B열");
     }
   }
 
@@ -209,7 +210,7 @@ class ExcelErrorReportServiceTest {
       assertThat(errMsgCell).isNotNull();
       String cellValue = errMsgCell.getStringCellValue();
       // 일반 메시지는 컬럼 접두어와 함께 포맷되어야 함
-      assertThat(cellValue).startsWith("[B]");
+      assertThat(cellValue).startsWith("B열");
       assertThat(cellValue).contains("필수 입력 항목입니다");
     }
   }
@@ -496,7 +497,7 @@ class ExcelErrorReportServiceTest {
     CellError cellError =
         CellError.builder()
             .columnIndex(1)
-            .columnLetter("B")
+            .columnRef(ExcelColumnRef.ofLetter("B"))
             .fieldName("name")
             .headerName("Name")
             .rejectedValue("")
@@ -513,7 +514,7 @@ class ExcelErrorReportServiceTest {
     CellError cellError1 =
         CellError.builder()
             .columnIndex(1)
-            .columnLetter("B")
+            .columnRef(ExcelColumnRef.ofLetter("B"))
             .fieldName("name")
             .headerName("Name")
             .rejectedValue("")
@@ -523,7 +524,7 @@ class ExcelErrorReportServiceTest {
     CellError cellError2 =
         CellError.builder()
             .columnIndex(2)
-            .columnLetter("C")
+            .columnRef(ExcelColumnRef.ofLetter("C"))
             .fieldName("value")
             .headerName("Value")
             .rejectedValue("abc")
@@ -543,7 +544,7 @@ class ExcelErrorReportServiceTest {
     CellError cellError =
         CellError.builder()
             .columnIndex(1)
-            .columnLetter("B")
+            .columnRef(ExcelColumnRef.ofLetter("B"))
             .fieldName("name")
             .headerName("Name")
             .rejectedValue("=cmd|'/C calc'!A0")
@@ -560,7 +561,7 @@ class ExcelErrorReportServiceTest {
     CellError cellError =
         CellError.builder()
             .columnIndex(1)
-            .columnLetter("B")
+            .columnRef(ExcelColumnRef.ofLetter("B"))
             .fieldName("name")
             .headerName("Name")
             .rejectedValue("@attack")

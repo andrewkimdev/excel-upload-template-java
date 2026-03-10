@@ -240,7 +240,7 @@ class ExcelParserServiceTest {
             ex -> {
               var batch = (ColumnResolutionBatchException) ex;
               assertThat(batch.getExceptions()).hasSize(2);
-              assertThat(batch.toKoreanMessage()).contains("컬럼 B").contains("컬럼 C");
+              assertThat(batch.toKoreanMessage()).contains("B열").contains("C열");
             });
   }
 

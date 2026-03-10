@@ -5,7 +5,7 @@ import lombok.Builder;
 @Builder
 public record CellError(
     int columnIndex,
-    String columnLetter,
+    ExcelColumnRef columnRef,
     String fieldName,
     String headerName,
     Object rejectedValue,

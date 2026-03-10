@@ -9,6 +9,7 @@ import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.validation.CellError;
+import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.RowError;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -23,7 +24,7 @@ public class AAppcarItemDbUniquenessChecker
     implements DatabaseUniquenessChecker<AAppcarItemDto, AAppcarItemCommonData> {
 
   private static final int ID_COLUMN_INDEX = 1;
-  private static final String ID_COLUMN_LETTER = "B";
+  private static final ExcelColumnRef ID_COLUMN_REF = ExcelColumnRef.ofLetter("B");
   private static final String ID_FIELD_NAME = "goodsSeqNo";
   private static final String ID_HEADER_NAME = "순번";
   private static final String EQUIP_DUPLICATE_MESSAGE =
@@ -81,7 +82,7 @@ public class AAppcarItemDbUniquenessChecker
     CellError cellError =
         CellError.builder()
             .columnIndex(ID_COLUMN_INDEX)
-            .columnLetter(ID_COLUMN_LETTER)
+            .columnRef(ID_COLUMN_REF)
             .fieldName(ID_FIELD_NAME)
             .headerName(ID_HEADER_NAME)
             .message(message)

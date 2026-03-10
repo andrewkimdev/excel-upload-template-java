@@ -6,6 +6,7 @@ import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.util.ExcelColumnUtil;
 import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.CellError;
+import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.RowError;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -39,7 +40,10 @@ public class ExcelParserService {
       ThreadLocal.withInitial(DataFormatter::new);
 
   public record ColumnMapping(
-      Field field, ExcelColumn annotation, int resolvedColumnIndex, String resolvedColumnLetter) {}
+      Field field,
+      ExcelColumn annotation,
+      int resolvedColumnIndex,
+      ExcelColumnRef resolvedColumnRef) {}
 
   public record ParseResult<T>(
       List<T> rows,
@@ -112,9 +116,10 @@ public class ExcelParserService {
           continue;
         }
 
-        String resolvedLetter = ExcelColumnUtil.indexToLetter(resolvedIndex);
+        ExcelColumnRef resolvedColumnRef =
+            ExcelColumnRef.ofLetter(ExcelColumnUtil.indexToLetter(resolvedIndex));
         field.setAccessible(true);
-        mappings.add(new ColumnMapping(field, annotation, resolvedIndex, resolvedLetter));
+        mappings.add(new ColumnMapping(field, annotation, resolvedIndex, resolvedColumnRef));
       } catch (ColumnResolutionException e) {
         errors.add(e);
       }
@@ -158,7 +163,11 @@ public class ExcelParserService {
       // 헤더 불일치
       if (annotation.required()) {
         throw new ColumnResolutionException(
-            fieldName, annotation.header(), actual, annotation.column(), annotation.matchMode());
+            fieldName,
+            annotation.header(),
+            actual,
+            ExcelColumnRef.ofLetter(annotation.column()),
+            annotation.matchMode());
       }
       log.warn(
           "Header mismatch for optional field '{}' at column {}: expected '{}', actual '{}'",
@@ -329,7 +338,7 @@ public class ExcelParserService {
       parseErrors.add(
           CellError.builder()
               .columnIndex(mapping.resolvedColumnIndex())
-              .columnLetter(mapping.resolvedColumnLetter())
+              .columnRef(mapping.resolvedColumnRef())
               .fieldName(mapping.field().getName())
               .headerName(mapping.annotation().header())
               .rejectedValue(rawValue)
