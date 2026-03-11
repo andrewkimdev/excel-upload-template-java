@@ -47,7 +47,7 @@ This gives the full pattern:
 - `ExcelImportConfig`
 - template `MetaData`
 - `PersistenceHandler<T, M extends MetaData>`
-- optional `DatabaseUniquenessChecker<M>`
+- optional `DatabaseUniquenessChecker<T, M>`
 - `TemplateDefinition<T, M>` bean with `metaDataClass`
 - upload-level summary entity/repository
 

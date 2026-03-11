@@ -2,13 +2,13 @@
 
 ## Summary
 
-We simplified the database uniqueness contract from `DatabaseUniquenessChecker<T, C>` to `DatabaseUniquenessChecker<M extends MetaData>`.
+We keep the database uniqueness contract row-oriented as `DatabaseUniquenessChecker<T, M extends MetaData>`.
 
 At the same time, we standardized the metadata generic name across the template contract layer from `C` to `M`:
 
 - `PersistenceHandler<T, M extends MetaData>`
 - `TemplateDefinition<T, M extends MetaData>`
-- `DatabaseUniquenessChecker<M extends MetaData>`
+- `DatabaseUniquenessChecker<T, M extends MetaData>`
 
 This made the contracts read more clearly:
 
@@ -29,21 +29,22 @@ public interface DatabaseUniquenessChecker<T, C extends MetaData> {
 After:
 
 ```java
-public interface DatabaseUniquenessChecker<M extends MetaData> {
-  List<RowError> check(List<Integer> sourceRowNumbers, M metaData);
+public interface DatabaseUniquenessChecker<T, M extends MetaData> {
+  List<RowError> check(
+      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metaData);
 }
 ```
 
 Related implementation changes:
 
-- `TemplateDefinition.checkDbUniqueness(...)` no longer accepts parsed rows
-- `ExcelImportOrchestrator` no longer passes parsed rows into DB uniqueness checking
-- `AAppcarItemDbUniquenessChecker` now checks uniqueness from `sourceRowNumbers + metaData`
+- `TemplateDefinition.checkDbUniqueness(...)` keeps parsed rows in its signature
+- `ExcelImportOrchestrator` continues passing parsed rows into DB uniqueness checking
+- `AAppcarItemDbUniquenessChecker` remains a metadata-driven special case inside a row-oriented contract
 - tests and documentation were updated to match the new contract
 
 ## Why We Did It
 
-The old interface implied that DB uniqueness checking needed access to parsed row DTOs and `Class<T>`. In this repository, that was not true.
+From a code reader's perspective, a type named `DatabaseUniquenessChecker` naturally suggests row-oriented duplicate checking against persisted data. Keeping `T` in the contract preserves that expectation.
 
 The only implementation, `AAppcarItemDbUniquenessChecker`, derives uniqueness from:
 
@@ -52,13 +53,14 @@ The only implementation, `AAppcarItemDbUniquenessChecker`, derives uniqueness fr
 
 It does not inspect row DTO fields, DTO annotations, or `Class<T>`.
 
-That meant the old generic `T` on `DatabaseUniquenessChecker` was speculative. It preserved a possible future use case, but it did not describe the current dependency surface honestly. Since no real implementation used `T`, keeping it added abstraction without present value.
+Even so, we keep the row DTO type in the contract because the abstraction is intended to describe the general approach of DB duplicate checking across templates, not just the needs of the current sample implementation. `AAppcarItem` is treated as a business-specific exception inside that broader shape.
 
-The rename from `C` to `M` was made for the same reason: `M` is a clearer generic name for a `MetaData` subtype than `C`, especially after the codebase moved away from `CommonData`.
+The rename from `C` to `M` was still kept because `M` is a clearer generic name for a `MetaData` subtype than `C`, especially after the codebase moved away from `CommonData`.
 
 ## Design Rule Going Forward
 
+- Keep `T` on `DatabaseUniquenessChecker` to preserve the reader-facing row-oriented design of the abstraction
 - Keep `T` where row DTO typing is actually used: parsing, validation, persistence, and `TemplateDefinition`
 - Use `M` for template-specific metadata types
-- Keep `DatabaseUniquenessChecker` metadata-driven unless a real template requires row-aware DB uniqueness later
-- If a future template truly needs row DTO data for DB uniqueness, reintroduce that capability in a focused refactor instead of preserving speculative complexity in advance
+- Allow individual checker implementations to ignore row DTO values when business logic is driven by upload-level metadata
+- Revisit the contract only if future template patterns show that another abstraction shape is clearly better across multiple implementations

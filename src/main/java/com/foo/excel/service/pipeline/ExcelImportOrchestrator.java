@@ -136,7 +136,8 @@ public class ExcelImportOrchestrator {
 
       // 6. DB 유일성 검사
       List<RowError> dbErrors =
-          template.checkDbUniqueness(parseResult.sourceRowNumbers(), typedMetaData);
+          template.checkDbUniqueness(
+              parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
       validationResult.merge(dbErrors);
 
       // 7. 파싱 오류 병합

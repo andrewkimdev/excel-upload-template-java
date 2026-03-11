@@ -14,7 +14,7 @@ public class TemplateDefinition<T, M extends MetaData> {
   private final Class<M> metaDataClass;
   private final ExcelImportConfig config;
   private final PersistenceHandler<T, M> persistenceHandler;
-  private final DatabaseUniquenessChecker<M> dbUniquenessChecker;
+  private final DatabaseUniquenessChecker<T, M> dbUniquenessChecker;
 
   public TemplateDefinition(
       String templateType,
@@ -22,7 +22,7 @@ public class TemplateDefinition<T, M extends MetaData> {
       Class<M> metaDataClass,
       ExcelImportConfig config,
       PersistenceHandler<T, M> persistenceHandler,
-      DatabaseUniquenessChecker<M> dbUniquenessChecker) {
+      DatabaseUniquenessChecker<T, M> dbUniquenessChecker) {
     this.templateType = templateType;
     this.dtoClass = dtoClass;
     this.metaDataClass = metaDataClass;
@@ -31,10 +31,11 @@ public class TemplateDefinition<T, M extends MetaData> {
     this.dbUniquenessChecker = dbUniquenessChecker;
   }
 
-  public List<RowError> checkDbUniqueness(List<Integer> sourceRowNumbers, M metaData) {
+  public List<RowError> checkDbUniqueness(
+      List<T> rows, List<Integer> sourceRowNumbers, M metaData) {
     if (dbUniquenessChecker == null) {
       return Collections.emptyList();
     }
-    return dbUniquenessChecker.check(sourceRowNumbers, metaData);
+    return dbUniquenessChecker.check(rows, dtoClass, sourceRowNumbers, metaData);
   }
 }

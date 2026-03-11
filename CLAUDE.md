@@ -56,7 +56,7 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 - Template wiring:
   - `TemplateDefinition<T, M extends MetaData>`
   - `PersistenceHandler<T, M extends MetaData>`
-  - optional `DatabaseUniquenessChecker<M extends MetaData>`
+  - optional `DatabaseUniquenessChecker<T, M extends MetaData>`
 - Current sample template:
   - `templates/samples/aappcar/*`
   - `AAppcarItemTemplateConfig` wires `AAppcarItemDbUniquenessChecker` bean.
@@ -70,7 +70,7 @@ Create a subpackage under `com.foo.excel.templates...` with:
 3. `*MetaData` (implements `MetaData`, validated by Bean Validation)
 4. Persistence entity/repository classes as needed
 5. `*Service` implementing `PersistenceHandler<Dto, MetaDataType>`
-6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<MetaDataType>`
+6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<Dto, MetaDataType>`
 7. `*TemplateConfig` producing `TemplateDefinition<Dto, MetaDataType>` with `metaDataClass`
 
 ## Testing Guidance

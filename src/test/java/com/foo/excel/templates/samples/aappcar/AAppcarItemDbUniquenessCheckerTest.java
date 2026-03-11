@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
@@ -37,7 +38,11 @@ class AAppcarItemDbUniquenessCheckerTest {
     when(itemRepository.findAllById(any())).thenReturn(List.of());
 
     List<RowError> result =
-        checker.check(List.of(7), createMetaData("2026", "1", "1", "EQ-01"));
+        checker.check(
+            List.of(new AAppcarItemDto()),
+            AAppcarItemDto.class,
+            List.of(7),
+            createMetaData("2026", "1", "1", "EQ-01"));
 
     assertThat(result).isEmpty();
   }
@@ -48,7 +53,11 @@ class AAppcarItemDbUniquenessCheckerTest {
     when(itemRepository.findAllById(any())).thenReturn(List.of());
 
     List<RowError> result =
-        checker.check(List.of(7, 8), createMetaData("2026", "1", "1", "EQ-01"));
+        checker.check(
+            List.of(new AAppcarItemDto(), new AAppcarItemDto()),
+            AAppcarItemDto.class,
+            List.of(7, 8),
+            createMetaData("2026", "1", "1", "EQ-01"));
 
     assertThat(result).hasSize(2);
     assertThat(result)
@@ -67,7 +76,11 @@ class AAppcarItemDbUniquenessCheckerTest {
     when(itemRepository.findAllById(any())).thenReturn(List.of(existing));
 
     List<RowError> result =
-        checker.check(List.of(7, 8), createMetaData("2026", "1", "1", "EQ-01"));
+        checker.check(
+            List.of(new AAppcarItemDto(), new AAppcarItemDto()),
+            AAppcarItemDto.class,
+            List.of(7, 8),
+            createMetaData("2026", "1", "1", "EQ-01"));
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).getRowNumber()).isEqualTo(8);

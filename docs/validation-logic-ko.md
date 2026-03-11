@@ -157,8 +157,8 @@
    - `getCustomId()`가 non-blank 보장
 4. `PersistenceHandler<T, M>`
    - `saveAll(List<T>, List<Integer>, M)` 구현
-5. (선택) `DatabaseUniquenessChecker<M>`
-   - `check(List<Integer>, M)` 구현
+5. (선택) `DatabaseUniquenessChecker<T, M>`
+   - `check(List<T>, Class<T>, List<Integer>, M)` 구현
 6. `TemplateDefinition<T, M>` 빈 등록
    - `metaDataClass` 반드시 지정
 
