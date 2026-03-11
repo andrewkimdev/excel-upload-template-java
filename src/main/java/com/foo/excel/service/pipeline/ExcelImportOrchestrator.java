@@ -67,14 +67,14 @@ public class ExcelImportOrchestrator {
   }
 
   @SuppressWarnings("unchecked")
-  private <T, C extends MetaData> ImportResult doProcess(
+  private <T, M extends MetaData> ImportResult doProcess(
       TemplateDefinition<?, ?> rawTemplate, MultipartFile file, MetaData metaData)
       throws IOException {
-    TemplateDefinition<T, C> template = (TemplateDefinition<T, C>) rawTemplate;
+    TemplateDefinition<T, M> template = (TemplateDefinition<T, M>) rawTemplate;
     if (!template.getMetaDataClass().isInstance(metaData)) {
       throw new IllegalArgumentException("metaData 형식이 템플릿과 일치하지 않습니다.");
     }
-    C typedMetaData = template.getMetaDataClass().cast(metaData);
+    M typedMetaData = template.getMetaDataClass().cast(metaData);
 
     ExcelImportConfig config = template.getConfig();
 
@@ -136,8 +136,7 @@ public class ExcelImportOrchestrator {
 
       // 6. DB 유일성 검사
       List<RowError> dbErrors =
-          template.checkDbUniqueness(
-              parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
+          template.checkDbUniqueness(parseResult.sourceRowNumbers(), typedMetaData);
       validationResult.merge(dbErrors);
 
       // 7. 파싱 오류 병합

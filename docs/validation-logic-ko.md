@@ -155,10 +155,11 @@
 3. `MetaData` DTO
    - Bean Validation
    - `getCustomId()`가 non-blank 보장
-4. `PersistenceHandler<T, C>`
-   - `saveAll(List<T>, List<Integer>, C)` 구현
-5. (선택) `DatabaseUniquenessChecker<T, C>`
-6. `TemplateDefinition<T, C>` 빈 등록
+4. `PersistenceHandler<T, M>`
+   - `saveAll(List<T>, List<Integer>, M)` 구현
+5. (선택) `DatabaseUniquenessChecker<M>`
+   - `check(List<Integer>, M)` 구현
+6. `TemplateDefinition<T, M>` 빈 등록
    - `metaDataClass` 반드시 지정
 
 ## 9. 운영 시 주의사항
@@ -167,4 +168,3 @@
 - 예기치 못한 시스템 예외 상세는 외부로 노출하지 않는다.
 - `th:text` 기반 escaping을 유지해 UI 렌더링 시 XSS 위험을 줄인다.
 - 대용량 처리 환경에서는 `maxRows`, `preCountBuffer`, 파일 크기 제한을 함께 조정한다.
-

@@ -20,7 +20,7 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
   - `file` (`.xlsx` only; `.xls` rejected)
   - `metaData` (`application/json`)
 - Current runtime wiring uses explicit template routes (not a generic `{templateType}` catch-all).
-- `metaData` is template-specific via `TemplateDefinition<T, C extends MetaData>.metaDataClass`
+- `metaData` is template-specific via `TemplateDefinition<T, M extends MetaData>.metaDataClass`
 - For current tariff template, required fields are:
   - `comeYear`, `comeOrder`, `uploadSeq`, `equipCode`
   - `equipMean`, `hsno`, `spec`, `taxRate`
@@ -54,9 +54,9 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
   - Upload: `AAppcarItemUploadApiController` -> `ExcelUploadRequestService` -> `ExcelImportOrchestrator`
   - Download: `ExcelFileController` serves `/api/excel/download/{fileId}`
 - Template wiring:
-  - `TemplateDefinition<T, C extends MetaData>`
-  - `PersistenceHandler<T, C extends MetaData>`
-  - optional `DatabaseUniquenessChecker<T, C extends MetaData>`
+  - `TemplateDefinition<T, M extends MetaData>`
+  - `PersistenceHandler<T, M extends MetaData>`
+  - optional `DatabaseUniquenessChecker<M extends MetaData>`
 - Current sample template:
   - `templates/samples/aappcar/*`
   - `AAppcarItemTemplateConfig` wires `AAppcarItemDbUniquenessChecker` bean.
@@ -70,7 +70,7 @@ Create a subpackage under `com.foo.excel.templates...` with:
 3. `*MetaData` (implements `MetaData`, validated by Bean Validation)
 4. Persistence entity/repository classes as needed
 5. `*Service` implementing `PersistenceHandler<Dto, MetaDataType>`
-6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<Dto, MetaDataType>`
+6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<MetaDataType>`
 7. `*TemplateConfig` producing `TemplateDefinition<Dto, MetaDataType>` with `metaDataClass`
 
 ## Testing Guidance

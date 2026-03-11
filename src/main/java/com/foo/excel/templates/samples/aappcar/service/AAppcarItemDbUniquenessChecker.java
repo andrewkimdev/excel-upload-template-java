@@ -2,7 +2,6 @@ package com.foo.excel.templates.samples.aappcar.service;
 
 import com.foo.excel.service.contract.DatabaseUniquenessChecker;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -21,7 +20,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class AAppcarItemDbUniquenessChecker
-    implements DatabaseUniquenessChecker<AAppcarItemDto, AAppcarItemMetaData> {
+    implements DatabaseUniquenessChecker<AAppcarItemMetaData> {
 
   private static final int ID_COLUMN_INDEX = 1;
   private static final ExcelColumnRef ID_COLUMN_REF = ExcelColumnRef.ofLetter("B");
@@ -35,13 +34,9 @@ public class AAppcarItemDbUniquenessChecker
   private final AAppcarEquipRepository equipRepository;
 
   @Override
-  public List<RowError> check(
-      List<AAppcarItemDto> rows,
-      Class<AAppcarItemDto> dtoClass,
-      List<Integer> sourceRowNumbers,
-      AAppcarItemMetaData metaData) {
+  public List<RowError> check(List<Integer> sourceRowNumbers, AAppcarItemMetaData metaData) {
     List<RowError> errors = new ArrayList<>();
-    if (rows.isEmpty() || sourceRowNumbers.isEmpty()) {
+    if (sourceRowNumbers.isEmpty()) {
       return errors;
     }
 

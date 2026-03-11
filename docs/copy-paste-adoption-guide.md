@@ -46,9 +46,9 @@ This gives the full pattern:
 - row DTO (`@ExcelColumn` + validation)
 - `ExcelImportConfig`
 - template `MetaData`
-- `PersistenceHandler<T, C extends MetaData>`
-- optional `DatabaseUniquenessChecker<T, C>`
-- `TemplateDefinition<T, C>` bean with `metaDataClass`
+- `PersistenceHandler<T, M extends MetaData>`
+- optional `DatabaseUniquenessChecker<M>`
+- `TemplateDefinition<T, M>` bean with `metaDataClass`
 - upload-level summary entity/repository
 
 ### Step C: Controller layer (choose one)

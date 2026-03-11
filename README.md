@@ -32,7 +32,7 @@ Open http://localhost:8080 to access the upload form.
 - Parts:
   - `file`: Excel file (`.xlsx` only)
   - `metaData`: JSON (`application/json`)
-- `metaData` schema is template-specific (`TemplateDefinition<T, C>`의 `metaDataClass` 기준)
+- `metaData` schema is template-specific (`TemplateDefinition<T, M>`의 `metaDataClass` 기준)
 - Required `metaData` fields (현재 `aappcar` 템플릿 기준):
   - `comeYear`
   - `comeOrder`
@@ -210,9 +210,9 @@ See `application.properties` for a detailed security checklist and configuration
 2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
 3. **MetaData** -- 템플릿별 DTO를 만들고 `MetaData`를 구현한다 (strict JSON + Bean Validation 대상)
    - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)
-4. **Persistence** -- Implement `PersistenceHandler<T, C>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, C metaData)` to save parsed rows merged with common fields
-5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, C>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, C metaData)` if duplicates should be checked against existing data
-6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, C>` `@Bean` with `metaDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
+4. **Persistence** -- Implement `PersistenceHandler<T, M>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metaData)` to save parsed rows merged with common fields
+5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<M>` with `check(List<Integer> sourceRowNumbers, M metaData)` if duplicates should be checked against existing data
+6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, M>` `@Bean` with `metaDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
 
 See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemImportConfig`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
 
@@ -249,6 +249,6 @@ Tests cover all layers:
 | `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, invalid `@ExcelCompositeUnique` declaration fail-fast behavior |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `metaData`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
-| `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `MetaData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |
+| `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `MetaData`/`TemplateDefinition<T, M>` signature and tariff persistence mapping |
 | `AAppcarItemEmbeddedIdMappingTest` | Template Unit | Item/Equip embedded ID 매핑 및 엔티티 구성 검증 |
 | `AAppcarItemEmbeddedIdPersistenceTest` | Template Integration | Embedded ID 기반 upsert/요약 집계 persistence 동작 검증 |

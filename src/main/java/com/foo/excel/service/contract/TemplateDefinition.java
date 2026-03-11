@@ -7,22 +7,22 @@ import java.util.List;
 import lombok.Getter;
 
 @Getter
-public class TemplateDefinition<T, C extends MetaData> {
+public class TemplateDefinition<T, M extends MetaData> {
 
   private final String templateType;
   private final Class<T> dtoClass;
-  private final Class<C> metaDataClass;
+  private final Class<M> metaDataClass;
   private final ExcelImportConfig config;
-  private final PersistenceHandler<T, C> persistenceHandler;
-  private final DatabaseUniquenessChecker<T, C> dbUniquenessChecker;
+  private final PersistenceHandler<T, M> persistenceHandler;
+  private final DatabaseUniquenessChecker<M> dbUniquenessChecker;
 
   public TemplateDefinition(
       String templateType,
       Class<T> dtoClass,
-      Class<C> metaDataClass,
+      Class<M> metaDataClass,
       ExcelImportConfig config,
-      PersistenceHandler<T, C> persistenceHandler,
-      DatabaseUniquenessChecker<T, C> dbUniquenessChecker) {
+      PersistenceHandler<T, M> persistenceHandler,
+      DatabaseUniquenessChecker<M> dbUniquenessChecker) {
     this.templateType = templateType;
     this.dtoClass = dtoClass;
     this.metaDataClass = metaDataClass;
@@ -31,11 +31,10 @@ public class TemplateDefinition<T, C extends MetaData> {
     this.dbUniquenessChecker = dbUniquenessChecker;
   }
 
-  public List<RowError> checkDbUniqueness(
-      List<T> rows, List<Integer> sourceRowNumbers, C metaData) {
+  public List<RowError> checkDbUniqueness(List<Integer> sourceRowNumbers, M metaData) {
     if (dbUniquenessChecker == null) {
       return Collections.emptyList();
     }
-    return dbUniquenessChecker.check(rows, dtoClass, sourceRowNumbers, metaData);
+    return dbUniquenessChecker.check(sourceRowNumbers, metaData);
   }
 }
