@@ -2,7 +2,7 @@ package com.foo.excel.service.pipeline;
 
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.service.contract.CommonData;
+import com.foo.excel.service.contract.MetaData;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.service.file.ExcelUploadFileService;
@@ -49,14 +49,14 @@ public class ExcelImportOrchestrator {
       String originalFilename,
       String message) {}
 
-  public ImportResult processUpload(MultipartFile file, String templateType, CommonData commonData)
+  public ImportResult processUpload(MultipartFile file, String templateType, MetaData metaData)
       throws IOException {
     TemplateDefinition<?, ?> template = findTemplate(templateType);
-    return doProcess(template, file, commonData);
+    return doProcess(template, file, metaData);
   }
 
-  public Class<? extends CommonData> getCommonDataClass(String templateType) {
-    return findTemplate(templateType).getCommonDataClass();
+  public Class<? extends MetaData> getMetaDataClass(String templateType) {
+    return findTemplate(templateType).getMetaDataClass();
   }
 
   private TemplateDefinition<?, ?> findTemplate(String templateType) {
@@ -67,19 +67,19 @@ public class ExcelImportOrchestrator {
   }
 
   @SuppressWarnings("unchecked")
-  private <T, C extends CommonData> ImportResult doProcess(
-      TemplateDefinition<?, ?> rawTemplate, MultipartFile file, CommonData commonData)
+  private <T, C extends MetaData> ImportResult doProcess(
+      TemplateDefinition<?, ?> rawTemplate, MultipartFile file, MetaData metaData)
       throws IOException {
     TemplateDefinition<T, C> template = (TemplateDefinition<T, C>) rawTemplate;
-    if (!template.getCommonDataClass().isInstance(commonData)) {
-      throw new IllegalArgumentException("commonData 형식이 템플릿과 일치하지 않습니다.");
+    if (!template.getMetaDataClass().isInstance(metaData)) {
+      throw new IllegalArgumentException("metaData 형식이 템플릿과 일치하지 않습니다.");
     }
-    C typedCommonData = template.getCommonDataClass().cast(commonData);
+    C typedMetaData = template.getMetaDataClass().cast(metaData);
 
     ExcelImportConfig config = template.getConfig();
 
     // 1. customId 기반 임시 하위 디렉터리 생성
-    String customIdPath = resolveCustomIdPath(typedCommonData);
+    String customIdPath = resolveCustomIdPath(typedMetaData);
     Path tempSubDir = properties.getTempDirectoryPath().resolve(customIdPath);
     Files.createDirectories(tempSubDir);
 
@@ -137,7 +137,7 @@ public class ExcelImportOrchestrator {
       // 6. DB 유일성 검사
       List<RowError> dbErrors =
           template.checkDbUniqueness(
-              parseResult.rows(), parseResult.sourceRowNumbers(), typedCommonData);
+              parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
       validationResult.merge(dbErrors);
 
       // 7. 파싱 오류 병합
@@ -148,7 +148,7 @@ public class ExcelImportOrchestrator {
         PersistenceHandler.SaveResult saveResult =
             template
                 .getPersistenceHandler()
-                .saveAll(parseResult.rows(), parseResult.sourceRowNumbers(), typedCommonData);
+                .saveAll(parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
 
         return ImportResult.builder()
             .success(true)
@@ -193,8 +193,8 @@ public class ExcelImportOrchestrator {
     }
   }
 
-  private String resolveCustomIdPath(CommonData commonData) {
-    String customId = commonData.getCustomId();
+  private String resolveCustomIdPath(MetaData metaData) {
+    String customId = metaData.getCustomId();
     if (customId == null || customId.isBlank()) {
       throw new IllegalArgumentException("customId는 필수입니다.");
     }

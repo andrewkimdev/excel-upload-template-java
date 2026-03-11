@@ -1,7 +1,7 @@
 package com.foo.excel.templates.samples.aappcar.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.foo.excel.service.contract.CommonData;
+import com.foo.excel.service.contract.MetaData;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AAppcarItemCommonData implements CommonData {
+public class AAppcarItemMetaData implements MetaData {
 
   private static final String DEFAULT_APPROVED_YN = "N";
 

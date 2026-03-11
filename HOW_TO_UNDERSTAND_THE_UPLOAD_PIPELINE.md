@@ -25,9 +25,9 @@ HTTP (REST/Thymeleaf)
 - `POST /api/excel/upload/aappcar`
 - Parts:
   - `file` (`multipart/form-data`)
-  - `commonData` (`application/json`, required)
+  - `metaData` (`application/json`, required)
 
-`commonData` required fields:
+`metaData` required fields:
 - `comeYear`
 - `comeOrder`
 - `uploadSeq`
@@ -47,7 +47,7 @@ Behavior:
 - `GET /upload/aappcar` -> `upload-aappcar`
 - `POST /upload/aappcar` -> `result`
 
-Form fields map to template-specific `CommonData` fields and file.
+Form fields map to template-specific `MetaData` fields and file.
 
 ### Download
 
@@ -125,7 +125,7 @@ Orchestrator merges parser conversion errors into `ExcelValidationResult`.
 ### Step 8a: success path (persist)
 
 If valid, orchestrator calls:
-- `PersistenceHandler.saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)`
+- `PersistenceHandler.saveAll(List<T> rows, List<Integer> sourceRowNumbers, C metaData)`
 
 Current tariff implementation (`AAppcarItemService`):
 - upserts detail rows by `(comeYear, comeOrder, uploadSeq, equipCode, rowNumber)`

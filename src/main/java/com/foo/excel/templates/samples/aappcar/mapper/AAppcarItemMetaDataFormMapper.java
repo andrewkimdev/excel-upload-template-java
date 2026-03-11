@@ -1,14 +1,14 @@
 package com.foo.excel.templates.samples.aappcar.mapper;
 
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemCommonData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AAppcarItemCommonDataFormMapper {
+public class AAppcarItemMetaDataFormMapper {
 
-  public AAppcarItemCommonData toCommonData(
+  public AAppcarItemMetaData toMetaData(
       String comeYear,
       String comeOrder,
       String uploadSeq,
@@ -20,19 +20,19 @@ public class AAppcarItemCommonDataFormMapper {
       String filePath,
       String approvalYn,
       String approvalDate) {
-    AAppcarItemCommonData commonData = new AAppcarItemCommonData();
-    commonData.setComeYear(comeYear);
-    commonData.setComeOrder(comeOrder);
-    commonData.setUploadSeq(uploadSeq);
-    commonData.setEquipCode(equipCode);
-    commonData.setEquipMean(equipMean);
-    commonData.setHsno(hsno);
-    commonData.setSpec(spec);
-    commonData.setTaxRate(parseTaxRate(taxRate));
-    commonData.setFilePath(blankToNull(filePath));
-    commonData.setApprovalYn(blankToNull(approvalYn));
-    commonData.setApprovalDate(parseApprovalDate(approvalDate));
-    return commonData;
+    AAppcarItemMetaData metaData = new AAppcarItemMetaData();
+    metaData.setComeYear(comeYear);
+    metaData.setComeOrder(comeOrder);
+    metaData.setUploadSeq(uploadSeq);
+    metaData.setEquipCode(equipCode);
+    metaData.setEquipMean(equipMean);
+    metaData.setHsno(hsno);
+    metaData.setSpec(spec);
+    metaData.setTaxRate(parseTaxRate(taxRate));
+    metaData.setFilePath(blankToNull(filePath));
+    metaData.setApprovalYn(blankToNull(approvalYn));
+    metaData.setApprovalDate(parseApprovalDate(approvalDate));
+    return metaData;
   }
 
   private BigDecimal parseTaxRate(String taxRate) {

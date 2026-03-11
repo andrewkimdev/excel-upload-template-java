@@ -18,15 +18,15 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 
 - Multipart parts:
   - `file` (`.xlsx` only; `.xls` rejected)
-  - `commonData` (`application/json`)
+  - `metaData` (`application/json`)
 - Current runtime wiring uses explicit template routes (not a generic `{templateType}` catch-all).
-- `commonData` is template-specific via `TemplateDefinition<T, C extends CommonData>.commonDataClass`
+- `metaData` is template-specific via `TemplateDefinition<T, C extends MetaData>.metaDataClass`
 - For current tariff template, required fields are:
   - `comeYear`, `comeOrder`, `uploadSeq`, `equipCode`
   - `equipMean`, `hsno`, `spec`, `taxRate`
 - Optional fields are:
   - `filePath`, `approvalYn`, `approvalDate`
-  - `customId`는 런타임 계약(`CommonData#getCustomId`)상 필수이며, 현재 컨트롤러에서 `CUSTOM01`로 주입됨
+  - `customId`는 런타임 계약(`MetaData#getCustomId`)상 필수이며, 현재 컨트롤러에서 `CUSTOM01`로 주입됨
 - `approvalYn`가 비어 있으면 기본값 `N`을 사용하며, 유효 승인값이 `Y`이면 `approvalDate`는 저장 시 현재 날짜를 사용한다.
 - Strict parsing is enabled:
   - `FAIL_ON_UNKNOWN_PROPERTIES`
@@ -54,9 +54,9 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
   - Upload: `AAppcarItemUploadApiController` -> `ExcelUploadRequestService` -> `ExcelImportOrchestrator`
   - Download: `ExcelFileController` serves `/api/excel/download/{fileId}`
 - Template wiring:
-  - `TemplateDefinition<T, C extends CommonData>`
-  - `PersistenceHandler<T, C extends CommonData>`
-  - optional `DatabaseUniquenessChecker<T, C extends CommonData>`
+  - `TemplateDefinition<T, C extends MetaData>`
+  - `PersistenceHandler<T, C extends MetaData>`
+  - optional `DatabaseUniquenessChecker<T, C extends MetaData>`
 - Current sample template:
   - `templates/samples/aappcar/*`
   - `AAppcarItemTemplateConfig` wires `AAppcarItemDbUniquenessChecker` bean.
@@ -67,11 +67,11 @@ Create a subpackage under `com.foo.excel.templates...` with:
 
 1. `*Dto` (`@ExcelColumn` + JSR-380 validation)
 2. `*ImportConfig` (`ExcelImportConfig`)
-3. `*CommonData` (implements `CommonData`, validated by Bean Validation)
+3. `*MetaData` (implements `MetaData`, validated by Bean Validation)
 4. Persistence entity/repository classes as needed
-5. `*Service` implementing `PersistenceHandler<Dto, CommonDataType>`
-6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<Dto, CommonDataType>`
-7. `*TemplateConfig` producing `TemplateDefinition<Dto, CommonDataType>` with `commonDataClass`
+5. `*Service` implementing `PersistenceHandler<Dto, MetaDataType>`
+6. Optional `*DbUniquenessChecker` implementing `DatabaseUniquenessChecker<Dto, MetaDataType>`
+7. `*TemplateConfig` producing `TemplateDefinition<Dto, MetaDataType>` with `metaDataClass`
 
 ## Testing Guidance
 

@@ -19,10 +19,10 @@ These files show the full upload flow end-to-end.
 ## 2) Keep these current behavior facts in mind
 
 - Upload accepts `.xlsx` only. `.xls` is rejected in `ExcelUploadFileService`.
-- `commonData` is required for REST upload (`/api/excel/upload/aappcar`).
-- `commonData` is parsed strictly (`FAIL_ON_UNKNOWN_PROPERTIES`, coercion disabled).
-- Server-managed fields are fixed by template commonData DTOs (for tariff: `AAppcarItemCommonData`): `createdBy=user01`, `approvedYn=N`.
-- `CommonData`는 `getCustomId()` 계약을 제공해야 하며, orchestrator가 temp 경로 분리에 사용합니다.
+- `metaData` is required for REST upload (`/api/excel/upload/aappcar`).
+- `metaData` is parsed strictly (`FAIL_ON_UNKNOWN_PROPERTIES`, coercion disabled).
+- Server-managed fields are fixed by template metaData DTOs (for tariff: `AAppcarItemMetaData`): `createdBy=user01`, `approvedYn=N`.
+- `MetaData`는 `getCustomId()` 계약을 제공해야 하며, orchestrator가 temp 경로 분리에 사용합니다.
 - Security path uses filename sanitization, magic-byte validation, secure workbook open, row pre-count, parser row-limit early-exit.
 - Error reports preserve formatting, add `_ERRORS`, sanitize formula-like values, and store original filename in a `.meta` file.
 

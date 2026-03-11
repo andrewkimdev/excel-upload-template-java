@@ -32,20 +32,20 @@ When documents conflict, use this order:
 - Keep user-facing messages and externally returned errors in Korean.
 - Internal technical logs may remain English where currently implemented.
 - Use Thymeleaf escaping (`th:text`) for user content.
-- Keep REST `commonData` contract strict:
+- Keep REST `metaData` contract strict:
   - reject unknown JSON fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
   - disable scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
 - Keep template docs aligned with current `aappcar` runtime contract:
-  - required commonData includes equip metadata (`equipMean`, `hsno`, `spec`, `taxRate`)
-  - optional commonData includes `filePath`, `approvalYn`, `approvalDate`
+  - required metaData includes equip metadata (`equipMean`, `hsno`, `spec`, `taxRate`)
+  - optional metaData includes `filePath`, `approvalYn`, `approvalDate`
   - `AAppcarEquip` in this repo no longer carries `createdAt`/`createdBy`
 - Add new Excel templates under `com.foo.excel.templates...` using the existing pattern:
   - DTO (`@ExcelColumn` + validation)
   - `ExcelImportConfig`
-  - template-specific `CommonData` DTO + bean validation
-  - `PersistenceHandler<T, C extends CommonData>` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)`)
+  - template-specific `MetaData` DTO + bean validation
+  - `PersistenceHandler<T, C extends MetaData>` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, C metaData)`)
   - optional `DatabaseUniquenessChecker`
-  - `TemplateDefinition<T, C>` bean wiring (`commonDataClass` 포함)
+  - `TemplateDefinition<T, C>` bean wiring (`metaDataClass` 포함)
   - include summary entity/repository where the template uses upload-level aggregate persistence
 
 ## Guardrails for Changes

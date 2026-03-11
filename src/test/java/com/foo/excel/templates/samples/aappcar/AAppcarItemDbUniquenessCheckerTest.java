@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemCommonData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -42,7 +42,7 @@ class AAppcarItemDbUniquenessCheckerTest {
             List.of(new AAppcarItemDto()),
             AAppcarItemDto.class,
             List.of(7),
-            createCommonData("2026", "1", "1", "EQ-01"));
+            createMetaData("2026", "1", "1", "EQ-01"));
 
     assertThat(result).isEmpty();
   }
@@ -57,7 +57,7 @@ class AAppcarItemDbUniquenessCheckerTest {
             List.of(new AAppcarItemDto(), new AAppcarItemDto()),
             AAppcarItemDto.class,
             List.of(7, 8),
-            createCommonData("2026", "1", "1", "EQ-01"));
+            createMetaData("2026", "1", "1", "EQ-01"));
 
     assertThat(result).hasSize(2);
     assertThat(result)
@@ -80,7 +80,7 @@ class AAppcarItemDbUniquenessCheckerTest {
             List.of(new AAppcarItemDto(), new AAppcarItemDto()),
             AAppcarItemDto.class,
             List.of(7, 8),
-            createCommonData("2026", "1", "1", "EQ-01"));
+            createMetaData("2026", "1", "1", "EQ-01"));
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).getRowNumber()).isEqualTo(8);
@@ -90,15 +90,15 @@ class AAppcarItemDbUniquenessCheckerTest {
         .contains("품목 테이블에 이미 존재하는 ID");
   }
 
-  private AAppcarItemCommonData createCommonData(
+  private AAppcarItemMetaData createMetaData(
       String comeYear, String comeOrder, String uploadSeq, String equipCode) {
-    AAppcarItemCommonData commonData = new AAppcarItemCommonData();
-    commonData.setComeYear(comeYear);
-    commonData.setComeOrder(comeOrder);
-    commonData.setUploadSeq(uploadSeq);
-    commonData.setEquipCode(equipCode);
-    commonData.setCompanyId("COMPANY01");
-    commonData.setCustomId("CUSTOM01");
-    return commonData;
+    AAppcarItemMetaData metaData = new AAppcarItemMetaData();
+    metaData.setComeYear(comeYear);
+    metaData.setComeOrder(comeOrder);
+    metaData.setUploadSeq(uploadSeq);
+    metaData.setEquipCode(equipCode);
+    metaData.setCompanyId("COMPANY01");
+    metaData.setCustomId("CUSTOM01");
+    return metaData;
   }
 }

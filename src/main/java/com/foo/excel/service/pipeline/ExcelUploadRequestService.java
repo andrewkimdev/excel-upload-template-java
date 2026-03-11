@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.type.LogicalType;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.service.contract.CommonData;
+import com.foo.excel.service.contract.MetaData;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -29,19 +29,19 @@ public class ExcelUploadRequestService {
   private final ObjectMapper objectMapper;
   private final Validator validator;
 
-  public ImportResult upload(MultipartFile file, String templateType, String commonDataJson)
+  public ImportResult upload(MultipartFile file, String templateType, String metaDataJson)
       throws IOException {
     checkFileSize(file);
-    Class<? extends CommonData> commonDataClass = orchestrator.getCommonDataClass(templateType);
-    CommonData commonData = parseAndValidateCommonData(commonDataJson, commonDataClass);
-    return orchestrator.processUpload(file, templateType, commonData);
+    Class<? extends MetaData> metaDataClass = orchestrator.getMetaDataClass(templateType);
+    MetaData metaData = parseAndValidateMetaData(metaDataJson, metaDataClass);
+    return orchestrator.processUpload(file, templateType, metaData);
   }
 
-  public ImportResult upload(MultipartFile file, String templateType, CommonData commonData)
+  public ImportResult upload(MultipartFile file, String templateType, MetaData metaData)
       throws IOException {
     checkFileSize(file);
-    validateCommonData(commonData);
-    return orchestrator.processUpload(file, templateType, commonData);
+    validateMetaData(metaData);
+    return orchestrator.processUpload(file, templateType, metaData);
   }
 
   public Map<String, Object> toApiResponse(ImportResult result) {
@@ -71,10 +71,10 @@ public class ExcelUploadRequestService {
     }
   }
 
-  private CommonData parseAndValidateCommonData(
-      String commonDataJson, Class<? extends CommonData> commonDataClass) {
-    if (commonDataJson == null || commonDataJson.isBlank()) {
-      throw new IllegalArgumentException("commonData 파트는 필수입니다.");
+  private MetaData parseAndValidateMetaData(
+      String metaDataJson, Class<? extends MetaData> metaDataClass) {
+    if (metaDataJson == null || metaDataJson.isBlank()) {
+      throw new IllegalArgumentException("metaData 파트는 필수입니다.");
     }
 
     try {
@@ -88,16 +88,16 @@ public class ExcelUploadRequestService {
           .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
           .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail);
 
-      CommonData commonData = strictMapper.readValue(commonDataJson, commonDataClass);
-      validateCommonData(commonData);
-      return commonData;
+      MetaData metaData = strictMapper.readValue(metaDataJson, metaDataClass);
+      validateMetaData(metaData);
+      return metaData;
     } catch (JsonProcessingException e) {
-      throw new IllegalArgumentException("commonData 형식이 올바르지 않습니다.");
+      throw new IllegalArgumentException("metaData 형식이 올바르지 않습니다.");
     }
   }
 
-  private void validateCommonData(CommonData commonData) {
-    var violations = validator.validate(commonData);
+  private void validateMetaData(MetaData metaData) {
+    var violations = validator.validate(metaData);
     if (!violations.isEmpty()) {
       ConstraintViolation<?> violation = violations.iterator().next();
       throw new IllegalArgumentException(violation.getMessage());

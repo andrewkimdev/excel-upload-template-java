@@ -31,7 +31,7 @@
 
 - Keep `README.md` architecture paths aligned with actual source tree.
 - Keep `HOW_TO_UNDERSTAND_THE_UPLOAD_PIPELINE.md` route/contract descriptions aligned with controller/runtime behavior.
-- Use `TemplateDefinition<T, C extends CommonData>` terminology and template-specific `commonDataClass`.
+- Use `TemplateDefinition<T, C extends MetaData>` terminology and template-specific `metaDataClass`.
 
 ## Language Policy
 

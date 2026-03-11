@@ -1,7 +1,7 @@
 package com.foo.excel.templates.samples.aappcar.service;
 
 import com.foo.excel.service.contract.PersistenceHandler;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemCommonData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AAppcarItemService
-    implements PersistenceHandler<AAppcarItemDto, AAppcarItemCommonData> {
+    implements PersistenceHandler<AAppcarItemDto, AAppcarItemMetaData> {
 
   private static final int UPSERT_RETRY_LIMIT = 2;
 
@@ -32,12 +32,12 @@ public class AAppcarItemService
   public SaveResult saveAll(
       List<AAppcarItemDto> dtos,
       List<Integer> sourceRowNumbers,
-      AAppcarItemCommonData commonData) {
+      AAppcarItemMetaData metaData) {
     int created = 0;
     int updated = 0;
 
     for (int i = 0; i < dtos.size(); i++) {
-      boolean createdNow = upsertItemWithRetry(dtos.get(i), sourceRowNumbers.get(i), commonData);
+      boolean createdNow = upsertItemWithRetry(dtos.get(i), sourceRowNumbers.get(i), metaData);
       if (createdNow) {
         created++;
       } else {
@@ -45,14 +45,14 @@ public class AAppcarItemService
       }
     }
 
-    upsertEquipWithRetry(commonData);
+    upsertEquipWithRetry(metaData);
 
     return new SaveResult(created, updated);
   }
 
   private boolean upsertItemWithRetry(
-      AAppcarItemDto dto, Integer rowNumber, AAppcarItemCommonData commonData) {
-    AAppcarItemId itemId = buildItemId(commonData, rowNumber);
+      AAppcarItemDto dto, Integer rowNumber, AAppcarItemMetaData metaData) {
+    AAppcarItemId itemId = buildItemId(metaData, rowNumber);
     int attempt = 0;
     while (attempt <= UPSERT_RETRY_LIMIT) {
       attempt++;
@@ -61,12 +61,12 @@ public class AAppcarItemService
 
         if (existing.isPresent()) {
           AAppcarItem entity = existing.get();
-          updateEntityFromDto(entity, dto, commonData);
+          updateEntityFromDto(entity, dto, metaData);
           itemRepository.saveAndFlush(entity);
           return false;
         }
 
-        AAppcarItem newEntity = buildEntityFromDto(dto, commonData);
+        AAppcarItem newEntity = buildEntityFromDto(dto, metaData);
         newEntity.setId(itemId);
         itemRepository.saveAndFlush(newEntity);
         return true;
@@ -80,8 +80,8 @@ public class AAppcarItemService
     throw new IllegalStateException("동시 저장 충돌로 품목 데이터 처리에 실패했습니다.");
   }
 
-  private void upsertEquipWithRetry(AAppcarItemCommonData commonData) {
-    AAppcarEquipId equipId = buildEquipId(commonData);
+  private void upsertEquipWithRetry(AAppcarItemMetaData metaData) {
+    AAppcarEquipId equipId = buildEquipId(metaData);
     int attempt = 0;
     while (attempt <= UPSERT_RETRY_LIMIT) {
       attempt++;
@@ -90,13 +90,13 @@ public class AAppcarItemService
 
         if (existing.isPresent()) {
           AAppcarEquip entity = existing.get();
-          applyEquipFields(entity, commonData);
+          applyEquipFields(entity, metaData);
           equipRepository.saveAndFlush(entity);
           return;
         }
 
         AAppcarEquip newEntity = AAppcarEquip.builder().id(equipId).build();
-        applyEquipFields(newEntity, commonData);
+        applyEquipFields(newEntity, metaData);
         equipRepository.saveAndFlush(newEntity);
         return;
       } catch (DataIntegrityViolationException e) {
@@ -110,7 +110,7 @@ public class AAppcarItemService
   }
 
   private void updateEntityFromDto(
-      AAppcarItem entity, AAppcarItemDto dto, AAppcarItemCommonData commonData) {
+      AAppcarItem entity, AAppcarItemDto dto, AAppcarItemMetaData metaData) {
     entity.setGoodsDes(dto.getGoodsDes());
     entity.setSpec(dto.getSpec());
     entity.setModelDes(dto.getModelDes());
@@ -121,11 +121,11 @@ public class AAppcarItemService
     entity.setRepairQty(dto.getRepairQty());
     entity.setImportAmt(dto.getImportAmt());
     entity.setImportQty(dto.getImportQty());
-    entity.setApprovalYn(resolveApprovalYn(dto.getApprovalYn(), commonData));
+    entity.setApprovalYn(resolveApprovalYn(dto.getApprovalYn(), metaData));
   }
 
   private AAppcarItem buildEntityFromDto(
-      AAppcarItemDto dto, AAppcarItemCommonData commonData) {
+      AAppcarItemDto dto, AAppcarItemMetaData metaData) {
     AAppcarItem entity =
         AAppcarItem.builder()
             .goodsDes(dto.getGoodsDes())
@@ -138,45 +138,45 @@ public class AAppcarItemService
             .repairQty(dto.getRepairQty())
             .importAmt(dto.getImportAmt())
             .importQty(dto.getImportQty())
-            .approvalYn(resolveApprovalYn(dto.getApprovalYn(), commonData))
+            .approvalYn(resolveApprovalYn(dto.getApprovalYn(), metaData))
             .build();
     return entity;
   }
 
-  private AAppcarItemId buildItemId(AAppcarItemCommonData commonData, Integer rowNumber) {
+  private AAppcarItemId buildItemId(AAppcarItemMetaData metaData, Integer rowNumber) {
     return new AAppcarItemId(
-        commonData.getCompanyId(),
-        commonData.getCustomId(),
-        commonData.getComeYear(),
-        commonData.getComeOrder(),
-        commonData.getUploadSeq(),
-        commonData.getEquipCode(),
+        metaData.getCompanyId(),
+        metaData.getCustomId(),
+        metaData.getComeYear(),
+        metaData.getComeOrder(),
+        metaData.getUploadSeq(),
+        metaData.getEquipCode(),
         rowNumber);
   }
 
-  private AAppcarEquipId buildEquipId(AAppcarItemCommonData commonData) {
+  private AAppcarEquipId buildEquipId(AAppcarItemMetaData metaData) {
     return new AAppcarEquipId(
-        commonData.getCompanyId(),
-        commonData.getCustomId(),
-        commonData.getComeYear(),
-        Integer.valueOf(commonData.getComeOrder()),
-        Integer.valueOf(commonData.getUploadSeq()),
-        commonData.getEquipCode());
+        metaData.getCompanyId(),
+        metaData.getCustomId(),
+        metaData.getComeYear(),
+        Integer.valueOf(metaData.getComeOrder()),
+        Integer.valueOf(metaData.getUploadSeq()),
+        metaData.getEquipCode());
   }
 
-  private void applyEquipFields(AAppcarEquip entity, AAppcarItemCommonData commonData) {
-    entity.setEquipMean(commonData.getEquipMean());
-    entity.setHsno(commonData.getHsno());
-    entity.setSpec(commonData.getSpec());
-    entity.setTaxRate(commonData.getTaxRate());
-    entity.setFilePath(commonData.getFilePath());
-    entity.setApprovalYn(commonData.getApprovedYn());
-    entity.setApprovalDate(commonData.isApprovalYnYes() ? LocalDate.now() : null);
+  private void applyEquipFields(AAppcarEquip entity, AAppcarItemMetaData metaData) {
+    entity.setEquipMean(metaData.getEquipMean());
+    entity.setHsno(metaData.getHsno());
+    entity.setSpec(metaData.getSpec());
+    entity.setTaxRate(metaData.getTaxRate());
+    entity.setFilePath(metaData.getFilePath());
+    entity.setApprovalYn(metaData.getApprovedYn());
+    entity.setApprovalDate(metaData.isApprovalYnYes() ? LocalDate.now() : null);
   }
 
-  private String resolveApprovalYn(String dtoApprovalYn, AAppcarItemCommonData commonData) {
+  private String resolveApprovalYn(String dtoApprovalYn, AAppcarItemMetaData metaData) {
     if (dtoApprovalYn == null || dtoApprovalYn.isBlank()) {
-      return commonData.getApprovedYn();
+      return metaData.getApprovedYn();
     }
     String normalized = dtoApprovalYn.trim();
     if (normalized.equalsIgnoreCase("Y")
@@ -194,6 +194,6 @@ public class AAppcarItemService
         || normalized.equalsIgnoreCase("FAIL")) {
       return "N";
     }
-    return commonData.getApprovedYn();
+    return metaData.getApprovedYn();
   }
 }

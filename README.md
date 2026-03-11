@@ -31,9 +31,9 @@ Open http://localhost:8080 to access the upload form.
 - Content type: `multipart/form-data`
 - Parts:
   - `file`: Excel file (`.xlsx` only)
-  - `commonData`: JSON (`application/json`)
-- `commonData` schema is template-specific (`TemplateDefinition<T, C>`의 `commonDataClass` 기준)
-- Required `commonData` fields (현재 `aappcar` 템플릿 기준):
+  - `metaData`: JSON (`application/json`)
+- `metaData` schema is template-specific (`TemplateDefinition<T, C>`의 `metaDataClass` 기준)
+- Required `metaData` fields (현재 `aappcar` 템플릿 기준):
   - `comeYear`
   - `comeOrder`
   - `uploadSeq`
@@ -42,18 +42,18 @@ Open http://localhost:8080 to access the upload form.
   - `hsno`
   - `spec`
   - `taxRate`
-- Optional `commonData` fields (현재 `aappcar` 템플릿 기준):
+- Optional `metaData` fields (현재 `aappcar` 템플릿 기준):
   - `filePath`
   - `approvalYn`
   - `approvalDate`
-- Runtime contract fields (템플릿 `CommonData` 계약):
-  - `customId` (`CommonData#getCustomId`) must resolve to a non-blank value for temp-path partitioning
+- Runtime contract fields (템플릿 `MetaData` 계약):
+  - `customId` (`MetaData#getCustomId`) must resolve to a non-blank value for temp-path partitioning
 - Server-managed fields:
   - `approvalYn`: defaults to `N` when omitted
   - `approvalDate`: saved as `LocalDate.now()` only when effective `approvalYn` is `Y`, otherwise `null`
   - `companyId`: currently forced to `COMPANY01` on server-side controller
   - `customId`: currently forced to `CUSTOM01` on server-side controller
-- `commonData` is parsed in strict mode:
+- `metaData` is parsed in strict mode:
   - reject unknown fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
   - reject scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
 
@@ -113,16 +113,16 @@ src/main/java/com/foo/excel/
 ├── controller/          # Thin split controllers (REST + Thymeleaf) + shared download endpoint
 ├── service/
 │   ├── contract/
-│   │   ├── CommonData.java                        # Marker interface for template-specific commonData DTOs
-│   │   ├── TemplateDefinition.java                # Type-safe bundle: DTO + commonData + config + handlers
-│   │   ├── PersistenceHandler.java                # Strategy interface for saving parsed rows with typed commonData
+│   │   ├── MetaData.java                        # Marker interface for template-specific metaData DTOs
+│   │   ├── TemplateDefinition.java                # Type-safe bundle: DTO + metaData + config + handlers
+│   │   ├── PersistenceHandler.java                # Strategy interface for saving parsed rows with typed metaData
 │   │   └── DatabaseUniquenessChecker.java         # Strategy interface for DB-level duplicate checks
 │   ├── file/
 │   │   ├── ExcelUploadFileService.java            # Multipart file handling + secure temp storage
 │   │   └── TempFileCleanupService.java            # Scheduled cleanup of expired temp/error files
 │   └── pipeline/
 │       ├── ExcelImportOrchestrator.java           # End-to-end pipeline; contains ImportResult record
-│       ├── ExcelUploadRequestService.java         # Request-level orchestration (size/commonData strict parsing + validation)
+│       ├── ExcelUploadRequestService.java         # Request-level orchestration (size/metaData strict parsing + validation)
 │       ├── parse/
 │       │   ├── ExcelParserService.java            # Excel -> List<DTO>; contains ColumnMapping + ParseResult records
 │       │   ├── ColumnResolutionException.java     # Column header mismatch error
@@ -137,9 +137,9 @@ src/main/java/com/foo/excel/
 │   │   └── AAppcarItemTemplateConfig.java     # Wires the TemplateDefinition bean (includes DB checker)
 │   ├── dto/
 │   │   ├── AAppcarItemDto.java                # DTO with @ExcelColumn + JSR-380 annotations
-│   │   └── AAppcarItemCommonData.java         # Tariff template-specific commonData DTO
+│   │   └── AAppcarItemMetaData.java         # Tariff template-specific metaData DTO
 │   ├── mapper/
-│   │   └── AAppcarItemCommonDataFormMapper.java # Thymeleaf form -> AAppcarItemCommonData mapper
+│   │   └── AAppcarItemMetaDataFormMapper.java # Thymeleaf form -> AAppcarItemMetaData mapper
 │   ├── persistence/
 │   │   ├── entity/
 │   │   │   ├── AAppcarItemId.java             # Item composite PK (@Embeddable)
@@ -208,11 +208,11 @@ See `application.properties` for a detailed security checklist and configuration
 1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
    - If you use `@ExcelCompositeUnique`, every field name in `fields()` must exist on the DTO class hierarchy; invalid declarations are treated as fail-fast configuration errors during within-file uniqueness validation
 2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
-3. **CommonData** -- 템플릿별 DTO를 만들고 `CommonData`를 구현한다 (strict JSON + Bean Validation 대상)
+3. **MetaData** -- 템플릿별 DTO를 만들고 `MetaData`를 구현한다 (strict JSON + Bean Validation 대상)
    - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)
-4. **Persistence** -- Implement `PersistenceHandler<T, C>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, C commonData)` to save parsed rows merged with common fields
-5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, C>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, C commonData)` if duplicates should be checked against existing data
-6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, C>` `@Bean` with `commonDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
+4. **Persistence** -- Implement `PersistenceHandler<T, C>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, C metaData)` to save parsed rows merged with common fields
+5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, C>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, C metaData)` if duplicates should be checked against existing data
+6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, C>` `@Bean` with `metaDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
 
 See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemImportConfig`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
 
@@ -248,7 +248,7 @@ Tests cover all layers:
 | `ExcelValidationServiceTest` | Component | JSR-380 constraints, boundary values, Korean error messages |
 | `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, invalid `@ExcelCompositeUnique` declaration fail-fast behavior |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
-| `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `commonData`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
-| `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `CommonData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |
+| `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `metaData`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
+| `TariffUploadPlanContractTest` | Contract/Plan | Upload domain contract checks for `MetaData`/`TemplateDefinition<T, C>` signature and tariff persistence mapping |
 | `AAppcarItemEmbeddedIdMappingTest` | Template Unit | Item/Equip embedded ID 매핑 및 엔티티 구성 검증 |
 | `AAppcarItemEmbeddedIdPersistenceTest` | Template Integration | Embedded ID 기반 upsert/요약 집계 persistence 동작 검증 |

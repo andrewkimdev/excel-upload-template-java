@@ -24,8 +24,8 @@
 검증 내용:
 - 파일 크기 제한: `checkFileSize`
   - `excel.import.max-file-size-mb` 초과 시 `MaxUploadSizeExceededException`
-- `commonData` 필수 여부/형식 검증
-  - JSON 모드 업로드 시 `commonData` 누락/공백 금지
+- `metaData` 필수 여부/형식 검증
+  - JSON 모드 업로드 시 `metaData` 누락/공백 금지
   - 엄격 역직렬화 적용:
     - 알 수 없는 필드 거부 (`FAIL_ON_UNKNOWN_PROPERTIES`)
     - 텍스트 필드에 대한 스칼라 강제 변환 거부 (`ALLOW_COERCION_OF_SCALARS` 비활성 + Textual coercion fail)
@@ -33,7 +33,7 @@
 
 이식 포인트:
 - API 계약을 느슨하게 가져가려면 strict mapper 설정을 의도적으로 완화해야 한다.
-- 현재 구현은 `commonData` 오류를 빠르게 400으로 반환하는 설계다.
+- 현재 구현은 `metaData` 오류를 빠르게 400으로 반환하는 설계다.
 
 ## 3. 파일/보안 검증
 
@@ -152,14 +152,14 @@
    - 필요 시 `@ExcelUnique` / `@ExcelCompositeUnique`
 2. `ExcelImportConfig`
    - 헤더 행/데이터 시작 행/시트 인덱스/푸터 마커
-3. `CommonData` DTO
+3. `MetaData` DTO
    - Bean Validation
    - `getCustomId()`가 non-blank 보장
 4. `PersistenceHandler<T, C>`
    - `saveAll(List<T>, List<Integer>, C)` 구현
 5. (선택) `DatabaseUniquenessChecker<T, C>`
 6. `TemplateDefinition<T, C>` 빈 등록
-   - `commonDataClass` 반드시 지정
+   - `metaDataClass` 반드시 지정
 
 ## 9. 운영 시 주의사항
 

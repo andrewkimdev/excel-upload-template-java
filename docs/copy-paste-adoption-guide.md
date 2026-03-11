@@ -45,10 +45,10 @@ Copy:
 This gives the full pattern:
 - row DTO (`@ExcelColumn` + validation)
 - `ExcelImportConfig`
-- template `CommonData`
-- `PersistenceHandler<T, C extends CommonData>`
+- template `MetaData`
+- `PersistenceHandler<T, C extends MetaData>`
 - optional `DatabaseUniquenessChecker<T, C>`
-- `TemplateDefinition<T, C>` bean with `commonDataClass`
+- `TemplateDefinition<T, C>` bean with `metaDataClass`
 - upload-level summary entity/repository
 
 ### Step C: Controller layer (choose one)
@@ -63,7 +63,7 @@ API + Thymeleaf pages:
 - add `AAppcarItemUploadPageController`
 - add `UploadIndexController`
 - add `templates/*.html`, `static/style.css`
-- add `AAppcarItemCommonDataFormMapper`
+- add `AAppcarItemMetaDataFormMapper`
 
 ## 3. Security and Contract Rules You Must Keep
 
@@ -72,7 +72,7 @@ API + Thymeleaf pages:
 - `.xlsx` only (`.xls` reject)
 - secure workbook open
 - row pre-count + max-row checks
-- strict `commonData` JSON (unknown fields reject + textual scalar coercion off)
+- strict `metaData` JSON (unknown fields reject + textual scalar coercion off)
 - hide internal exception details from API responses
 - external/user-facing errors in Korean
 - use `th:text` for user content in Thymeleaf
@@ -104,13 +104,13 @@ Multipart limits:
 3. Invalid rows return error report download URL.
 4. `.xls` is rejected.
 5. Oversized upload returns HTTP `413`.
-6. Unknown `commonData` fields are rejected.
+6. Unknown `metaData` fields are rejected.
 7. Unexpected exceptions do not leak internals.
 
 ## 7. Evidence (Repository)
 
 - Dependency reality: `build.gradle`
-- Strict `commonData` parsing: `ExcelUploadRequestService`
+- Strict `metaData` parsing: `ExcelUploadRequestService`
 - Upload security gates: `ExcelUploadFileService`, `SecureExcelUtils`, `ExcelImportOrchestrator`
 - Hidden internal errors in API responses: `ExcelApiExceptionHandler`
 - Cleanup scheduling requirement: `TempFileCleanupService`, `ExcelUploadApplication`

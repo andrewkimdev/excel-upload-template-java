@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.foo.excel.ExcelUploadApplication;
-import com.foo.excel.service.contract.CommonData;
+import com.foo.excel.service.contract.MetaData;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator;
@@ -47,7 +47,7 @@ class TariffUploadPlanContractTest {
   @Autowired private ApplicationContext applicationContext;
 
   @Test
-  void tariffApiUpload_requiresCommonDataPart() throws Exception {
+  void tariffApiUpload_requiresMetaDataPart() throws Exception {
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -58,11 +58,11 @@ class TariffUploadPlanContractTest {
     mockMvc
         .perform(multipart(API_UPLOAD_TARIFF).file(file))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message", containsString("commonData")));
+        .andExpect(jsonPath("$.message", containsString("metaData")));
   }
 
   @Test
-  void tariffApiUpload_rejectsUnknownCommonDataField() throws Exception {
+  void tariffApiUpload_rejectsUnknownMetaDataField() throws Exception {
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -70,10 +70,10 @@ class TariffUploadPlanContractTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             createValidAAppcarItemXlsx());
 
-    MockMultipartFile commonData =
+    MockMultipartFile metaData =
         new MockMultipartFile(
-            "commonData",
-            "commonData",
+            "metaData",
+            "metaData",
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":\"2026\","
@@ -85,7 +85,7 @@ class TariffUploadPlanContractTest {
                 .getBytes());
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(commonData))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(metaData))
         .andExpect(status().isBadRequest());
   }
 
@@ -95,36 +95,36 @@ class TariffUploadPlanContractTest {
         new MockMultipartFile(
             "file", "tariff.xls", "application/vnd.ms-excel", createValidAAppcarItemXls());
 
-    MockMultipartFile commonData =
+    MockMultipartFile metaData =
         new MockMultipartFile(
-            "commonData",
-            "commonData",
+            "metaData",
+            "metaData",
             MediaType.APPLICATION_JSON_VALUE,
-            requiredCommonDataJson().getBytes());
+            requiredMetaDataJson().getBytes());
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(commonData))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(metaData))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message", containsString("xlsx")));
   }
 
   @Test
-  void orchestratorContract_includesCommonDataParameter() {
+  void orchestratorContract_includesMetaDataParameter() {
     boolean hasNewSignature =
         Arrays.stream(ExcelImportOrchestrator.class.getDeclaredMethods())
             .filter(method -> method.getName().equals("processUpload"))
             .anyMatch(
                 method ->
                     method.getParameterCount() == 3
-                        && method.getParameterTypes()[2].equals(CommonData.class));
+                        && method.getParameterTypes()[2].equals(MetaData.class));
 
     assertTrue(
         hasNewSignature,
-        "ExcelImportOrchestrator.processUpload(file, templateType, commonData) 시그니처가 필요합니다.");
+        "ExcelImportOrchestrator.processUpload(file, templateType, metaData) 시그니처가 필요합니다.");
   }
 
   @Test
-  void persistenceHandlerContract_requiresSourceRowsAndCommonData() {
+  void persistenceHandlerContract_requiresSourceRowsAndMetaData() {
     Method[] methods = PersistenceHandler.class.getDeclaredMethods();
     boolean hasNewSaveAllSignature =
         Arrays.stream(methods)
@@ -134,23 +134,23 @@ class TariffUploadPlanContractTest {
                     method.getParameterCount() == 3
                         && List.class.isAssignableFrom(method.getParameterTypes()[0])
                         && List.class.isAssignableFrom(method.getParameterTypes()[1])
-                        && CommonData.class.isAssignableFrom(method.getParameterTypes()[2]));
+                        && MetaData.class.isAssignableFrom(method.getParameterTypes()[2]));
 
     assertTrue(
         hasNewSaveAllSignature,
-        "PersistenceHandler.saveAll(rows, sourceRowNumbers, commonData) 시그니처가 필요합니다.");
+        "PersistenceHandler.saveAll(rows, sourceRowNumbers, metaData) 시그니처가 필요합니다.");
   }
 
   @Test
-  void templateDefinitionContract_includesCommonDataClassField() {
+  void templateDefinitionContract_includesMetaDataClassField() {
     List<String> fieldNames =
         Arrays.stream(TemplateDefinition.class.getDeclaredFields())
             .map(Field::getName)
             .collect(Collectors.toList());
 
     assertTrue(
-        fieldNames.contains("commonDataClass"),
-        "TemplateDefinition에는 commonDataClass 필드가 포함되어야 합니다.");
+        fieldNames.contains("metaDataClass"),
+        "TemplateDefinition에는 metaDataClass 필드가 포함되어야 합니다.");
   }
 
   @Test
@@ -174,7 +174,7 @@ class TariffUploadPlanContractTest {
         "AAppcarItem must include approvalYn");
   }
 
-  private String requiredCommonDataJson() {
+  private String requiredMetaDataJson() {
     return "{"
         + "\"comeYear\":\"2026\","
         + "\"comeOrder\":\"001\","

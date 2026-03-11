@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.foo.excel.ExcelUploadApplication;
 import com.foo.excel.service.contract.PersistenceHandler.SaveResult;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemCommonData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -33,10 +33,10 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_sameItemId_createsThenUpdates_withFindByIdRoundTrip() {
-    AAppcarItemCommonData commonData = commonData();
+    AAppcarItemMetaData metaData = metaData();
 
     AAppcarItemDto first = dto("Item1", "Model-A");
-    SaveResult firstResult = service.saveAll(List.of(first), List.of(7), commonData);
+    SaveResult firstResult = service.saveAll(List.of(first), List.of(7), metaData);
 
     AAppcarItemId itemId =
         new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 7);
@@ -49,7 +49,7 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     assertThat(equipRepository.findById(equipId)).isPresent();
 
     AAppcarItemDto second = dto("Item1-Updated", "Model-B");
-    SaveResult secondResult = service.saveAll(List.of(second), List.of(7), commonData);
+    SaveResult secondResult = service.saveAll(List.of(second), List.of(7), metaData);
 
     assertThat(secondResult.created()).isZero();
     assertThat(secondResult.updated()).isEqualTo(1);
@@ -62,18 +62,18 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_sameEquipId_updatesEquipFields() {
-    AAppcarItemCommonData commonData = commonData();
+    AAppcarItemMetaData metaData = metaData();
     AAppcarEquipId equipId =
         new AAppcarEquipId("COMPANY01", "CUSTOM01", "2026", 1, 1, "EQ-01");
 
-    service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), commonData);
-    commonData.setEquipMean("설비B");
-    commonData.setSpec("규격B");
-    commonData.setHsno("999999999999");
-    commonData.setTaxRate(new BigDecimal("9.50"));
-    commonData.setApprovalYn("Y");
+    service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), metaData);
+    metaData.setEquipMean("설비B");
+    metaData.setSpec("규격B");
+    metaData.setHsno("999999999999");
+    metaData.setTaxRate(new BigDecimal("9.50"));
+    metaData.setApprovalYn("Y");
     service.saveAll(
-        List.of(dto("Item1", "Model-A"), dto("Item2", "Model-B")), List.of(7, 8), commonData);
+        List.of(dto("Item1", "Model-A"), dto("Item2", "Model-B")), List.of(7, 8), metaData);
 
     assertThat(equipRepository.findById(equipId))
         .get()
@@ -88,19 +88,19 @@ class AAppcarItemEmbeddedIdPersistenceTest {
             "설비B", "규격B", "999999999999", new BigDecimal("9.50"), "Y", LocalDate.now());
   }
 
-  private AAppcarItemCommonData commonData() {
-    AAppcarItemCommonData commonData = new AAppcarItemCommonData();
-    commonData.setComeYear("2026");
-    commonData.setComeOrder("001");
-    commonData.setUploadSeq("1");
-    commonData.setEquipCode("EQ-01");
-    commonData.setEquipMean("설비A");
-    commonData.setHsno("8481802000");
-    commonData.setSpec("규격A");
-    commonData.setTaxRate(new BigDecimal("8.50"));
-    commonData.setCompanyId("COMPANY01");
-    commonData.setCustomId("CUSTOM01");
-    return commonData;
+  private AAppcarItemMetaData metaData() {
+    AAppcarItemMetaData metaData = new AAppcarItemMetaData();
+    metaData.setComeYear("2026");
+    metaData.setComeOrder("001");
+    metaData.setUploadSeq("1");
+    metaData.setEquipCode("EQ-01");
+    metaData.setEquipMean("설비A");
+    metaData.setHsno("8481802000");
+    metaData.setSpec("규격A");
+    metaData.setTaxRate(new BigDecimal("8.50"));
+    metaData.setCompanyId("COMPANY01");
+    metaData.setCustomId("CUSTOM01");
+    return metaData;
   }
 
   private AAppcarItemDto dto(String itemName, String modelName) {

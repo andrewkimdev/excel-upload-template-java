@@ -1,7 +1,7 @@
 package com.foo.excel.templates.samples.aappcar.service;
 
 import com.foo.excel.service.contract.DatabaseUniquenessChecker;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemCommonData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class AAppcarItemDbUniquenessChecker
-    implements DatabaseUniquenessChecker<AAppcarItemDto, AAppcarItemCommonData> {
+    implements DatabaseUniquenessChecker<AAppcarItemDto, AAppcarItemMetaData> {
 
   private static final int ID_COLUMN_INDEX = 1;
   private static final ExcelColumnRef ID_COLUMN_REF = ExcelColumnRef.ofLetter("B");
@@ -39,21 +39,21 @@ public class AAppcarItemDbUniquenessChecker
       List<AAppcarItemDto> rows,
       Class<AAppcarItemDto> dtoClass,
       List<Integer> sourceRowNumbers,
-      AAppcarItemCommonData commonData) {
+      AAppcarItemMetaData metaData) {
     List<RowError> errors = new ArrayList<>();
     if (rows.isEmpty() || sourceRowNumbers.isEmpty()) {
       return errors;
     }
 
-    if (hasDuplicateEquipId(commonData)) {
+    if (hasDuplicateEquipId(metaData)) {
       for (int rowNumber : sourceRowNumbers) {
         errors.add(buildRowError(rowNumber, EQUIP_DUPLICATE_MESSAGE));
       }
     }
 
-    Set<AAppcarItemId> existingItemIds = findExistingItemIds(sourceRowNumbers, commonData);
+    Set<AAppcarItemId> existingItemIds = findExistingItemIds(sourceRowNumbers, metaData);
     for (int rowNumber : sourceRowNumbers) {
-      AAppcarItemId itemId = buildItemId(commonData, rowNumber);
+      AAppcarItemId itemId = buildItemId(metaData, rowNumber);
       if (existingItemIds.contains(itemId)) {
         errors.add(buildRowError(rowNumber, ITEM_DUPLICATE_MESSAGE));
       }
@@ -62,14 +62,14 @@ public class AAppcarItemDbUniquenessChecker
     return errors;
   }
 
-  private boolean hasDuplicateEquipId(AAppcarItemCommonData commonData) {
-    return equipRepository.existsById(buildEquipId(commonData));
+  private boolean hasDuplicateEquipId(AAppcarItemMetaData metaData) {
+    return equipRepository.existsById(buildEquipId(metaData));
   }
 
   private Set<AAppcarItemId> findExistingItemIds(
-      List<Integer> sourceRowNumbers, AAppcarItemCommonData commonData) {
+      List<Integer> sourceRowNumbers, AAppcarItemMetaData metaData) {
     List<AAppcarItemId> itemIds =
-        sourceRowNumbers.stream().map(rowNumber -> buildItemId(commonData, rowNumber)).toList();
+        sourceRowNumbers.stream().map(rowNumber -> buildItemId(metaData, rowNumber)).toList();
     List<AAppcarItem> existingItems = itemRepository.findAllById(itemIds);
     Set<AAppcarItemId> existingIds = new HashSet<>();
     for (AAppcarItem existingItem : existingItems) {
@@ -93,24 +93,24 @@ public class AAppcarItemDbUniquenessChecker
     return RowError.builder().rowNumber(rowNumber).cellErrors(cellErrors).build();
   }
 
-  private AAppcarItemId buildItemId(AAppcarItemCommonData commonData, int rowNumber) {
+  private AAppcarItemId buildItemId(AAppcarItemMetaData metaData, int rowNumber) {
     return new AAppcarItemId(
-        commonData.getCompanyId(),
-        commonData.getCustomId(),
-        commonData.getComeYear(),
-        commonData.getComeOrder(),
-        commonData.getUploadSeq(),
-        commonData.getEquipCode(),
+        metaData.getCompanyId(),
+        metaData.getCustomId(),
+        metaData.getComeYear(),
+        metaData.getComeOrder(),
+        metaData.getUploadSeq(),
+        metaData.getEquipCode(),
         rowNumber);
   }
 
-  private AAppcarEquipId buildEquipId(AAppcarItemCommonData commonData) {
+  private AAppcarEquipId buildEquipId(AAppcarItemMetaData metaData) {
     return new AAppcarEquipId(
-        commonData.getCompanyId(),
-        commonData.getCustomId(),
-        commonData.getComeYear(),
-        Integer.valueOf(commonData.getComeOrder()),
-        Integer.valueOf(commonData.getUploadSeq()),
-        commonData.getEquipCode());
+        metaData.getCompanyId(),
+        metaData.getCustomId(),
+        metaData.getComeYear(),
+        Integer.valueOf(metaData.getComeOrder()),
+        Integer.valueOf(metaData.getUploadSeq()),
+        metaData.getEquipCode());
   }
 }

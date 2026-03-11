@@ -38,7 +38,7 @@ class ExcelApiExceptionHandlerTest {
         .perform(
             multipart("/api/excel/upload/" + TemplateTypes.AAPPCAR)
                 .file(filePart())
-                .file(commonDataPart()))
+                .file(metaDataPart()))
         .andExpect(status().isInternalServerError())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.message").value("파일 처리 중 오류가 발생했습니다. 관리자에게 문의하세요."))
@@ -55,7 +55,7 @@ class ExcelApiExceptionHandlerTest {
         .perform(
             multipart("/api/excel/upload/" + TemplateTypes.AAPPCAR)
                 .file(filePart())
-                .file(commonDataPart()))
+                .file(metaDataPart()))
         .andExpect(status().isPayloadTooLarge())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.message").value("업로드 파일 크기가 제한을 초과했습니다."));
@@ -69,10 +69,10 @@ class ExcelApiExceptionHandlerTest {
         "a".getBytes());
   }
 
-  private MockMultipartFile commonDataPart() {
+  private MockMultipartFile metaDataPart() {
     return new MockMultipartFile(
-        "commonData",
-        "commonData",
+        "metaData",
+        "metaData",
         MediaType.APPLICATION_JSON_VALUE,
         ("{"
                 + "\"comeYear\":\"2026\","
