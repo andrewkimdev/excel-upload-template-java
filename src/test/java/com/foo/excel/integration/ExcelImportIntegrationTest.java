@@ -30,6 +30,7 @@ import java.util.Optional;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -471,24 +472,7 @@ class ExcelImportIntegrationTest {
   }
 
   private void fillAAppcarItemSheet(Sheet sheet, int dataRows, boolean makeInvalid) {
-    Row headerRow = sheet.createRow(3);
-    headerRow.createCell(0).setCellValue("No");
-    headerRow.createCell(1).setCellValue("순번");
-    headerRow.createCell(2).setCellValue("물품명");
-    headerRow.createCell(3).setCellValue("규격1)");
-    headerRow.createCell(4).setCellValue("모델명1)");
-    headerRow.createCell(5).setCellValue("HSK No");
-    headerRow.createCell(6).setCellValue("");
-    headerRow.createCell(7).setCellValue("관세율");
-    headerRow.createCell(8).setCellValue("단가($)");
-    headerRow.createCell(9).setCellValue("제조용");
-    headerRow.createCell(10).setCellValue("");
-    headerRow.createCell(11).setCellValue("수리용");
-    headerRow.createCell(12).setCellValue("");
-    headerRow.createCell(13).setCellValue("연간수입예상금액($)");
-    headerRow.createCell(14).setCellValue("심의결과");
-    headerRow.createCell(15).setCellValue("");
-    headerRow.createCell(16).setCellValue("연간 예상소요량");
+    createTariffHeaderRows(sheet);
 
     for (int i = 0; i < dataRows; i++) {
       Row row = sheet.createRow(6 + i);
@@ -511,6 +495,45 @@ class ExcelImportIntegrationTest {
       row.createCell(14).setCellValue("통과");
       row.createCell(16).setCellValue(100);
     }
+  }
+
+  private void createTariffHeaderRows(Sheet sheet) {
+    Row row4 = sheet.createRow(3);
+    row4.createCell(0).setCellValue("No");
+    row4.createCell(1).setCellValue("순번");
+    row4.createCell(2).setCellValue("물품명");
+    row4.createCell(3).setCellValue("규격1)");
+    row4.createCell(4).setCellValue("모델명1)");
+    row4.createCell(5).setCellValue("HSK No");
+    row4.createCell(6).setCellValue("");
+    row4.createCell(7).setCellValue("관세율");
+    row4.createCell(8).setCellValue("단가($)");
+    row4.createCell(9).setCellValue("소요량");
+    row4.createCell(10).setCellValue("");
+    row4.createCell(11).setCellValue("");
+    row4.createCell(12).setCellValue("");
+    row4.createCell(13).setCellValue("연간수입예상금액($)");
+    row4.createCell(14).setCellValue("심의결과");
+    row4.createCell(15).setCellValue("");
+    row4.createCell(16).setCellValue("연간 예상소요량");
+
+    Row row5 = sheet.createRow(4);
+    row5.createCell(9).setCellValue("제조용");
+    row5.createCell(10).setCellValue("");
+    row5.createCell(11).setCellValue("수리용");
+    row5.createCell(12).setCellValue("");
+
+    Row row6 = sheet.createRow(5);
+    row6.createCell(9).setCellValue("");
+    row6.createCell(10).setCellValue("");
+    row6.createCell(11).setCellValue("");
+    row6.createCell(12).setCellValue("");
+
+    sheet.addMergedRegion(new CellRangeAddress(3, 3, 9, 11));
+    sheet.addMergedRegion(new CellRangeAddress(4, 4, 9, 10));
+    sheet.addMergedRegion(new CellRangeAddress(4, 4, 11, 12));
+    sheet.addMergedRegion(new CellRangeAddress(5, 5, 9, 10));
+    sheet.addMergedRegion(new CellRangeAddress(5, 5, 11, 12));
   }
 
   private byte[] createWrongTemplateAAppcarItemXlsx() throws IOException {

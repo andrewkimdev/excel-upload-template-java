@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ public class ExcelParserService {
 
   private static final ThreadLocal<DataFormatter> DATA_FORMATTER =
       ThreadLocal.withInitial(DataFormatter::new);
+  private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
   public record ColumnMapping(
       Field field,
@@ -50,6 +52,8 @@ public class ExcelParserService {
       List<Integer> sourceRowNumbers,
       List<ColumnMapping> columnMappings,
       List<RowError> parseErrors) {}
+
+  private record HeaderRowRange(int startRowIndex, int endRowIndex) {}
 
   public <T> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config)
       throws IOException {
@@ -75,7 +79,7 @@ public class ExcelParserService {
           throw new IllegalStateException("Header row " + config.getHeaderRow() + " is empty");
         }
 
-        List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, headerRow, sheet);
+        List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, sheet, config);
         List<RowError> parseErrors = new ArrayList<>();
         List<Integer> sourceRowNumbers = new ArrayList<>();
         List<T> rows =
@@ -97,10 +101,9 @@ public class ExcelParserService {
   }
 
   private <T> List<ColumnMapping> resolveColumnMappings(
-      Class<T> dtoClass, Row headerRow, Sheet sheet) {
+      Class<T> dtoClass, Sheet sheet, ExcelImportConfig config) {
     List<ColumnMapping> mappings = new ArrayList<>();
     List<ColumnResolutionException> errors = new ArrayList<>();
-    Map<Integer, String> headerMap = buildHeaderMap(headerRow, sheet);
 
     for (Field field : getAllFields(dtoClass)) {
       ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
@@ -109,7 +112,7 @@ public class ExcelParserService {
       }
 
       try {
-        int resolvedIndex = resolveColumnIndex(annotation, field.getName(), headerMap);
+        int resolvedIndex = resolveColumnIndex(annotation, field.getName(), sheet, config);
 
         if (resolvedIndex < 0) {
           // 선택 필드이며 찾지 못함
@@ -132,31 +135,16 @@ public class ExcelParserService {
     return mappings;
   }
 
-  private Map<Integer, String> buildHeaderMap(Row headerRow, Sheet sheet) {
-    var map = new LinkedHashMap<Integer, String>();
-    for (int i = 0; i <= headerRow.getLastCellNum(); i++) {
-      Cell cell = headerRow.getCell(i);
-      if (cell == null) {
-        cell = resolveMergedCell(sheet, headerRow.getRowNum(), i);
-      }
-      if (cell != null) {
-        String value = getCellStringValue(cell);
-        if (value != null && !value.isBlank()) {
-          map.put(i, value);
-        }
-      }
-    }
-    return map;
-  }
-
   private int resolveColumnIndex(
-      ExcelColumn annotation, String fieldName, Map<Integer, String> headerMap) {
+      ExcelColumn annotation, String fieldName, Sheet sheet, ExcelImportConfig config) {
     // 모드 1: 헤더 검증이 포함된 고정 컬럼
     if (!annotation.column().isEmpty()) {
       int index = ExcelColumnUtil.letterToIndex(annotation.column());
-      String actual = headerMap.get(index);
+      List<String> actualSegments = resolveHeaderSegments(sheet, annotation, config, index);
+      String actual = formatResolvedHeader(actualSegments);
+      String expected = expectedHeaderLabel(annotation);
 
-      if (matchHeader(actual, annotation.header(), annotation.matchMode())) {
+      if (matchesResolvedHeader(annotation, actualSegments)) {
         return index;
       }
 
@@ -164,7 +152,7 @@ public class ExcelParserService {
       if (annotation.required()) {
         throw new ColumnResolutionException(
             fieldName,
-            annotation.header(),
+            expected,
             actual,
             ExcelColumnRef.ofLetter(annotation.column()),
             annotation.matchMode());
@@ -173,14 +161,14 @@ public class ExcelParserService {
           "Header mismatch for optional field '{}' at column {}: expected '{}', actual '{}'",
           fieldName,
           annotation.column(),
-          annotation.header(),
+          expected,
           actual);
       return -1;
     }
 
     // 모드 2: 헤더 텍스트 기반 자동 탐지
-    for (var entry : headerMap.entrySet()) {
-      if (matchHeader(entry.getValue(), annotation.header(), annotation.matchMode())) {
+    for (var entry : buildResolvedHeaderMap(sheet, annotation, config).entrySet()) {
+      if (matchesResolvedHeader(annotation, entry.getValue())) {
         return entry.getKey();
       }
     }
@@ -188,29 +176,147 @@ public class ExcelParserService {
     // 찾지 못함
     if (annotation.required()) {
       throw new ColumnResolutionException(
-          fieldName, annotation.header(), null, null, annotation.matchMode());
+          fieldName, expectedHeaderLabel(annotation), null, null, annotation.matchMode());
     }
     log.warn(
         "Could not resolve column for optional field '{}' with header '{}'",
         fieldName,
-        annotation.header());
+        expectedHeaderLabel(annotation));
     return -1;
   }
 
-  private boolean matchHeader(String cellValue, String expected, HeaderMatchMode mode) {
+  private Map<Integer, List<String>> buildResolvedHeaderMap(
+      Sheet sheet, ExcelColumn annotation, ExcelImportConfig config) {
+    HeaderRowRange range = resolveHeaderRowRange(annotation, config);
+    int maxColumns = resolveHeaderScanColumnCount(sheet, range);
+    var map = new LinkedHashMap<Integer, List<String>>();
+    for (int i = 0; i < maxColumns; i++) {
+      List<String> segments = resolveHeaderSegments(sheet, range, i);
+      if (!segments.isEmpty()) {
+        map.put(i, segments);
+      }
+    }
+    return map;
+  }
+
+  private List<String> resolveHeaderSegments(
+      Sheet sheet, ExcelColumn annotation, ExcelImportConfig config, int columnIndex) {
+    return resolveHeaderSegments(sheet, resolveHeaderRowRange(annotation, config), columnIndex);
+  }
+
+  private List<String> resolveHeaderSegments(
+      Sheet sheet, HeaderRowRange range, int columnIndex) {
+    List<String> segments = new ArrayList<>();
+    for (int rowIndex = range.startRowIndex(); rowIndex <= range.endRowIndex(); rowIndex++) {
+      String value = resolveCellValue(sheet, rowIndex, columnIndex);
+      if (value == null || value.isBlank()) {
+        continue;
+      }
+      if (segments.isEmpty() || !segments.get(segments.size() - 1).equals(value)) {
+        segments.add(value);
+      }
+    }
+    return segments;
+  }
+
+  private HeaderRowRange resolveHeaderRowRange(
+      ExcelColumn annotation, ExcelImportConfig config) {
+    int start = annotation.headerRowStart();
+    int end = annotation.headerRowEnd();
+    if (start == -1 && end == -1) {
+      int headerRow = config.getHeaderRow() - 1;
+      return new HeaderRowRange(headerRow, headerRow);
+    }
+    if (start < 1 || end < 1 || start > end) {
+      throw new IllegalStateException(
+          "Invalid header row range for column '%s': start=%d, end=%d"
+              .formatted(annotation.column(), start, end));
+    }
+    return new HeaderRowRange(start - 1, end - 1);
+  }
+
+  private int resolveHeaderScanColumnCount(Sheet sheet, HeaderRowRange range) {
+    int maxColumns = 0;
+    for (int rowIndex = range.startRowIndex(); rowIndex <= range.endRowIndex(); rowIndex++) {
+      Row row = sheet.getRow(rowIndex);
+      if (row != null && row.getLastCellNum() > maxColumns) {
+        maxColumns = row.getLastCellNum();
+      }
+    }
+    return maxColumns;
+  }
+
+  private boolean matchesResolvedHeader(ExcelColumn annotation, List<String> actualSegments) {
+    if (actualSegments.isEmpty()) {
+      return false;
+    }
+
+    List<String> expectedSegments = expectedHeaderSegments(annotation);
+    if (annotation.headerPath().length == 0) {
+      return matchHeader(
+          actualSegments.get(actualSegments.size() - 1),
+          expectedSegments.get(0),
+          annotation.matchMode(),
+          annotation.ignoreHeaderWhitespace());
+    }
+
+    if (actualSegments.size() != expectedSegments.size()) {
+      return false;
+    }
+
+    for (int i = 0; i < expectedSegments.size(); i++) {
+      if (!matchHeader(
+          actualSegments.get(i),
+          expectedSegments.get(i),
+          annotation.matchMode(),
+          annotation.ignoreHeaderWhitespace())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private List<String> expectedHeaderSegments(ExcelColumn annotation) {
+    if (annotation.headerPath().length == 0) {
+      return Collections.singletonList(annotation.header());
+    }
+    return Arrays.asList(annotation.headerPath());
+  }
+
+  private String expectedHeaderLabel(ExcelColumn annotation) {
+    return String.join(" > ", expectedHeaderSegments(annotation));
+  }
+
+  private String formatResolvedHeader(List<String> segments) {
+    if (segments.isEmpty()) {
+      return null;
+    }
+    return String.join(" > ", segments);
+  }
+
+  private boolean matchHeader(
+      String cellValue, String expected, HeaderMatchMode mode, boolean ignoreWhitespace) {
     if (cellValue == null || cellValue.isBlank()) {
       return false;
     }
 
-    String trimmedCell = cellValue.trim();
-    String trimmedExpected = expected.trim();
+    String normalizedCell = normalizeHeaderValue(cellValue, ignoreWhitespace);
+    String normalizedExpected = normalizeHeaderValue(expected, ignoreWhitespace);
 
     return switch (mode) {
-      case EXACT -> trimmedCell.equalsIgnoreCase(trimmedExpected);
-      case CONTAINS -> trimmedCell.contains(trimmedExpected);
-      case STARTS_WITH -> trimmedCell.startsWith(trimmedExpected);
-      case REGEX -> Pattern.matches(trimmedExpected, trimmedCell);
+      case EXACT -> normalizedCell.equalsIgnoreCase(normalizedExpected);
+      case CONTAINS -> normalizedCell.contains(normalizedExpected);
+      case STARTS_WITH -> normalizedCell.startsWith(normalizedExpected);
+      case REGEX -> Pattern.matches(normalizedExpected, normalizedCell);
     };
+  }
+
+  private String normalizeHeaderValue(String value, boolean ignoreWhitespace) {
+    String normalized = value.trim();
+    if (ignoreWhitespace) {
+      normalized = WHITESPACE_PATTERN.matcher(normalized).replaceAll("");
+    }
+    return normalized;
   }
 
   private <T> List<T> parseDataRows(
@@ -254,10 +360,7 @@ public class ExcelParserService {
       List<CellError> cellErrors = new ArrayList<>();
 
       for (ColumnMapping mapping : columnMappings) {
-        Cell cell = row.getCell(mapping.resolvedColumnIndex());
-        if (cell == null) {
-          cell = resolveMergedCell(sheet, i, mapping.resolvedColumnIndex());
-        }
+        Cell cell = resolveEffectiveCell(sheet, i, mapping.resolvedColumnIndex());
 
         Object value = getCellValue(cell, mapping, sheet, cellErrors);
         try {
@@ -418,6 +521,28 @@ public class ExcelParserService {
       }
     }
     return null;
+  }
+
+  private String resolveCellValue(Sheet sheet, int rowIdx, int colIdx) {
+    Cell cell = resolveEffectiveCell(sheet, rowIdx, colIdx);
+    return getCellStringValue(cell);
+  }
+
+  private Cell resolveEffectiveCell(Sheet sheet, int rowIdx, int colIdx) {
+    Row row = sheet.getRow(rowIdx);
+    Cell cell = row != null ? row.getCell(colIdx) : null;
+    if (cell == null || isBlankCellValue(cell)) {
+      Cell mergedCell = resolveMergedCell(sheet, rowIdx, colIdx);
+      if (mergedCell != null && !isBlankCellValue(mergedCell)) {
+        return mergedCell;
+      }
+    }
+    return cell;
+  }
+
+  private boolean isBlankCellValue(Cell cell) {
+    String value = getCellStringValue(cell);
+    return value == null || value.isBlank();
   }
 
   private String getCellStringValue(Cell cell) {

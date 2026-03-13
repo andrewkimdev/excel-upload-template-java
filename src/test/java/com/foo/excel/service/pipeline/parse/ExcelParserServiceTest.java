@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import lombok.Data;
 import org.apache.poi.ss.usermodel.Row;
@@ -83,6 +84,18 @@ class ExcelParserServiceTest {
   }
 
   @Test
+  void parse_multiRowMergedHeaders_realSample() throws IOException {
+    Path file = copySampleFile("samples/tariff_exemption_sample_merged_cols.xlsx");
+
+    ExcelParserService.ParseResult<AAppcarItemDto> result =
+        parserService.parse(file, AAppcarItemDto.class, tariffConfig);
+
+    assertThat(result.rows()).hasSize(3);
+    assertThat(result.rows().get(0).getProdQty()).isEqualTo(10);
+    assertThat(result.rows().get(0).getRepairQty()).isEqualTo(2);
+  }
+
+  @Test
   void parse_typeCoercion_string_trimmed() throws IOException {
     Path file = createAAppcarItemFile(1, false, false);
 
@@ -125,6 +138,32 @@ class ExcelParserServiceTest {
     assertThat(result.rows().get(0).getExactField()).isEqualTo("exactVal");
     assertThat(result.rows().get(0).getContainsField()).isEqualTo("containsVal");
     assertThat(result.rows().get(0).getStartsWithField()).isEqualTo("startsVal");
+  }
+
+  @Test
+  void parse_headerWhitespaceIgnoredWhenConfigured() throws IOException {
+    Path file = createFileWithWhitespaceSeparatedHeader();
+    ExcelImportConfig config = new SimpleConfig();
+
+    ExcelParserService.ParseResult<WhitespaceEqualsDto> result =
+        parserService.parse(file, WhitespaceEqualsDto.class, config);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.rows().get(0).getValue()).isEqualTo("value");
+  }
+
+  @Test
+  void parse_headerWhitespaceNotIgnoredForExactByDefault() throws IOException {
+    Path file = createFileWithWhitespaceSeparatedHeader();
+    ExcelImportConfig config = new SimpleConfig();
+
+    assertThatThrownBy(() -> parserService.parse(file, WhitespaceExactDto.class, config))
+        .isInstanceOf(ColumnResolutionBatchException.class)
+        .satisfies(
+            ex -> {
+              var batch = (ColumnResolutionBatchException) ex;
+              assertThat(batch.toKoreanMessage()).contains("헤더가 일치하지 않습니다");
+            });
   }
 
   @Test
@@ -332,6 +371,22 @@ class ExcelParserServiceTest {
     private String value;
   }
 
+  @Data
+  public static class WhitespaceEqualsDto {
+    @ExcelColumn(
+        header = "순번",
+        column = "B",
+        matchMode = HeaderMatchMode.EXACT,
+        ignoreHeaderWhitespace = true)
+    private String value;
+  }
+
+  @Data
+  public static class WhitespaceExactDto {
+    @ExcelColumn(header = "순번", column = "B", matchMode = HeaderMatchMode.EXACT)
+    private String value;
+  }
+
   static class SimpleConfig implements ExcelImportConfig {
     @Override
     public int getHeaderRow() {
@@ -352,25 +407,7 @@ class ExcelParserServiceTest {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
 
-      // 헤더 행은 4행(0-based: 3행)
-      Row headerRow = sheet.createRow(3);
-      headerRow.createCell(0).setCellValue("No"); // A열 - 장식용
-      headerRow.createCell(1).setCellValue("순번"); // B열
-      headerRow.createCell(2).setCellValue("물품명"); // C열
-      headerRow.createCell(3).setCellValue("규격1)"); // D열
-      headerRow.createCell(4).setCellValue("모델명1)"); // E열
-      headerRow.createCell(5).setCellValue("HSK No"); // F열
-      headerRow.createCell(6).setCellValue(""); // G열 - 병합 종속 셀
-      headerRow.createCell(7).setCellValue("관세율"); // H열
-      headerRow.createCell(8).setCellValue("단가($)"); // I열
-      headerRow.createCell(9).setCellValue("제조용"); // J열
-      headerRow.createCell(10).setCellValue(""); // K열 - 병합 종속 셀
-      headerRow.createCell(11).setCellValue("수리용"); // L열
-      headerRow.createCell(12).setCellValue(""); // M열 - 병합 종속 셀
-      headerRow.createCell(13).setCellValue("연간수입예상금액($)"); // N열
-      headerRow.createCell(14).setCellValue("심의결과"); // O열
-      headerRow.createCell(15).setCellValue(""); // P열 - 병합 종속 셀
-      headerRow.createCell(16).setCellValue("연간 예상소요량"); // Q열
+      createTariffHeaderRows(sheet);
 
       // 데이터 행은 7행(0-based: 6행)부터 시작
       int currentRow = 6;
@@ -414,21 +451,7 @@ class ExcelParserServiceTest {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
 
-      // 헤더 행은 4행(0-based: 3행)
-      Row headerRow = sheet.createRow(3);
-      headerRow.createCell(0).setCellValue("No");
-      headerRow.createCell(1).setCellValue("순번");
-      headerRow.createCell(2).setCellValue("물품명");
-      headerRow.createCell(3).setCellValue("규격1)");
-      headerRow.createCell(4).setCellValue("모델명1)");
-      headerRow.createCell(5).setCellValue("HSK No");
-      headerRow.createCell(7).setCellValue("관세율");
-      headerRow.createCell(8).setCellValue("단가($)");
-      headerRow.createCell(9).setCellValue("제조용");
-      headerRow.createCell(11).setCellValue("수리용");
-      headerRow.createCell(13).setCellValue("연간수입예상금액($)");
-      headerRow.createCell(14).setCellValue("심의결과");
-      headerRow.createCell(16).setCellValue("연간 예상소요량");
+      createTariffHeaderRows(sheet);
 
       // F-G 병합이 있는 데이터 행은 7행(0-based: 6행)
       Row dataRow = sheet.createRow(6);
@@ -456,6 +479,34 @@ class ExcelParserServiceTest {
       }
       return file;
     }
+  }
+
+  private void createTariffHeaderRows(Sheet sheet) {
+    Row row4 = sheet.createRow(3);
+    row4.createCell(0).setCellValue("No");
+    row4.createCell(1).setCellValue("순번");
+    row4.createCell(2).setCellValue("물품명");
+    row4.createCell(3).setCellValue("규격1)");
+    row4.createCell(4).setCellValue("모델명1)");
+    row4.createCell(5).setCellValue("HSK No");
+    row4.createCell(7).setCellValue("관세율");
+    row4.createCell(8).setCellValue("단가($)");
+    row4.createCell(9).setCellValue("소요량");
+    row4.createCell(13).setCellValue("연간수입예상금액($)");
+    row4.createCell(14).setCellValue("심의결과");
+    row4.createCell(16).setCellValue("연간 예상소요량");
+
+    Row row5 = sheet.createRow(4);
+    row5.createCell(9).setCellValue("제조용");
+    row5.createCell(11).setCellValue("수리용");
+
+    sheet.createRow(5);
+
+    sheet.addMergedRegion(new CellRangeAddress(3, 3, 9, 11));
+    sheet.addMergedRegion(new CellRangeAddress(4, 4, 9, 10));
+    sheet.addMergedRegion(new CellRangeAddress(4, 4, 11, 12));
+    sheet.addMergedRegion(new CellRangeAddress(5, 5, 9, 10));
+    sheet.addMergedRegion(new CellRangeAddress(5, 5, 11, 12));
   }
 
   private Path createFileWithAnnotatedHeaders() throws IOException {
@@ -499,6 +550,26 @@ class ExcelParserServiceTest {
       dataRow2.createCell(1).setCellValue(""); // 빈 값 -> false
 
       Path file = tempDir.resolve("boolean_test.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private Path createFileWithWhitespaceSeparatedHeader() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+
+      Row headerRow = sheet.createRow(0);
+      headerRow.createCell(0).setCellValue("Deco");
+      headerRow.createCell(1).setCellValue("순\n번");
+
+      Row dataRow = sheet.createRow(1);
+      dataRow.createCell(0).setCellValue("skip");
+      dataRow.createCell(1).setCellValue("value");
+
+      Path file = tempDir.resolve("whitespace_header_test.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
         wb.write(os);
       }
@@ -631,5 +702,12 @@ class ExcelParserServiceTest {
       }
       return file;
     }
+  }
+
+  private Path copySampleFile(String relativePath) throws IOException {
+    Path source = Path.of(relativePath);
+    Path target = tempDir.resolve(source.getFileName().toString());
+    Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+    return target;
   }
 }

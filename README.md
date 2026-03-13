@@ -166,7 +166,7 @@ src/main/java/com/foo/excel/
 3. **Content validation** -- verify file magic bytes and allow only OOXML `.xlsx`; reject legacy `.xls`
 4. **Row count pre-check** -- lightweight SAX/StAX count rejects obviously oversized files before full parsing
 5. **Secure parsing** -- Excel opened with XXE and zip bomb protections; parser exits early if rows exceed limit
-6. **Header verification** -- verify actual headers match `@ExcelColumn` expectations at declared positions; fail-fast with Korean error messages if required columns mismatch
+6. **Header verification** -- verify actual headers match `@ExcelColumn` expectations at declared positions; templates may opt into multi-row header ranges, merged-header paths, and whitespace-insensitive matching for legacy files; fail-fast with Korean error messages if required columns mismatch
 7. **Row parsing** -- read data rows, skip blanks, stop at footer marker (`※`)
 8. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
 9. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
@@ -207,6 +207,7 @@ See `application.properties` for a detailed security checklist and configuration
 
 1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
    - If you use `@ExcelCompositeUnique`, every field name in `fields()` must exist on the DTO class hierarchy; invalid declarations are treated as fail-fast configuration errors during within-file uniqueness validation
+   - For legacy workbooks with merged or multi-line headers, `@ExcelColumn` can opt into a header row range (`headerRowStart`/`headerRowEnd`), a logical header path (`headerPath`), and whitespace-insensitive comparison (`ignoreHeaderWhitespace`)
 2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
 3. **MetaData** -- 템플릿별 DTO를 만들고 `MetaData`를 구현한다 (strict JSON + Bean Validation 대상)
    - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)

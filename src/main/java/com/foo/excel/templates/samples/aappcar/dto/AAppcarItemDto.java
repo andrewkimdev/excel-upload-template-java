@@ -56,12 +56,24 @@ public class AAppcarItemDto {
   private BigDecimal unitprice;
 
   // J열: 소요량(제조용) - J-K 병합, J에서 읽음
-  @ExcelColumn(header = "제조용", column = "J")
+  @ExcelColumn(
+      header = "제조용",
+      column = "J",
+      ignoreHeaderWhitespace = true,
+      headerRowStart = 4,
+      headerRowEnd = 6,
+      headerPath = {"소요량", "제조용"})
   @Min(value = 0, message = "제조용 소요량은 0 이상이어야 합니다")
   private Integer prodQty;
 
   // L열: 소요량(수리용) - L-M 병합, L에서 읽음
-  @ExcelColumn(header = "수리용", column = "L")
+  @ExcelColumn(
+      header = "수리용",
+      column = "L",
+      ignoreHeaderWhitespace = true,
+      headerRowStart = 4,
+      headerRowEnd = 6,
+      headerPath = {"소요량", "수리용"})
   @Min(value = 0, message = "수리용 소요량은 0 이상이어야 합니다")
   private Integer repairQty;
 

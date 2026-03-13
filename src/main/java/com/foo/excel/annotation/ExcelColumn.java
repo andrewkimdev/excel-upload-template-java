@@ -32,6 +32,37 @@ public @interface ExcelColumn {
    */
   HeaderMatchMode matchMode() default HeaderMatchMode.CONTAINS;
 
+  /**
+   * 헤더 비교 시 공백류(스페이스, 탭, 줄바꿈 등)를 무시할지 여부.
+   *
+   * <p>true이면 실제 Excel 헤더와 애너테이션 기대값 모두에서 공백류를 제거한 뒤
+   * {@link #matchMode()}를 적용한다.
+   */
+  boolean ignoreHeaderWhitespace() default false;
+
+  /**
+   * 멀티 행 헤더가 시작하는 행 번호(1부터 시작, 포함).
+   *
+   * <p>기본값(-1)이면 {@link com.foo.excel.config.ExcelImportConfig#getHeaderRow()}를 사용한다.
+   * {@link #headerRowEnd()}와 함께 설정해야 한다.
+   */
+  int headerRowStart() default -1;
+
+  /**
+   * 멀티 행 헤더가 끝나는 행 번호(1부터 시작, 포함).
+   *
+   * <p>기본값(-1)이면 {@link com.foo.excel.config.ExcelImportConfig#getHeaderRow()}를 사용한다.
+   * {@link #headerRowStart()}와 함께 설정해야 한다.
+   */
+  int headerRowEnd() default -1;
+
+  /**
+   * 멀티 행 헤더 검증에 사용할 기대 헤더 경로.
+   *
+   * <p>예: {"소요량", "제조용"}. 비어 있으면 최종 세그먼트(leaf)와 {@link #header()}를 비교한다.
+   */
+  String[] headerPath() default {};
+
   /** 이 컬럼의 검증 오류에 사용할 사용자 정의 메시지 접두사. */
   String errorPrefix() default "";
 
