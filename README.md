@@ -226,6 +226,7 @@ Key properties in `application.properties`:
 | `excel.import.max-file-size-mb` | `10` | Maximum upload file size in MB |
 | `excel.import.max-rows` | `10000` | Maximum data rows per file |
 | `excel.import.pre-count-buffer` | `100` | Extra rows allowed in SAX pre-count to account for headers/blanks |
+| `excel.import.error-row-limit` | `100` | Stop row-level error collection after this many invalid rows and return a partial report (`0` or less disables the cap) |
 | `excel.import.retention-days` | `30` | Days to keep temp/error files (shorter = more secure) |
 | `excel.import.temp-directory` | `${java.io.tmpdir}/excel-imports` | Temp file storage path |
 

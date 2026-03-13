@@ -4,9 +4,8 @@ import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
-import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquip;
-import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
+import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import java.time.LocalDate;
@@ -26,6 +25,7 @@ public class AAppcarItemService
 
   private final AAppcarItemRepository itemRepository;
   private final AAppcarEquipRepository equipRepository;
+  private final AAppcarItemKeyFactory keyFactory;
 
   @Override
   @Transactional
@@ -52,7 +52,7 @@ public class AAppcarItemService
 
   private boolean upsertItemWithRetry(
       AAppcarItemDto dto, Integer rowNumber, AAppcarItemMetaData metaData) {
-    AAppcarItemId itemId = buildItemId(metaData, rowNumber);
+    AAppcarItemId itemId = keyFactory.buildItemId(metaData, rowNumber);
     int attempt = 0;
     while (attempt <= UPSERT_RETRY_LIMIT) {
       attempt++;
@@ -81,7 +81,7 @@ public class AAppcarItemService
   }
 
   private void upsertEquipWithRetry(AAppcarItemMetaData metaData) {
-    AAppcarEquipId equipId = buildEquipId(metaData);
+    var equipId = keyFactory.buildEquipId(metaData);
     int attempt = 0;
     while (attempt <= UPSERT_RETRY_LIMIT) {
       attempt++;
@@ -141,27 +141,6 @@ public class AAppcarItemService
             .approvalYn(resolveApprovalYn(dto.getApprovalYn(), metaData))
             .build();
     return entity;
-  }
-
-  private AAppcarItemId buildItemId(AAppcarItemMetaData metaData, Integer rowNumber) {
-    return new AAppcarItemId(
-        metaData.getCompanyId(),
-        metaData.getCustomId(),
-        metaData.getComeYear(),
-        metaData.getComeOrder(),
-        metaData.getUploadSeq(),
-        metaData.getEquipCode(),
-        rowNumber);
-  }
-
-  private AAppcarEquipId buildEquipId(AAppcarItemMetaData metaData) {
-    return new AAppcarEquipId(
-        metaData.getCompanyId(),
-        metaData.getCustomId(),
-        metaData.getComeYear(),
-        Integer.valueOf(metaData.getComeOrder()),
-        Integer.valueOf(metaData.getUploadSeq()),
-        metaData.getEquipCode());
   }
 
   private void applyEquipFields(AAppcarEquip entity, AAppcarItemMetaData metaData) {

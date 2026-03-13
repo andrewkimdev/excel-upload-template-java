@@ -70,6 +70,7 @@ public class ExcelImportOrchestrator {
   private <T, M extends MetaData> ImportResult doProcess(
       TemplateDefinition<?, ?> rawTemplate, MultipartFile file, MetaData metaData)
       throws IOException {
+    long requestStartedAt = System.nanoTime();
     TemplateDefinition<T, M> template = (TemplateDefinition<T, M>) rawTemplate;
     if (!template.getMetaDataClass().isInstance(metaData)) {
       throw new IllegalArgumentException("metaData 형식이 템플릿과 일치하지 않습니다.");
@@ -85,17 +86,45 @@ public class ExcelImportOrchestrator {
 
     try {
       // 2. xlsx 파일 저장 및 검증
+      long fileStageStartedAt = System.nanoTime();
       StoredUpload storedUpload = uploadFileService.storeAndValidateXlsx(file, tempSubDir);
       Path xlsxFile = storedUpload.path();
       String sanitizedFilename = storedUpload.sanitizedFilename();
+      long fileStageElapsedMs = elapsedMillis(fileStageStartedAt);
+      int maxErrorRows = resolveMaxErrorRows();
+
+      // 2a. upload-level 선행 차단 조건은 파싱 전에 확인한다.
+      var uploadPrecheckFailure = template.runUploadPrecheck(typedMetaData);
+      if (uploadPrecheckFailure.isPresent()) {
+        log.info(
+            "Upload stage timing [templateType={}, file={}, fileMs={}, totalMs={}, reportMode=skipped]: upload-level blocked",
+            template.getTemplateType(),
+            sanitizedFilename,
+            fileStageElapsedMs,
+            elapsedMillis(requestStartedAt));
+        return ImportResult.builder()
+            .success(false)
+            .rowsProcessed(0)
+            .errorRows(0)
+            .errorCount(0)
+            .message(uploadPrecheckFailure.orElseThrow())
+            .build();
+      }
 
       // 2b. 빠른 행 수 사전 점검(경량 SAX, 대용량 파일의 전체 파싱 회피)
+      long preCountStageStartedAt = System.nanoTime();
       int roughRowCount = SecureExcelUtils.countRows(xlsxFile, config.getSheetIndex());
       int preCountThreshold =
           properties.getMaxRows() + (config.getDataStartRow() - 1) + properties.getPreCountBuffer();
+      long preCountStageElapsedMs = elapsedMillis(preCountStageStartedAt);
       if (roughRowCount > preCountThreshold) {
         log.info(
-            "Pre-count rejected file: roughly {} rows, threshold={}",
+            "Upload stage timing [templateType={}, file={}, fileMs={}, preCountMs={}, totalMs={}]: pre-count rejected, roughRows={}, threshold={}",
+            template.getTemplateType(),
+            sanitizedFilename,
+            fileStageElapsedMs,
+            preCountStageElapsedMs,
+            elapsedMillis(requestStartedAt),
             roughRowCount,
             preCountThreshold);
         return ImportResult.builder()
@@ -112,11 +141,24 @@ public class ExcelImportOrchestrator {
       }
 
       // 3. 파싱
+      long parseStageStartedAt = System.nanoTime();
       ExcelParserService.ParseResult<T> parseResult =
-          parserService.parse(xlsxFile, template.getDtoClass(), config, properties.getMaxRows());
+          parserService.parse(
+              xlsxFile, template.getDtoClass(), config, properties.getMaxRows(), maxErrorRows);
+      long parseStageElapsedMs = elapsedMillis(parseStageStartedAt);
 
       // 4. 최대 행 수 확인
       if (parseResult.rows().size() > properties.getMaxRows()) {
+        log.info(
+            "Upload stage timing [templateType={}, file={}, fileMs={}, preCountMs={}, parseMs={}, totalMs={}]: row limit exceeded after parse, rowsProcessed={}, maxRows={}",
+            template.getTemplateType(),
+            sanitizedFilename,
+            fileStageElapsedMs,
+            preCountStageElapsedMs,
+            parseStageElapsedMs,
+            elapsedMillis(requestStartedAt),
+            parseResult.rows().size(),
+            properties.getMaxRows());
         return ImportResult.builder()
             .success(false)
             .rowsProcessed(parseResult.rows().size())
@@ -129,26 +171,91 @@ public class ExcelImportOrchestrator {
             .build();
       }
 
-      // 5. 검증(JSR-380 + 파일 내 유일성)
+      // 5. 파싱 오류가 있으면 이후 고비용 검증/DB 조회를 생략하고 즉시 실패 처리
+      if (!parseResult.parseErrors().isEmpty()) {
+        ExcelValidationResult validationResult =
+            capRowErrors(parseResult.rows().size(), parseResult.parseErrors(), maxErrorRows);
+        return buildFailureResult(
+            template,
+            sanitizedFilename,
+            xlsxFile,
+            config,
+            parseResult,
+            validationResult,
+            fileStageElapsedMs,
+            preCountStageElapsedMs,
+            parseStageElapsedMs,
+            0,
+            0,
+            requestStartedAt,
+            "parse failed; skipped validation and db uniqueness");
+      }
+
+      // 6. 검증(JSR-380 + 파일 내 유일성)
+      long validationStageStartedAt = System.nanoTime();
       ExcelValidationResult validationResult =
           validationService.validate(
-              parseResult.rows(), template.getDtoClass(), parseResult.sourceRowNumbers());
+              parseResult.rows(),
+              template.getDtoClass(),
+              parseResult.sourceRowNumbers(),
+              remainingErrorRowBudget(maxErrorRows, 0));
+      long validationStageElapsedMs = elapsedMillis(validationStageStartedAt);
 
-      // 6. DB 유일성 검사
+      // 7. 이미 유효하지 않으면 DB 유일성 검사를 생략한다.
+      if (!validationResult.isValid()) {
+        return buildFailureResult(
+            template,
+            sanitizedFilename,
+            xlsxFile,
+            config,
+            parseResult,
+            validationResult,
+            fileStageElapsedMs,
+            preCountStageElapsedMs,
+            parseStageElapsedMs,
+            validationStageElapsedMs,
+            0,
+            requestStartedAt,
+            failureOutcome("validation failed; skipped db uniqueness", validationResult));
+      }
+
+      // 8. DB 유일성 검사
+      long dbUniquenessStageStartedAt = System.nanoTime();
       List<RowError> dbErrors =
           template.checkDbUniqueness(
               parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
-      validationResult.merge(dbErrors);
-
-      // 7. 파싱 오류 병합
-      validationResult.merge(parseResult.parseErrors());
+      long dbUniquenessStageElapsedMs = elapsedMillis(dbUniquenessStageStartedAt);
+      if (!dbErrors.isEmpty()) {
+        List<RowError> cappedDbErrors =
+            capAdditionalErrors(
+                dbErrors, remainingErrorRowBudget(maxErrorRows, validationResult.getErrorRowCount()));
+        validationResult.merge(cappedDbErrors);
+        if (cappedDbErrors.size() < dbErrors.size()) {
+          validationResult.markTruncated(ExcelValidationResult.DEFAULT_TRUNCATION_MESSAGE);
+        }
+      }
 
       if (validationResult.isValid()) {
-        // 8. 저장
+        // 9. 저장
+        long saveStageStartedAt = System.nanoTime();
         PersistenceHandler.SaveResult saveResult =
             template
                 .getPersistenceHandler()
                 .saveAll(parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
+        long saveStageElapsedMs = elapsedMillis(saveStageStartedAt);
+
+        log.info(
+            "Upload stage timing [templateType={}, file={}, rowsProcessed={}, fileMs={}, preCountMs={}, parseMs={}, validationMs={}, dbUniquenessMs={}, saveMs={}, totalMs={}]: success",
+            template.getTemplateType(),
+            sanitizedFilename,
+            parseResult.rows().size(),
+            fileStageElapsedMs,
+            preCountStageElapsedMs,
+            parseStageElapsedMs,
+            validationStageElapsedMs,
+            dbUniquenessStageElapsedMs,
+            saveStageElapsedMs,
+            elapsedMillis(requestStartedAt));
 
         return ImportResult.builder()
             .success(true)
@@ -158,31 +265,20 @@ public class ExcelImportOrchestrator {
             .message("데이터 업로드 완료")
             .build();
       } else {
-        // 9. 오류 리포트 생성
-        Path errorFile =
-            errorReportService.generateErrorReport(
-                xlsxFile,
-                validationResult,
-                parseResult.columnMappings(),
-                config,
-                sanitizedFilename);
-
-        String errorFileId = errorFile.getFileName().toString().replace(".xlsx", "");
-
-        return ImportResult.builder()
-            .success(false)
-            .rowsProcessed(validationResult.getTotalRows())
-            .errorRows(validationResult.getErrorRowCount())
-            .errorCount(validationResult.getTotalErrorCount())
-            .errorFileId(errorFileId)
-            .downloadUrl("/api/excel/download/" + errorFileId)
-            .originalFilename(sanitizedFilename)
-            .message(
-                validationResult.getErrorRowCount()
-                    + "개 행에서 "
-                    + validationResult.getTotalErrorCount()
-                    + "개 오류가 발견되었습니다")
-            .build();
+        return buildFailureResult(
+            template,
+            sanitizedFilename,
+            xlsxFile,
+            config,
+            parseResult,
+            validationResult,
+            fileStageElapsedMs,
+            preCountStageElapsedMs,
+            parseStageElapsedMs,
+            validationStageElapsedMs,
+            dbUniquenessStageElapsedMs,
+            requestStartedAt,
+            failureOutcome("validation failed after db uniqueness", validationResult));
       }
     } catch (ColumnResolutionBatchException e) {
       log.warn("컬럼 해석에 실패했습니다: {}", e.getMessage());
@@ -213,5 +309,107 @@ public class ExcelImportOrchestrator {
       throw new IllegalArgumentException("customId 형식이 올바르지 않습니다.");
     }
     return sanitized;
+  }
+
+  private long elapsedMillis(long startedAtNanos) {
+    return (System.nanoTime() - startedAtNanos) / 1_000_000;
+  }
+
+  private int resolveMaxErrorRows() {
+    int configured = properties.getErrorRowLimit();
+    return configured > 0 ? configured : Integer.MAX_VALUE;
+  }
+
+  private int remainingErrorRowBudget(int maxErrorRows, int currentErrorRows) {
+    if (maxErrorRows == Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    }
+    return Math.max(0, maxErrorRows - currentErrorRows);
+  }
+
+  private ExcelValidationResult capRowErrors(
+      int totalRows, List<RowError> rowErrors, int maxErrorRows) {
+    if (rowErrors.isEmpty()) {
+      return ExcelValidationResult.success(totalRows);
+    }
+    if (maxErrorRows != Integer.MAX_VALUE && rowErrors.size() >= maxErrorRows) {
+      return ExcelValidationResult.truncatedFailure(
+          totalRows, rowErrors.subList(0, Math.min(rowErrors.size(), maxErrorRows)));
+    }
+    if (maxErrorRows == Integer.MAX_VALUE || rowErrors.size() <= maxErrorRows) {
+      return ExcelValidationResult.failure(totalRows, rowErrors);
+    }
+    return ExcelValidationResult.truncatedFailure(totalRows, rowErrors.subList(0, maxErrorRows));
+  }
+
+  private List<RowError> capAdditionalErrors(List<RowError> rowErrors, int budget) {
+    if (budget == Integer.MAX_VALUE || rowErrors.size() <= budget) {
+      return rowErrors;
+    }
+    return rowErrors.subList(0, budget);
+  }
+
+  private String failureOutcome(String baseOutcome, ExcelValidationResult validationResult) {
+    return validationResult.isTruncated() ? baseOutcome + "; errors truncated" : baseOutcome;
+  }
+
+  private <T> ImportResult buildFailureResult(
+      TemplateDefinition<T, ?> template,
+      String sanitizedFilename,
+      Path xlsxFile,
+      ExcelImportConfig config,
+      ExcelParserService.ParseResult<T> parseResult,
+      ExcelValidationResult validationResult,
+      long fileStageElapsedMs,
+      long preCountStageElapsedMs,
+      long parseStageElapsedMs,
+      long validationStageElapsedMs,
+      long dbUniquenessStageElapsedMs,
+      long requestStartedAt,
+      String outcome)
+      throws IOException {
+    long errorReportStageStartedAt = System.nanoTime();
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            xlsxFile, validationResult, parseResult.columnMappings(), config, sanitizedFilename);
+    long errorReportStageElapsedMs = elapsedMillis(errorReportStageStartedAt);
+
+    String errorFileId = errorFile.getFileName().toString().replace(".xlsx", "");
+    String message =
+        validationResult.getErrorRowCount()
+            + "개 행에서 "
+            + validationResult.getTotalErrorCount()
+            + "개 오류가 발견되었습니다";
+    if (validationResult.isTruncated() && validationResult.getTruncationMessage() != null) {
+      message += " " + validationResult.getTruncationMessage();
+    }
+
+    log.info(
+        "Upload stage timing [templateType={}, file={}, rowsProcessed={}, errorRows={}, errorCount={}, fileMs={}, preCountMs={}, parseMs={}, validationMs={}, dbUniquenessMs={}, errorReportMs={}, totalMs={}, reportMode={}]: {}",
+        template.getTemplateType(),
+        sanitizedFilename,
+        validationResult.getTotalRows(),
+        validationResult.getErrorRowCount(),
+        validationResult.getTotalErrorCount(),
+        fileStageElapsedMs,
+        preCountStageElapsedMs,
+        parseStageElapsedMs,
+        validationStageElapsedMs,
+        dbUniquenessStageElapsedMs,
+        errorReportStageElapsedMs,
+        elapsedMillis(requestStartedAt),
+        validationResult.isTruncated() ? "compact" : "full",
+        outcome);
+
+    return ImportResult.builder()
+        .success(false)
+        .rowsProcessed(validationResult.getTotalRows())
+        .errorRows(validationResult.getErrorRowCount())
+        .errorCount(validationResult.getTotalErrorCount())
+        .errorFileId(errorFileId)
+        .downloadUrl("/api/excel/download/" + errorFileId)
+        .originalFilename(sanitizedFilename)
+        .message(message)
+        .build();
   }
 }

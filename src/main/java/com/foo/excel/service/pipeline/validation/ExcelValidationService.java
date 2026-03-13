@@ -27,8 +27,9 @@ public class ExcelValidationService {
   private final WithinFileUniqueConstraintValidator withinFileUniqueConstraintValidator;
 
   public <T> ExcelValidationResult validate(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers) {
+      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, int maxErrorRows) {
     List<RowError> allErrors = new ArrayList<>();
+    boolean truncated = false;
 
     // 1차: JSR-380 검증
     for (int i = 0; i < rows.size(); i++) {
@@ -46,20 +47,47 @@ public class ExcelValidationService {
         }
 
         allErrors.add(RowError.builder().rowNumber(rowNumber).cellErrors(cellErrors).build());
+        if (hasReachedErrorLimit(allErrors.size(), maxErrorRows)) {
+          truncated = true;
+          break;
+        }
       }
     }
 
-    // 2차: 파일 내 유일성 검증
-    List<RowError> uniqueErrors =
-        withinFileUniqueConstraintValidator.checkWithinFileUniqueness(
-            rows, dtoClass, sourceRowNumbers);
-    mergeErrors(allErrors, uniqueErrors);
+    if (!hasReachedErrorLimit(allErrors.size(), maxErrorRows)) {
+      // 2차: 파일 내 유일성 검증
+      List<RowError> uniqueErrors =
+          withinFileUniqueConstraintValidator.checkWithinFileUniqueness(
+              rows, dtoClass, sourceRowNumbers, remainingErrorRowBudget(maxErrorRows, allErrors.size()));
+      mergeErrors(allErrors, uniqueErrors);
+      if (hasReachedErrorLimit(allErrors.size(), maxErrorRows) && !uniqueErrors.isEmpty()) {
+        truncated = true;
+      }
+    }
 
     if (allErrors.isEmpty()) {
       return ExcelValidationResult.success(rows.size());
     }
 
+    if (truncated) {
+      return ExcelValidationResult.truncatedFailure(rows.size(), allErrors);
+    }
     return ExcelValidationResult.failure(rows.size(), allErrors);
+  }
+
+  private int remainingErrorRowBudget(int maxErrorRows, int currentErrorRows) {
+    if (!isErrorLimitEnabled(maxErrorRows)) {
+      return Integer.MAX_VALUE;
+    }
+    return Math.max(0, maxErrorRows - currentErrorRows);
+  }
+
+  private boolean hasReachedErrorLimit(int errorRows, int maxErrorRows) {
+    return isErrorLimitEnabled(maxErrorRows) && errorRows >= maxErrorRows;
+  }
+
+  private boolean isErrorLimitEnabled(int maxErrorRows) {
+    return maxErrorRows > 0 && maxErrorRows != Integer.MAX_VALUE;
   }
 
   private <T> CellError mapViolationToCellError(

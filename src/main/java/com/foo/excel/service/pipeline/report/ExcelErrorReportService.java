@@ -12,6 +12,8 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +27,7 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
@@ -39,6 +42,23 @@ public class ExcelErrorReportService {
   private final ExcelImportProperties properties;
 
   public Path generateErrorReport(
+      Path originalXlsx,
+      ExcelValidationResult validationResult,
+      List<ExcelParserService.ColumnMapping> columnMappings,
+      ExcelImportConfig config,
+      String originalFilename)
+      throws IOException {
+
+    if (validationResult.isTruncated()) {
+      return generateCompactErrorReport(
+          originalXlsx, validationResult, columnMappings, config, originalFilename);
+    }
+
+    return generateFullErrorReport(
+        originalXlsx, validationResult, columnMappings, config, originalFilename);
+  }
+
+  private Path generateFullErrorReport(
       Path originalXlsx,
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
@@ -174,24 +194,102 @@ public class ExcelErrorReportService {
         }
 
         // 8. 임시 디렉터리에 저장
-        String fileId = UUID.randomUUID().toString();
-        Path errorsDir = properties.getTempDirectoryPath().resolve("errors");
-        Files.createDirectories(errorsDir);
-        Path errorFilePath = errorsDir.resolve(fileId + ".xlsx");
-
-        try (OutputStream os = Files.newOutputStream(errorFilePath)) {
-          sxssfWb.write(os);
-        }
-
-        // 9. 원본 파일명으로 .meta 파일 저장
-        if (originalFilename != null && !originalFilename.isBlank()) {
-          Path metaFilePath = errorsDir.resolve(fileId + ".meta");
-          Files.writeString(metaFilePath, originalFilename, StandardCharsets.UTF_8);
-        }
-
+        Path errorFilePath = writeErrorWorkbook(sxssfWb, originalFilename);
         log.info("Error report generated: {}", errorFilePath);
         return errorFilePath;
       }
     }
+  }
+
+  private Path generateCompactErrorReport(
+      Path originalXlsx,
+      ExcelValidationResult validationResult,
+      List<ExcelParserService.ColumnMapping> columnMappings,
+      ExcelImportConfig config,
+      String originalFilename)
+      throws IOException {
+    try (Workbook sourceWb = SecureExcelUtils.createWorkbook(originalXlsx);
+        XSSFWorkbook targetXssf = new XSSFWorkbook();
+        SXSSFWorkbook sxssfWb = new SXSSFWorkbook(targetXssf, 100)) {
+      Sheet sourceSheet = sourceWb.getSheetAt(config.getSheetIndex());
+      SXSSFSheet summarySheet = sxssfWb.createSheet("오류요약");
+      DataFormatter formatter = new DataFormatter();
+
+      CellStyle noticeStyle = sxssfWb.createCellStyle();
+      Font noticeFont = sxssfWb.createFont();
+      noticeFont.setItalic(true);
+      noticeFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+      noticeStyle.setFont(noticeFont);
+
+      CellStyle headerStyle = sxssfWb.createCellStyle();
+      Font boldFont = sxssfWb.createFont();
+      boldFont.setBold(true);
+      headerStyle.setFont(boldFont);
+
+      int rowIndex = 0;
+      Row noticeRow = summarySheet.createRow(rowIndex++);
+      noticeRow.createCell(0).setCellValue("※ 일부 오류만 표시됩니다. 원본 전체 파일은 분석하지 않았습니다.");
+      noticeRow.getCell(0).setCellStyle(noticeStyle);
+
+      Row headerRow = summarySheet.createRow(rowIndex++);
+      headerRow.createCell(0).setCellValue("원본 행번호");
+      headerRow.getCell(0).setCellStyle(headerStyle);
+
+      List<ExcelParserService.ColumnMapping> sortedMappings =
+          columnMappings.stream()
+              .sorted(Comparator.comparingInt(ExcelParserService.ColumnMapping::resolvedColumnIndex))
+              .toList();
+
+      for (int i = 0; i < sortedMappings.size(); i++) {
+        Cell cell = headerRow.createCell(i + 1);
+        cell.setCellValue(sortedMappings.get(i).annotation().header());
+        cell.setCellStyle(headerStyle);
+      }
+      Cell errorHeader = headerRow.createCell(sortedMappings.size() + 1);
+      errorHeader.setCellValue(config.getErrorColumnName());
+      errorHeader.setCellStyle(headerStyle);
+
+      for (RowError rowError : validationResult.getRowErrors()) {
+        Row sourceRow = sourceSheet.getRow(rowError.getRowNumber() - 1);
+        Row targetRow = summarySheet.createRow(rowIndex++);
+        targetRow.createCell(0).setCellValue(rowError.getRowNumber());
+        for (int i = 0; i < sortedMappings.size(); i++) {
+          int columnIndex = sortedMappings.get(i).resolvedColumnIndex();
+          String value = "";
+          if (sourceRow != null) {
+            Cell sourceCell = sourceRow.getCell(columnIndex);
+            if (sourceCell != null) {
+              value = formatter.formatCellValue(sourceCell);
+            }
+          }
+          targetRow.createCell(i + 1).setCellValue(SecureExcelUtils.sanitizeForExcelCell(value));
+        }
+        targetRow
+            .createCell(sortedMappings.size() + 1)
+            .setCellValue(SecureExcelUtils.sanitizeForExcelCell(rowError.getFormattedMessage()));
+      }
+
+      Path errorFilePath = writeErrorWorkbook(sxssfWb, originalFilename);
+      log.info("Compact error report generated: {}", errorFilePath);
+      return errorFilePath;
+    }
+  }
+
+  private Path writeErrorWorkbook(SXSSFWorkbook workbook, String originalFilename) throws IOException {
+    String fileId = UUID.randomUUID().toString();
+    Path errorsDir = properties.getTempDirectoryPath().resolve("errors");
+    Files.createDirectories(errorsDir);
+    Path errorFilePath = errorsDir.resolve(fileId + ".xlsx");
+
+    try (OutputStream os = Files.newOutputStream(errorFilePath)) {
+      workbook.write(os);
+    }
+
+    if (originalFilename != null && !originalFilename.isBlank()) {
+      Path metaFilePath = errorsDir.resolve(fileId + ".meta");
+      Files.writeString(metaFilePath, originalFilename, StandardCharsets.UTF_8);
+    }
+
+    return errorFilePath;
   }
 }

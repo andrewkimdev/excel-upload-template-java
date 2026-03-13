@@ -3,10 +3,8 @@ package com.foo.excel.templates.samples.aappcar.service;
 import com.foo.excel.service.contract.DatabaseUniquenessChecker;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
-import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
-import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.ExcelColumnRef;
@@ -34,13 +32,6 @@ import org.springframework.stereotype.Component;
  * the full row-oriented contract because the abstraction should remain understandable to readers
  * and reusable by future templates that may genuinely need DTO field values.
  *
- * <p>The checker validates two persistence targets:
- *
- * <ul>
- *   <li>the upload-level equip aggregate
- *   <li>the per-row item records
- * </ul>
- *
  * <p>Any conflict is converted into {@link RowError} instances pointing at the "순번" column so the
  * upload pipeline can render the problem back to the user in the standard Excel error-report
  * format.
@@ -62,18 +53,13 @@ public class AAppcarItemDbUniquenessChecker
   /** Human-readable header name shown in upload error messages. */
   private static final String ID_HEADER_NAME = "순번";
 
-  /** Message used when the upload-level equip aggregate already exists in the database. */
-  private static final String EQUIP_DUPLICATE_MESSAGE =
-      "동일 업로드 식별자(회사/세관/반입연도/차수/업로드순번/설비코드)가 이미 존재합니다.";
-
   /** Message used when an item row would collide with an existing persisted item ID. */
   private static final String ITEM_DUPLICATE_MESSAGE = "품목 테이블에 이미 존재하는 ID입니다.";
 
   /** Repository for per-row item entities. */
   private final AAppcarItemRepository itemRepository;
 
-  /** Repository for the upload-level equip aggregate entity. */
-  private final AAppcarEquipRepository equipRepository;
+  private final AAppcarItemKeyFactory keyFactory;
 
   /**
    * Performs DB duplicate checking for the current upload.
@@ -82,21 +68,14 @@ public class AAppcarItemDbUniquenessChecker
    * deliberate, not accidental. In this template, persisted IDs are derived from metadata and the
    * original source row numbers, so DTO field values do not participate in DB uniqueness.
    *
-   * <p>The check happens in two parts:
-   *
-   * <ol>
-   *   <li>Check whether the upload-level equip ID already exists
-   *   <li>Check whether any row-derived item IDs already exist
-   * </ol>
-   *
-   * <p>Both conflict types are reported against the same "순번" column because that column maps most
-   * directly to the persisted item identity seen by users.
+   * <p>The check reports row-derived item ID conflicts against the "순번" column because that column
+   * maps most directly to the persisted item identity seen by users.
    *
    * @param rows parsed DTO rows; unused for this template's current business key
    * @param dtoClass DTO class; unused for this template's current business key
    * @param sourceRowNumbers original Excel row numbers that become part of the item identity
    * @param metaData upload-level metadata used to build equip and item IDs
-   * @return row errors representing equip-level or item-level DB conflicts
+   * @return row errors representing row-level item DB conflicts
    */
   @Override
   public List<RowError> check(
@@ -111,30 +90,17 @@ public class AAppcarItemDbUniquenessChecker
       return errors;
     }
 
-    // The equip table is modeled as an upload-level aggregate. If it already exists, every row in
-    // this upload is invalid because they all belong to the same duplicated aggregate context.
-    if (hasDuplicateEquipId(metaData)) {
-      for (int rowNumber : sourceRowNumbers) {
-        errors.add(buildRowError(rowNumber, EQUIP_DUPLICATE_MESSAGE));
-      }
-    }
-
     // Item IDs are row-specific because the original Excel row number is part of the persisted ID.
     // We prefetch existing IDs once and then match in-memory for stable per-row error reporting.
     Set<AAppcarItemId> existingItemIds = findExistingItemIds(sourceRowNumbers, metaData);
     for (int rowNumber : sourceRowNumbers) {
-      AAppcarItemId itemId = buildItemId(metaData, rowNumber);
+      AAppcarItemId itemId = keyFactory.buildItemId(metaData, rowNumber);
       if (existingItemIds.contains(itemId)) {
         errors.add(buildRowError(rowNumber, ITEM_DUPLICATE_MESSAGE));
       }
     }
 
     return errors;
-  }
-
-  /** Checks whether the upload-level equip aggregate already exists. */
-  private boolean hasDuplicateEquipId(AAppcarItemMetaData metaData) {
-    return equipRepository.existsById(buildEquipId(metaData));
   }
 
   /**
@@ -146,7 +112,7 @@ public class AAppcarItemDbUniquenessChecker
   private Set<AAppcarItemId> findExistingItemIds(
       List<Integer> sourceRowNumbers, AAppcarItemMetaData metaData) {
     List<AAppcarItemId> itemIds =
-        sourceRowNumbers.stream().map(rowNumber -> buildItemId(metaData, rowNumber)).toList();
+        sourceRowNumbers.stream().map(rowNumber -> keyFactory.buildItemId(metaData, rowNumber)).toList();
     List<AAppcarItem> existingItems = itemRepository.findAllById(itemIds);
     Set<AAppcarItemId> existingIds = new HashSet<>();
     for (AAppcarItem existingItem : existingItems) {
@@ -174,38 +140,5 @@ public class AAppcarItemDbUniquenessChecker
     List<CellError> cellErrors = new ArrayList<>();
     cellErrors.add(cellError);
     return RowError.builder().rowNumber(rowNumber).cellErrors(cellErrors).build();
-  }
-
-  /**
-   * Builds the per-row item primary key.
-   *
-   * <p>Notice that the persisted identity is metadata-heavy and uses {@code rowNumber} instead of a
-   * DTO field value. That is why this checker can remain correct without inspecting {@code rows}.
-   */
-  private AAppcarItemId buildItemId(AAppcarItemMetaData metaData, int rowNumber) {
-    return new AAppcarItemId(
-        metaData.getCompanyId(),
-        metaData.getCustomId(),
-        metaData.getComeYear(),
-        metaData.getComeOrder(),
-        metaData.getUploadSeq(),
-        metaData.getEquipCode(),
-        rowNumber);
-  }
-
-  /**
-   * Builds the upload-level equip primary key.
-   *
-   * <p>This aggregate key is shared by every row in the upload, which is why an equip collision is
-   * reported back against every source row number.
-   */
-  private AAppcarEquipId buildEquipId(AAppcarItemMetaData metaData) {
-    return new AAppcarEquipId(
-        metaData.getCompanyId(),
-        metaData.getCustomId(),
-        metaData.getComeYear(),
-        Integer.valueOf(metaData.getComeOrder()),
-        Integer.valueOf(metaData.getUploadSeq()),
-        metaData.getEquipCode());
   }
 }

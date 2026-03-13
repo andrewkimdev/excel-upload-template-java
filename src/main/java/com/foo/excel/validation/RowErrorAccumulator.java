@@ -61,6 +61,10 @@ public final class RowErrorAccumulator {
     return rowErrors;
   }
 
+  public int size() {
+    return rowErrors.size();
+  }
+
   private RowError normalize(RowError rowError) {
     return RowError.builder()
         .rowNumber(rowError.getRowNumber())

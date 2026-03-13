@@ -8,9 +8,9 @@ import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
-import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.templates.samples.aappcar.service.AAppcarItemDbUniquenessChecker;
+import com.foo.excel.templates.samples.aappcar.service.AAppcarItemKeyFactory;
 import com.foo.excel.validation.RowError;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,18 +23,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class AAppcarItemDbUniquenessCheckerTest {
 
   @Mock private AAppcarItemRepository itemRepository;
-  @Mock private AAppcarEquipRepository equipRepository;
 
   private AAppcarItemDbUniquenessChecker checker;
 
   @BeforeEach
   void setUp() {
-    checker = new AAppcarItemDbUniquenessChecker(itemRepository, equipRepository);
+    checker = new AAppcarItemDbUniquenessChecker(itemRepository, new AAppcarItemKeyFactory());
   }
 
   @Test
   void check_whenNoDuplicates_returnsEmptyErrors() {
-    when(equipRepository.existsById(any())).thenReturn(false);
     when(itemRepository.findAllById(any())).thenReturn(List.of());
 
     List<RowError> result =
@@ -48,27 +46,7 @@ class AAppcarItemDbUniquenessCheckerTest {
   }
 
   @Test
-  void check_whenEquipIdExists_marksAllRowsAsDuplicate() {
-    when(equipRepository.existsById(any())).thenReturn(true);
-    when(itemRepository.findAllById(any())).thenReturn(List.of());
-
-    List<RowError> result =
-        checker.check(
-            List.of(new AAppcarItemDto(), new AAppcarItemDto()),
-            AAppcarItemDto.class,
-            List.of(7, 8),
-            createMetaData("2026", "1", "1", "EQ-01"));
-
-    assertThat(result).hasSize(2);
-    assertThat(result)
-        .allMatch(rowError -> rowError.getFormattedMessage().startsWith("B열 "))
-        .allMatch(rowError -> !rowError.getFormattedMessage().contains("B열열"))
-        .allMatch(rowError -> rowError.getFormattedMessage().contains("동일 업로드 식별자"));
-  }
-
-  @Test
   void check_whenItemIdExists_marksOnlyConflictingRows() {
-    when(equipRepository.existsById(any())).thenReturn(false);
     AAppcarItem existing =
         AAppcarItem.builder()
             .id(new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "1", "1", "EQ-01", 8))

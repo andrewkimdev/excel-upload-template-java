@@ -53,6 +53,19 @@ class ExcelValidationResultTest {
   }
 
   @Test
+  void failure_truncated_preservesTruncationMetadata() {
+    ExcelValidationResult result =
+        ExcelValidationResult.failure(
+            3,
+            List.of(rowError(7, cellError("goodsDes", "물품명 오류"))),
+            true,
+            "검증이 조기 중단되어 일부 오류만 표시됩니다.");
+
+    assertThat(result.isTruncated()).isTrue();
+    assertThat(result.getTruncationMessage()).contains("일부 오류");
+  }
+
+  @Test
   void formattedMessage_displayReadyColumnLabel_doesNotDuplicateSuffix() {
     RowError rowError =
         RowError.builder()

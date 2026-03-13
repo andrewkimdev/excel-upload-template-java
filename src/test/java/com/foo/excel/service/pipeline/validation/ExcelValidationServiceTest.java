@@ -19,10 +19,7 @@ class ExcelValidationServiceTest {
 
   @BeforeEach
   void setUp() {
-    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-    Validator validator = factory.getValidator();
-    WithinFileUniqueConstraintValidator uniqueValidator = new WithinFileUniqueConstraintValidator();
-    validationService = new ExcelValidationService(validator, uniqueValidator);
+    validationService = createValidationService();
   }
 
   @Test
@@ -31,7 +28,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isTrue();
     assertThat(result.getTotalErrorCount()).isEqualTo(0);
@@ -44,7 +41,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isFalse();
     assertThat(result.getRowErrors()).isNotEmpty();
@@ -58,7 +55,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "goodsDes")).contains("물품명은 100자 이내로 입력하세요");
@@ -71,7 +68,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isTrue();
   }
@@ -83,7 +80,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "hsno")).contains("HSK 형식이 올바르지 않습니다");
@@ -96,7 +93,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "taxRate")).contains("관세율은 0 이상이어야 합니다");
@@ -109,7 +106,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isFalse();
     assertThat(findErrorMessage(result, "taxRate")).contains("관세율은 100 이하여야 합니다");
@@ -122,7 +119,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isTrue();
   }
@@ -134,7 +131,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isTrue();
   }
@@ -146,7 +143,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isFalse();
   }
@@ -160,7 +157,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(dto);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7), 100);
 
     assertThat(result.isValid()).isFalse();
     List<String> allMessages =
@@ -182,7 +179,7 @@ class ExcelValidationServiceTest {
     List<AAppcarItemDto> rows = List.of(first, duplicate);
 
     ExcelValidationResult result =
-        validationService.validate(rows, AAppcarItemDto.class, List.of(7, 8));
+        validationService.validate(rows, AAppcarItemDto.class, List.of(7, 8), 100);
 
     assertThat(result.isValid()).isFalse();
     assertThat(result.getRowErrors()).hasSize(1);
@@ -191,6 +188,24 @@ class ExcelValidationServiceTest {
         .hasSize(2)
         .anySatisfy(error -> assertThat(error.fieldName()).isEqualTo("taxRate"))
         .anySatisfy(error -> assertThat(error.fieldName()).isEqualTo("goodsDes"));
+  }
+
+  @Test
+  void errorRowLimit_stopsValidationEarly_andMarksResultTruncated() {
+    AAppcarItemDto first = createValidDto();
+    first.setGoodsDes("");
+    AAppcarItemDto second = createValidDto();
+    second.setGoodsDes("");
+
+    ExcelValidationResult result =
+        validationService.validate(List.of(first, second), AAppcarItemDto.class, List.of(7, 8), 1);
+
+    assertThat(result.isValid()).isFalse();
+    assertThat(result.isTruncated()).isTrue();
+    assertThat(result.getTruncationMessage()).contains("조기 중단");
+    assertThat(result.getErrorRowCount()).isEqualTo(1);
+    assertThat(result.getRowErrors()).hasSize(1);
+    assertThat(result.getRowErrors().get(0).getRowNumber()).isEqualTo(7);
   }
 
   // ===== 헬퍼 =====
@@ -210,6 +225,13 @@ class ExcelValidationServiceTest {
     dto.setApprovalYn("통과");
     dto.setImportQty(100);
     return dto;
+  }
+
+  private ExcelValidationService createValidationService() {
+    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+    Validator validator = factory.getValidator();
+    WithinFileUniqueConstraintValidator uniqueValidator = new WithinFileUniqueConstraintValidator();
+    return new ExcelValidationService(validator, uniqueValidator);
   }
 
   private String findErrorMessage(ExcelValidationResult result, String fieldName) {

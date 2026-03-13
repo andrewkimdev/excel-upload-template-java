@@ -49,13 +49,20 @@ public class WithinFileUniqueConstraintValidator {
    */
   public <T> List<RowError> checkWithinFileUniqueness(
       List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers) {
+    return checkWithinFileUniqueness(rows, dtoClass, sourceRowNumbers, Integer.MAX_VALUE);
+  }
+
+  public <T> List<RowError> checkWithinFileUniqueness(
+      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, int maxErrorRows) {
     // 여러 셀 오류를 행 번호 기준으로 모았다가 마지막에 RowError 목록으로 변환한다.
     RowErrorAccumulator errors = new RowErrorAccumulator();
 
     // @ExcelUnique(checkWithinFile = true) 대상 필드를 먼저 검사한다.
-    checkSingleFieldUniqueness(rows, dtoClass, sourceRowNumbers, errors);
+    checkSingleFieldUniqueness(rows, dtoClass, sourceRowNumbers, errors, maxErrorRows);
     // 클래스 레벨의 @ExcelCompositeUnique 선언도 이어서 검사한다.
-    checkCompositeUniqueness(rows, dtoClass, sourceRowNumbers, errors);
+    if (!hasReachedErrorLimit(errors, maxErrorRows)) {
+      checkCompositeUniqueness(rows, dtoClass, sourceRowNumbers, errors, maxErrorRows);
+    }
 
     return errors.toList();
   }
@@ -76,7 +83,8 @@ public class WithinFileUniqueConstraintValidator {
       List<T> rows,
       Class<T> dtoClass,
       List<Integer> sourceRowNumbers,
-      RowErrorAccumulator errors) {
+      RowErrorAccumulator errors,
+      int maxErrorRows) {
 
     // DTO에 선언된 모든 필드를 훑으면서 파일 내부 중복 검사 대상인지 확인한다.
     for (Field field : dtoClass.getDeclaredFields()) {
@@ -95,6 +103,9 @@ public class WithinFileUniqueConstraintValidator {
 
       // DTO 목록과 sourceRowNumbers는 동일한 인덱스 체계를 가진다고 가정한다.
       for (int i = 0; i < rows.size(); i++) {
+        if (hasReachedErrorLimit(errors, maxErrorRows)) {
+          return;
+        }
         T row = rows.get(i);
         Object value;
         try {
@@ -153,7 +164,8 @@ public class WithinFileUniqueConstraintValidator {
       List<T> rows,
       Class<T> dtoClass,
       List<Integer> sourceRowNumbers,
-      RowErrorAccumulator errors) {
+      RowErrorAccumulator errors,
+      int maxErrorRows) {
 
     // repeatable annotation을 고려하여 클래스 레벨의 모든 복합 유니크 선언을 가져온다.
     ExcelCompositeUnique[] compositeAnnotations =
@@ -171,6 +183,9 @@ public class WithinFileUniqueConstraintValidator {
       Map<List<Object>, Integer> seenKeys = new HashMap<>();
 
       for (int i = 0; i < rows.size(); i++) {
+        if (hasReachedErrorLimit(errors, maxErrorRows)) {
+          return;
+        }
         T row = rows.get(i);
         // 필드 순서를 유지한 값 목록 자체를 복합 키로 사용한다.
         List<Object> compositeKey = new ArrayList<>();
@@ -293,6 +308,10 @@ public class WithinFileUniqueConstraintValidator {
    */
   private void addErrorToRow(RowErrorAccumulator errors, int rowNumber, CellError cellError) {
     errors.addCellError(rowNumber, cellError);
+  }
+
+  private boolean hasReachedErrorLimit(RowErrorAccumulator errors, int maxErrorRows) {
+    return errors.size() >= maxErrorRows;
   }
 
   /**

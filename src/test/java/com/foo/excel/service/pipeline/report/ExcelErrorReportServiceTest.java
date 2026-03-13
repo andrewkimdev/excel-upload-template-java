@@ -141,6 +141,27 @@ class ExcelErrorReportServiceTest {
   }
 
   @Test
+  void errorReport_truncatedFailure_generatesCompactSummaryWorkbook() throws IOException {
+    Path originalFile = createSimpleXlsx();
+    ExcelValidationResult validationResult =
+        ExcelValidationResult.truncatedFailure(10, createValidationResult().getRowErrors());
+    TestConfig config = new TestConfig();
+    List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile, validationResult, mappings, config, "test-original.xlsx");
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      assertThat(wb.getNumberOfSheets()).isEqualTo(1);
+      Sheet sheet = wb.getSheetAt(0);
+      assertThat(sheet.getSheetName()).isEqualTo("오류요약");
+      assertThat(sheet.getRow(0).getCell(0).getStringCellValue()).contains("일부 오류만 표시");
+      assertThat(sheet.getRow(1).getCell(0).getStringCellValue()).isEqualTo("원본 행번호");
+    }
+  }
+
+  @Test
   void errorReport_messageWithFormulaContent_isSafelyFormatted() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResultWithFormulaInjection();

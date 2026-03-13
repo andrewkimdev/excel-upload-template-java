@@ -95,7 +95,7 @@ class ExcelImportIntegrationTest {
   }
 
   @Test
-  void upload_sameFileAndMetaData_twice_returnsDuplicateErrorReport() throws Exception {
+  void upload_sameFileAndMetaData_twice_returnsUploadLevelFailureWithoutErrorReport() throws Exception {
     byte[] xlsxBytes = createValidAAppcarItemXlsx(2);
     MockMultipartFile firstFile =
         new MockMultipartFile(
@@ -121,8 +121,9 @@ class ExcelImportIntegrationTest {
         .perform(multipart(API_UPLOAD_TARIFF).file(secondFile).file(requiredMetaDataPart()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
-        .andExpect(jsonPath("$.errorRows").value(greaterThan(0)))
-        .andExpect(jsonPath("$.downloadUrl").value(startsWith("/api/excel/download/")));
+        .andExpect(jsonPath("$.rowsProcessed").value(0))
+        .andExpect(jsonPath("$.message").value("이미 승인된 장비가 존재합니다."))
+        .andExpect(jsonPath("$.downloadUrl").doesNotExist());
 
     assertThat(itemRepository.count()).isEqualTo(2);
     Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredMetaDataEquipId());

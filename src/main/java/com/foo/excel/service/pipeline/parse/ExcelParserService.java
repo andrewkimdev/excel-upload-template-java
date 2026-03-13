@@ -57,11 +57,17 @@ public class ExcelParserService {
 
   public <T> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config)
       throws IOException {
-    return parse(xlsxFile, dtoClass, config, Integer.MAX_VALUE);
+    return parse(xlsxFile, dtoClass, config, Integer.MAX_VALUE, Integer.MAX_VALUE);
   }
 
   public <T> ParseResult<T> parse(
       Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config, int maxRows) throws IOException {
+    return parse(xlsxFile, dtoClass, config, maxRows, Integer.MAX_VALUE);
+  }
+
+  public <T> ParseResult<T> parse(
+      Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config, int maxRows, int maxErrorRows)
+      throws IOException {
 
     int headerRowNum = config.getHeaderRow() - 1; // 0-based로 변환
     int dataStartRowNum = config.getDataStartRow() - 1;
@@ -91,7 +97,8 @@ public class ExcelParserService {
                 footerMarker,
                 parseErrors,
                 sourceRowNumbers,
-                maxRows);
+                maxRows,
+                maxErrorRows);
 
         return new ParseResult<>(rows, sourceRowNumbers, columnMappings, parseErrors);
       }
@@ -327,7 +334,8 @@ public class ExcelParserService {
       String footerMarker,
       List<RowError> parseErrors,
       List<Integer> sourceRowNumbers,
-      int maxRows) {
+      int maxRows,
+      int maxErrorRows) {
 
     List<T> rows = new ArrayList<>();
     int lastRowNum = sheet.getLastRowNum();
@@ -373,6 +381,12 @@ public class ExcelParserService {
       if (!cellErrors.isEmpty()) {
         parseErrors.add(
             RowError.builder().rowNumber(excelRowNumber).cellErrors(cellErrors).build());
+        if (hasReachedErrorLimit(parseErrors.size(), maxErrorRows)) {
+          log.info("Parse error row limit reached at row {}, stopping early", excelRowNumber);
+          sourceRowNumbers.add(excelRowNumber);
+          rows.add(dto);
+          break;
+        }
       }
 
       sourceRowNumbers.add(excelRowNumber);
@@ -385,6 +399,10 @@ public class ExcelParserService {
     }
 
     return rows;
+  }
+
+  private boolean hasReachedErrorLimit(int errorRows, int maxErrorRows) {
+    return maxErrorRows > 0 && maxErrorRows != Integer.MAX_VALUE && errorRows >= maxErrorRows;
   }
 
   private boolean isFooterRow(Row row, String footerMarker) {

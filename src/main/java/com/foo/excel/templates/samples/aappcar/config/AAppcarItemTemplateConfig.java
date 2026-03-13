@@ -6,6 +6,7 @@ import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.service.AAppcarItemDbUniquenessChecker;
 import com.foo.excel.templates.samples.aappcar.service.AAppcarItemService;
+import com.foo.excel.templates.samples.aappcar.service.AAppcarItemUploadPrecheck;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,13 +15,16 @@ public class AAppcarItemTemplateConfig {
 
   @Bean
   public TemplateDefinition<AAppcarItemDto, AAppcarItemMetaData> tariffExemptionTemplate(
-      AAppcarItemService persistenceHandler, AAppcarItemDbUniquenessChecker dbUniquenessChecker) {
+      AAppcarItemService persistenceHandler,
+      AAppcarItemUploadPrecheck uploadPrecheck,
+      AAppcarItemDbUniquenessChecker dbUniquenessChecker) {
     return new TemplateDefinition<>(
         TemplateTypes.AAPPCAR,
         AAppcarItemDto.class,
         AAppcarItemMetaData.class,
         new AAppcarItemImportConfig(),
         persistenceHandler,
+        uploadPrecheck,
         dbUniquenessChecker);
   }
 }
