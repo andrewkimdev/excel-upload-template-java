@@ -88,6 +88,32 @@ class AAppcarItemEmbeddedIdPersistenceTest {
             "설비B", "규격B", "999999999999", new BigDecimal("9.50"), "Y", LocalDate.now());
   }
 
+  @Test
+  void saveAll_mixedExistingAndNewRows_updatesAndInsertsInSingleBatch() {
+    AAppcarItemMetaData metaData = metaData();
+    AAppcarItemId existingItemId =
+        new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 7);
+    AAppcarItemId newItemId =
+        new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 8);
+
+    service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), metaData);
+
+    SaveResult result =
+        service.saveAll(
+            List.of(dto("Item1-Updated", "Model-B"), dto("Item2", "Model-C")), List.of(7, 8), metaData);
+
+    assertThat(result.created()).isEqualTo(1);
+    assertThat(result.updated()).isEqualTo(1);
+    assertThat(itemRepository.findById(existingItemId))
+        .get()
+        .extracting(AAppcarItem::getGoodsDes, AAppcarItem::getModelDes)
+        .containsExactly("Item1-Updated", "Model-B");
+    assertThat(itemRepository.findById(newItemId))
+        .get()
+        .extracting(AAppcarItem::getGoodsDes, AAppcarItem::getModelDes)
+        .containsExactly("Item2", "Model-C");
+  }
+
   private AAppcarItemMetaData metaData() {
     AAppcarItemMetaData metaData = new AAppcarItemMetaData();
     metaData.setComeYear("2026");
