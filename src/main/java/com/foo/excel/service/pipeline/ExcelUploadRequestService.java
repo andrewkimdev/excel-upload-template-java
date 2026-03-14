@@ -58,6 +58,9 @@ public class ExcelUploadRequestService {
 
     response.put("errorRows", result.errorRows());
     response.put("errorCount", result.errorCount());
+    if (result.metadataConflict() != null) {
+      response.put("metadataConflict", result.metadataConflict());
+    }
     if (result.downloadUrl() != null) {
       response.put("downloadUrl", result.downloadUrl());
     }

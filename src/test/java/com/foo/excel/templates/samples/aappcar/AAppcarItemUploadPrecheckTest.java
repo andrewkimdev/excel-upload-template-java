@@ -2,8 +2,10 @@ package com.foo.excel.templates.samples.aappcar;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.foo.excel.service.contract.UploadPrecheckFailure;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.templates.samples.aappcar.service.AAppcarItemKeyFactory;
@@ -28,19 +30,30 @@ class AAppcarItemUploadPrecheckTest {
   }
 
   @Test
-  void check_whenApprovedEquipExists_returnsBlockingMessage() {
-    when(equipRepository.existsById(any())).thenReturn(true);
+  void check_whenApprovedEquipExists_returnsStructuredBlockingFailure() {
+    when(equipRepository.existsByIdAndApprovalYn(any(), eq("Y"))).thenReturn(true);
 
-    Optional<String> result = precheck.check(createMetaData());
+    Optional<UploadPrecheckFailure> result = precheck.check(createMetaData());
 
-    assertThat(result).contains("이미 승인된 장비가 존재합니다.");
+    assertThat(result).isPresent();
+    assertThat(result.orElseThrow().message()).contains("승인된 장비");
+    assertThat(result.orElseThrow().metadataConflict()).isNotNull();
+    assertThat(result.orElseThrow().metadataConflict().fields())
+        .extracting(field -> field.fieldName() + "=" + field.value())
+        .contains(
+            "companyId=COMPANY01",
+            "customId=CUSTOM01",
+            "comeYear=2026",
+            "comeOrder=1",
+            "uploadSeq=1",
+            "equipCode=EQ-01");
   }
 
   @Test
   void check_whenNoApprovedEquipExists_returnsEmpty() {
-    when(equipRepository.existsById(any())).thenReturn(false);
+    when(equipRepository.existsByIdAndApprovalYn(any(), eq("Y"))).thenReturn(false);
 
-    Optional<String> result = precheck.check(createMetaData());
+    Optional<UploadPrecheckFailure> result = precheck.check(createMetaData());
 
     assertThat(result).isEmpty();
   }

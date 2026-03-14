@@ -35,7 +35,7 @@ public class TemplateDefinition<T, M extends MetaData> {
     this.dbUniquenessChecker = dbUniquenessChecker;
   }
 
-  public Optional<String> runUploadPrecheck(M metaData) {
+  public Optional<UploadPrecheckFailure> runUploadPrecheck(M metaData) {
     if (uploadPrecheck == null) {
       return Optional.empty();
     }

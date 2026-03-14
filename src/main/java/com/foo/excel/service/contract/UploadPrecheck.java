@@ -13,10 +13,11 @@ import java.util.Optional;
 public interface UploadPrecheck<M extends MetaData> {
 
   /**
-   * Returns a user-facing Korean failure message when the upload should be blocked before parsing.
+   * Returns a structured user-facing Korean failure when the upload should be blocked before
+   * parsing.
    *
    * @param metaData validated upload metadata
-   * @return blocking message, or empty when the upload may proceed
+   * @return blocking failure, or empty when the upload may proceed
    */
-  Optional<String> check(M metaData);
+  Optional<UploadPrecheckFailure> check(M metaData);
 }

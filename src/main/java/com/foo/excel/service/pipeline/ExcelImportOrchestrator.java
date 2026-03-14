@@ -3,6 +3,7 @@ package com.foo.excel.service.pipeline;
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.service.contract.MetaData;
+import com.foo.excel.service.contract.MetadataConflict;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.service.file.ExcelUploadFileService;
@@ -47,6 +48,7 @@ public class ExcelImportOrchestrator {
       String errorFileId,
       String downloadUrl,
       String originalFilename,
+      MetadataConflict metadataConflict,
       String message) {}
 
   public ImportResult processUpload(MultipartFile file, String templateType, MetaData metaData)
@@ -96,6 +98,7 @@ public class ExcelImportOrchestrator {
       // 2a. upload-level 선행 차단 조건은 파싱 전에 확인한다.
       var uploadPrecheckFailure = template.runUploadPrecheck(typedMetaData);
       if (uploadPrecheckFailure.isPresent()) {
+        var failure = uploadPrecheckFailure.orElseThrow();
         log.info(
             "Upload stage timing [templateType={}, file={}, fileMs={}, totalMs={}, reportMode=skipped]: upload-level blocked",
             template.getTemplateType(),
@@ -107,7 +110,8 @@ public class ExcelImportOrchestrator {
             .rowsProcessed(0)
             .errorRows(0)
             .errorCount(0)
-            .message(uploadPrecheckFailure.orElseThrow())
+            .metadataConflict(failure.metadataConflict())
+            .message(failure.message())
             .build();
       }
 

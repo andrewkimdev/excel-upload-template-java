@@ -23,8 +23,8 @@ import com.foo.excel.templates.TemplateTypes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.nio.file.Files;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -95,15 +95,10 @@ class ExcelImportIntegrationTest {
   }
 
   @Test
-  void upload_sameFileAndMetaData_twice_returnsUploadLevelFailureWithoutErrorReport() throws Exception {
+  void upload_whenApprovedEquipAlreadyExists_returnsMetadataConflictWithoutErrorReport()
+      throws Exception {
     byte[] xlsxBytes = createValidAAppcarItemXlsx(2);
-    MockMultipartFile firstFile =
-        new MockMultipartFile(
-            "file",
-            "tariff.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            xlsxBytes);
-    MockMultipartFile secondFile =
+    MockMultipartFile file =
         new MockMultipartFile(
             "file",
             "tariff.xlsx",
@@ -111,24 +106,58 @@ class ExcelImportIntegrationTest {
             xlsxBytes);
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(firstFile).file(requiredMetaDataPart()))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart("Y")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.rowsCreated").value(2))
         .andExpect(jsonPath("$.rowsUpdated").value(0));
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(secondFile).file(requiredMetaDataPart()))
+        .perform(
+            multipart(API_UPLOAD_TARIFF)
+                .file(
+                    new MockMultipartFile(
+                        "file",
+                        "tariff.xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        xlsxBytes))
+                .file(requiredMetaDataPart()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.rowsProcessed").value(0))
-        .andExpect(jsonPath("$.message").value("이미 승인된 장비가 존재합니다."))
-        .andExpect(jsonPath("$.downloadUrl").doesNotExist());
+        .andExpect(jsonPath("$.message").value(containsString("승인된 장비")))
+        .andExpect(jsonPath("$.downloadUrl").doesNotExist())
+        .andExpect(jsonPath("$.metadataConflict.type").value("METADATA_DUPLICATE_APPROVED_EQUIP"))
+        .andExpect(jsonPath("$.metadataConflict.fields[0].fieldName").value("companyId"))
+        .andExpect(jsonPath("$.metadataConflict.fields[0].value").value("COMPANY01"))
+        .andExpect(jsonPath("$.metadataConflict.fields[5].fieldName").value("equipCode"))
+        .andExpect(jsonPath("$.metadataConflict.fields[5].value").value("EQ-01"));
 
     assertThat(itemRepository.count()).isEqualTo(2);
     Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredMetaDataEquipId());
     assertThat(savedEquip).isPresent();
     assertThat(savedEquip.orElseThrow().getEquipMean()).isEqualTo("설비A");
+    assertThat(savedEquip.orElseThrow().getApprovalYn()).isEqualTo("Y");
+  }
+
+  @Test
+  void upload_whenOnlyNonApprovedEquipExists_doesNotBlockMetadataPrecheck() throws Exception {
+    equipRepository.save(
+        AAppcarEquip.builder().id(requiredMetaDataEquipId()).approvalYn("N").build());
+
+    byte[] xlsxBytes = createValidAAppcarItemXlsx(2);
+    MockMultipartFile file =
+        new MockMultipartFile(
+            "file",
+            "tariff.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            xlsxBytes);
+
+    mockMvc
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success").value(true))
+        .andExpect(jsonPath("$.message").value("데이터 업로드 완료"));
   }
 
   @Test
@@ -576,6 +605,12 @@ class ExcelImportIntegrationTest {
   }
 
   private MockMultipartFile requiredMetaDataPart() {
+    return requiredMetaDataPart(null);
+  }
+
+  private MockMultipartFile requiredMetaDataPart(String approvalYn) {
+    String approvalField =
+        approvalYn == null ? "" : ",\"approvalYn\":\"" + approvalYn + "\"";
     return new MockMultipartFile(
         "metaData",
         "metaData",
@@ -589,6 +624,7 @@ class ExcelImportIntegrationTest {
                 + "\"hsno\":\"8481802000\","
                 + "\"spec\":\"규격A\","
                 + "\"taxRate\":8.50"
+                + approvalField
                 + "}")
             .getBytes());
   }

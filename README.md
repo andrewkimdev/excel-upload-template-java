@@ -101,6 +101,30 @@ Open http://localhost:8080 to access the upload form.
 }
 ```
 
+### Upload Response (metadata conflict precheck)
+
+```json
+{
+  "success": false,
+  "rowsProcessed": 0,
+  "errorRows": 0,
+  "errorCount": 0,
+  "message": "입력한 메타데이터 조합과 일치하는 승인된 장비가 이미 존재합니다.",
+  "metadataConflict": {
+    "type": "METADATA_DUPLICATE_APPROVED_EQUIP",
+    "description": "아래 메타데이터 값 조합에 대해 이미 승인된 장비가 존재합니다. 엑셀 파일이 아니라 메타데이터 값을 수정하세요.",
+    "fields": [
+      {"fieldName": "companyId", "label": "회사 ID", "value": "COMPANY01"},
+      {"fieldName": "customId", "label": "거래처 ID", "value": "CUSTOM01"},
+      {"fieldName": "comeYear", "label": "반입연도", "value": "2026"},
+      {"fieldName": "comeOrder", "label": "반입차수", "value": "1"},
+      {"fieldName": "uploadSeq", "label": "업로드 순번", "value": "1"},
+      {"fieldName": "equipCode", "label": "설비코드", "value": "EQ-01"}
+    ]
+  }
+}
+```
+
 ## Architecture
 
 ```
