@@ -1,6 +1,5 @@
 package com.foo.excel.service.contract;
 
-import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.validation.RowError;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +12,7 @@ public class TemplateDefinition<T, M extends MetaData> {
   private final String templateType;
   private final Class<T> dtoClass;
   private final Class<M> metaDataClass;
-  private final ExcelImportConfig config;
+  private final TemplateSheetMetadata sheetMetadata;
   private final List<TemplateMergeRegion> mergeRegions;
   private final PersistenceHandler<T, M> persistenceHandler;
   private final UploadPrecheck<M> uploadPrecheck;
@@ -23,14 +22,13 @@ public class TemplateDefinition<T, M extends MetaData> {
       String templateType,
       Class<T> dtoClass,
       Class<M> metaDataClass,
-      ExcelImportConfig config,
       PersistenceHandler<T, M> persistenceHandler,
       UploadPrecheck<M> uploadPrecheck,
       DatabaseUniquenessChecker<T, M> dbUniquenessChecker) {
     this.templateType = templateType;
     this.dtoClass = dtoClass;
     this.metaDataClass = metaDataClass;
-    this.config = config;
+    this.sheetMetadata = TemplateSheetMetadataResolver.resolve(dtoClass);
     this.mergeRegions = TemplateMergeMetadataResolver.resolve(dtoClass);
     this.persistenceHandler = persistenceHandler;
     this.uploadPrecheck = uploadPrecheck;

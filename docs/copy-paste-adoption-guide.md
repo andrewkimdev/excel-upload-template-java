@@ -43,8 +43,7 @@ Copy:
 - `com.foo.excel.templates.samples.aappcar`
 
 This gives the full pattern:
-- row DTO (`@ExcelColumn` + validation)
-- `ExcelImportConfig`
+- row DTO (`@ExcelSheet` + `@ExcelColumn` + validation)
 - template `MetaData`
 - `PersistenceHandler<T, M extends MetaData>`
 - optional `DatabaseUniquenessChecker<T, M>`

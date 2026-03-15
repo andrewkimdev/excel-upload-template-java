@@ -20,7 +20,6 @@ public class AAppcarItemTemplateConfig {
         TemplateTypes.AAPPCAR,
         AAppcarItemDto.class,
         AAppcarItemMetaData.class,
-        new AAppcarItemImportConfig(),
         persistenceHandler,
         uploadPrecheck,
         null);

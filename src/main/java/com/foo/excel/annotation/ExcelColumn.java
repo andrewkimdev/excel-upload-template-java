@@ -51,7 +51,7 @@ public @interface ExcelColumn {
   /**
    * 멀티 행 헤더가 시작하는 행 번호(1부터 시작, 포함).
    *
-   * <p>기본값(-1)이면 {@link com.foo.excel.config.ExcelImportConfig#getHeaderRow()}를 사용한다.
+   * <p>기본값(-1)이면 DTO의 {@link com.foo.excel.annotation.ExcelSheet#headerRow()}를 사용한다.
    * {@link #headerRowCount()}와 함께 설정해야 한다.
    */
   int headerRowStart() default -1;
@@ -59,7 +59,7 @@ public @interface ExcelColumn {
   /**
    * 멀티 행 헤더가 차지하는 행 수.
    *
-   * <p>기본값(-1)이면 {@link com.foo.excel.config.ExcelImportConfig#getHeaderRow()}를 사용한다.
+   * <p>기본값(-1)이면 DTO의 {@link com.foo.excel.annotation.ExcelSheet#headerRow()}를 사용한다.
    * {@link #headerRowStart()}와 함께 설정해야 한다.
    */
   int headerRowCount() default -1;

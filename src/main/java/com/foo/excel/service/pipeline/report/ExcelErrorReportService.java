@@ -1,9 +1,9 @@
 package com.foo.excel.service.pipeline.report;
 
-import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.service.contract.TemplateMergeRegion;
 import com.foo.excel.service.contract.TemplateMergeScope;
+import com.foo.excel.service.contract.TemplateSheetMetadata;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
 import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.util.WorkbookCopyUtils;
@@ -12,7 +12,7 @@ import com.foo.excel.validation.RowError;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;N
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,14 +46,14 @@ public class ExcelErrorReportService {
       Path originalXlsx,
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
-      ExcelImportConfig config,
+      TemplateSheetMetadata sheetMetadata,
       String originalFilename)
       throws IOException {
     return generateErrorReport(
         originalXlsx,
         validationResult,
         columnMappings,
-        config,
+        sheetMetadata,
         originalFilename,
         List.of());
   }
@@ -62,21 +62,20 @@ public class ExcelErrorReportService {
       Path originalXlsx,
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
-      ExcelImportConfig config,
+      TemplateSheetMetadata sheetMetadata,
       String originalFilename,
       List<TemplateMergeRegion> templateMergeRegions)
       throws IOException {
 
     if (validationResult.isTruncated()) {
       return generateCompactErrorReport(
-          originalXlsx, validationResult, columnMappings, config, originalFilename);
+          originalXlsx, validationResult, columnMappings, sheetMetadata, originalFilename);
     }
 
     return generateFullErrorReport(
         originalXlsx,
         validationResult,
-        columnMappings,
-        config,
+        sheetMetadata,
         originalFilename,
         templateMergeRegions);
   }
@@ -84,8 +83,7 @@ public class ExcelErrorReportService {
   private Path generateFullErrorReport(
       Path originalXlsx,
       ExcelValidationResult validationResult,
-      List<ExcelParserService.ColumnMapping> columnMappings,
-      ExcelImportConfig config,
+      TemplateSheetMetadata sheetMetadata,
       String originalFilename,
       List<TemplateMergeRegion> templateMergeRegions)
       throws IOException {
@@ -104,8 +102,8 @@ public class ExcelErrorReportService {
           errorsByRow.put(rowError.getRowNumber(), rowError);
         }
 
-        int dataSheetIndex = config.getSheetIndex();
-        int headerRowIdx = config.getHeaderRow() - 1;
+        int dataSheetIndex = sheetMetadata.sheetIndex();
+        int headerRowIdx = sheetMetadata.headerRow() - 1;
         var errorStyleCache = new HashMap<Integer, CellStyle>();
 
         // 5. 모든 시트 복사
@@ -176,7 +174,7 @@ public class ExcelErrorReportService {
             if (isDataSheet) {
               if (isHeaderRow) {
                 Cell errorHeaderCell = tgtRow.createCell(errorColIndex);
-                errorHeaderCell.setCellValue(config.getErrorColumnName());
+                errorHeaderCell.setCellValue(sheetMetadata.errorColumnName());
 
                 CellStyle headerStyle = sxssfWb.createCellStyle();
                 Font boldFont = sxssfWb.createFont();
@@ -197,7 +195,8 @@ public class ExcelErrorReportService {
 
           // 7. 데이터 시트에 안내문 추가(마지막 행 아래 2행)
           if (isDataSheet) {
-            applyTemplateMerges(tgtSheet, config, validationResult, errorColIndex, templateMergeRegions);
+            applyTemplateMerges(
+                tgtSheet, sheetMetadata, validationResult, errorColIndex, templateMergeRegions);
 
             int disclaimerRowIdx = lastRowNum + 2;
             Row disclaimerRow = tgtSheet.createRow(disclaimerRowIdx);
@@ -231,13 +230,13 @@ public class ExcelErrorReportService {
       Path originalXlsx,
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
-      ExcelImportConfig config,
+      TemplateSheetMetadata sheetMetadata,
       String originalFilename)
       throws IOException {
     try (Workbook sourceWb = SecureExcelUtils.createWorkbook(originalXlsx);
         XSSFWorkbook targetXssf = new XSSFWorkbook();
         SXSSFWorkbook sxssfWb = new SXSSFWorkbook(targetXssf, 100)) {
-      Sheet sourceSheet = sourceWb.getSheetAt(config.getSheetIndex());
+      Sheet sourceSheet = sourceWb.getSheetAt(sheetMetadata.sheetIndex());
       SXSSFSheet summarySheet = sxssfWb.createSheet("오류요약");
       DataFormatter formatter = new DataFormatter();
 
@@ -272,7 +271,7 @@ public class ExcelErrorReportService {
         cell.setCellStyle(headerStyle);
       }
       Cell errorHeader = headerRow.createCell(sortedMappings.size() + 1);
-      errorHeader.setCellValue(config.getErrorColumnName());
+      errorHeader.setCellValue(sheetMetadata.errorColumnName());
       errorHeader.setCellStyle(headerStyle);
 
       for (RowError rowError : validationResult.getRowErrors()) {
@@ -321,7 +320,7 @@ public class ExcelErrorReportService {
 
   private void applyTemplateMerges(
       Sheet sheet,
-      ExcelImportConfig config,
+      TemplateSheetMetadata sheetMetadata,
       ExcelValidationResult validationResult,
       int errorColIndex,
       List<TemplateMergeRegion> templateMergeRegions) {
@@ -329,8 +328,8 @@ public class ExcelErrorReportService {
       return;
     }
 
-    int headerStartRow = config.getHeaderRow() - 1;
-    int dataStartRow = config.getDataStartRow() - 1;
+    int headerStartRow = sheetMetadata.headerRow() - 1;
+    int dataStartRow = sheetMetadata.dataStartRow() - 1;
     int dataEndRow = dataStartRow + validationResult.getTotalRows() - 1;
 
     for (TemplateMergeRegion mergeRegion : templateMergeRegions) {

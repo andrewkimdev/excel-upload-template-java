@@ -100,7 +100,7 @@
   - 셀 단위 parse error로 누적(`RowError`/`CellError`)
 
 이식 포인트:
-- 템플릿 변경 시 가장 먼저 `@ExcelColumn`과 `ExcelImportConfig`(header row, data start row, footer marker) 정합성을 맞춰야 한다.
+- 템플릿 변경 시 가장 먼저 DTO의 `@ExcelSheet`와 `@ExcelColumn`(header row, data start row, footer marker 포함) 정합성을 맞춰야 한다.
 
 ## 6. 비즈니스 유효성 검증
 
@@ -148,10 +148,10 @@
 새 프로젝트에 적용할 때 아래를 한 세트로 맞춰야 한다.
 
 1. DTO
-   - `@ExcelColumn` + JSR-380
+   - `@ExcelSheet` + `@ExcelColumn` + JSR-380
    - 필요 시 `@ExcelUnique` / `@ExcelCompositeUnique`
-2. `ExcelImportConfig`
-   - 헤더 행/데이터 시작 행/시트 인덱스/푸터 마커
+2. DTO-level sheet metadata
+   - `@ExcelSheet`에 헤더 행/데이터 시작 행/시트 인덱스/푸터 마커/오류 컬럼명 선언
 3. `MetaData` DTO
    - Bean Validation
    - `getCustomId()`가 non-blank 보장

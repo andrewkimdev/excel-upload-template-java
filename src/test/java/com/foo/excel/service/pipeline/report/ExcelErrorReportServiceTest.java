@@ -2,11 +2,12 @@ package com.foo.excel.service.pipeline.report;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.foo.excel.config.ExcelImportConfig;
+import com.foo.excel.annotation.ExcelSheet;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.service.contract.TemplateMergeMetadataResolver;
+import com.foo.excel.service.contract.TemplateSheetMetadata;
+import com.foo.excel.service.contract.TemplateSheetMetadataResolver;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
-import com.foo.excel.templates.samples.aappcar.config.AAppcarItemImportConfig;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.ExcelColumnRef;
@@ -56,12 +57,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_addsErrorColumn_withName_ERRORS() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -82,12 +83,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_errorCells_haveRedBackground() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -105,12 +106,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_formattedMessages_perRow() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResultMultipleErrors();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -129,12 +130,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_outputFile_isValidXlsx() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     assertThat(errorFile).exists();
     assertThat(errorFile.toString()).endsWith(".xlsx");
@@ -149,12 +150,12 @@ class ExcelErrorReportServiceTest {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult =
         ExcelValidationResult.truncatedFailure(10, createValidationResult().getRowErrors());
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       assertThat(wb.getNumberOfSheets()).isEqualTo(1);
@@ -169,12 +170,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_messageWithFormulaContent_isSafelyFormatted() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResultWithFormulaInjection();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -195,12 +196,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_errorMessagePreserved_inFormattedOutput() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResultWithAtSign();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -219,12 +220,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_normalErrorMessage_preservedCorrectly() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-original.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-original.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -246,12 +247,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_preservesOriginalCellFormatting_withRoseFillAdded() throws IOException {
     Path originalFile = createStyledXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-styled.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-styled.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -274,12 +275,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_copiesAllSheets_fromMultiSheetSource() throws IOException {
     Path originalFile = createMultiSheetXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-multi.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-multi.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       assertThat(wb.getNumberOfSheets()).isEqualTo(3);
@@ -293,12 +294,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_preservesColumnWidths() throws IOException {
     Path originalFile = createStyledXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-widths.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-widths.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -310,12 +311,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_disclaimerRow_existsWithCorrectText() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test-disclaimer.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test-disclaimer.xlsx");
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -337,12 +338,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_metaFileWritten_whenOriginalFilenameProvided() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "original-file.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "original-file.xlsx");
 
     String fileId = errorFile.getFileName().toString().replace(".xlsx", "");
     Path metaFile = tempDir.resolve("errors").resolve(fileId + ".meta");
@@ -354,12 +355,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_noMetaFile_whenOriginalFilenameIsNull() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, null);
+            originalFile, validationResult, mappings, sheetMetadata, null);
 
     String fileId = errorFile.getFileName().toString().replace(".xlsx", "");
     Path metaFile = tempDir.resolve("errors").resolve(fileId + ".meta");
@@ -370,12 +371,12 @@ class ExcelErrorReportServiceTest {
   void errorReport_outputIsValidXlsx_afterSxssfWrite() throws IOException {
     Path originalFile = createSimpleXlsx();
     ExcelValidationResult validationResult = createValidationResult();
-    TestConfig config = new TestConfig();
+    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
     List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
     Path errorFile =
         errorReportService.generateErrorReport(
-            originalFile, validationResult, mappings, config, "test.xlsx");
+            originalFile, validationResult, mappings, sheetMetadata, "test.xlsx");
 
     // 출력이 유효한 XLSX인지 확인(WorkbookFactory는 .xlsx에서 XSSFWorkbook 반환)
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
@@ -394,12 +395,13 @@ class ExcelErrorReportServiceTest {
     for (int i = 0; i < 10; i++) {
       Path originalFile = createSimpleXlsx();
       ExcelValidationResult validationResult = createValidationResult();
-      TestConfig config = new TestConfig();
+      TemplateSheetMetadata sheetMetadata =
+          TemplateSheetMetadataResolver.resolve(TestSheetDto.class);
       List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
 
       Path errorFile =
           errorReportService.generateErrorReport(
-              originalFile, validationResult, mappings, config, "cleanup-check.xlsx");
+              originalFile, validationResult, mappings, sheetMetadata, "cleanup-check.xlsx");
 
       String fileId = errorFile.getFileName().toString().replace(".xlsx", "");
       Files.deleteIfExists(errorFile);
@@ -419,7 +421,7 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            new AAppcarItemImportConfig(),
+            TemplateSheetMetadataResolver.resolve(AAppcarItemDto.class),
             "aappcar-source.xlsx",
             TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
 
@@ -441,7 +443,7 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            new AAppcarItemImportConfig(),
+            TemplateSheetMetadataResolver.resolve(AAppcarItemDto.class),
             "aappcar-source.xlsx",
             TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
 
@@ -465,7 +467,7 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            new AAppcarItemImportConfig(),
+            TemplateSheetMetadataResolver.resolve(AAppcarItemDto.class),
             "aappcar-source.xlsx",
             TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
 
@@ -488,7 +490,7 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            new AAppcarItemImportConfig(),
+            TemplateSheetMetadataResolver.resolve(AAppcarItemDto.class),
             "aappcar-source.xlsx",
             TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
 
@@ -513,7 +515,7 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            new AAppcarItemImportConfig(),
+            TemplateSheetMetadataResolver.resolve(AAppcarItemDto.class),
             "aappcar-source.xlsx",
             TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
 
@@ -532,7 +534,7 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            new AAppcarItemImportConfig(),
+            TemplateSheetMetadataResolver.resolve(AAppcarItemDto.class),
             "aappcar-source.xlsx",
             TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
 
@@ -549,18 +551,8 @@ class ExcelErrorReportServiceTest {
 
   // ===== 헬퍼 =====
 
-  static class TestConfig implements ExcelImportConfig {
-    @Override
-    public int getHeaderRow() {
-      return 1;
-    }
-
-    @Override
-    public int getDataStartRow() {
-      return 2;
-    }
-
-  }
+  @ExcelSheet
+  static class TestSheetDto {}
 
   private Path createSimpleXlsx() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {

@@ -5,6 +5,7 @@ import static com.foo.excel.annotation.HeaderMatchMode.STARTS_WITH;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelCompositeUnique;
 import com.foo.excel.annotation.ExcelHeaderGroup;
+import com.foo.excel.annotation.ExcelSheet;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -15,6 +16,12 @@ import java.math.BigDecimal;
 import lombok.Data;
 
 @Data
+@ExcelSheet(
+    sheetIndex = 0,
+    headerRow = 4,
+    dataStartRow = 7,
+    footerMarker = "※",
+    errorColumnName = "_ERRORS")
 @ExcelCompositeUnique(
     fields = {"goodsDes", "spec", "hsno"},
     message = "물품명 + 규격 + HSK 조합이 중복됩니다")

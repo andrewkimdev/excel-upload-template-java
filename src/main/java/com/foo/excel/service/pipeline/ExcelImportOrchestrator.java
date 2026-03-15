@@ -1,11 +1,11 @@
 package com.foo.excel.service.pipeline;
 
-import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.service.contract.MetaData;
 import com.foo.excel.service.contract.MetadataConflict;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.contract.TemplateDefinition;
+import com.foo.excel.service.contract.TemplateSheetMetadata;
 import com.foo.excel.service.file.ExcelUploadFileService;
 import com.foo.excel.service.file.ExcelUploadFileService.StoredUpload;
 import com.foo.excel.service.pipeline.parse.ColumnResolutionBatchException;
@@ -79,7 +79,7 @@ public class ExcelImportOrchestrator {
     }
     M typedMetaData = template.getMetaDataClass().cast(metaData);
 
-    ExcelImportConfig config = template.getConfig();
+    TemplateSheetMetadata sheetMetadata = template.getSheetMetadata();
 
     // 1. customId 기반 임시 하위 디렉터리 생성
     String customIdPath = resolveCustomIdPath(typedMetaData);
@@ -117,9 +117,11 @@ public class ExcelImportOrchestrator {
 
       // 2b. 빠른 행 수 사전 점검(경량 SAX, 대용량 파일의 전체 파싱 회피)
       long preCountStageStartedAt = System.nanoTime();
-      int roughRowCount = SecureExcelUtils.countRows(xlsxFile, config.getSheetIndex());
+      int roughRowCount = SecureExcelUtils.countRows(xlsxFile, sheetMetadata.sheetIndex());
       int preCountThreshold =
-          properties.getMaxRows() + (config.getDataStartRow() - 1) + properties.getPreCountBuffer();
+          properties.getMaxRows()
+              + (sheetMetadata.dataStartRow() - 1)
+              + properties.getPreCountBuffer();
       long preCountStageElapsedMs = elapsedMillis(preCountStageStartedAt);
       if (roughRowCount > preCountThreshold) {
         log.info(
@@ -148,7 +150,11 @@ public class ExcelImportOrchestrator {
       long parseStageStartedAt = System.nanoTime();
       ExcelParserService.ParseResult<T> parseResult =
           parserService.parse(
-              xlsxFile, template.getDtoClass(), config, properties.getMaxRows(), maxErrorRows);
+              xlsxFile,
+              template.getDtoClass(),
+              sheetMetadata,
+              properties.getMaxRows(),
+              maxErrorRows);
       long parseStageElapsedMs = elapsedMillis(parseStageStartedAt);
 
       // 4. 최대 행 수 확인
@@ -183,7 +189,7 @@ public class ExcelImportOrchestrator {
             template,
             sanitizedFilename,
             xlsxFile,
-            config,
+            sheetMetadata,
             parseResult,
             validationResult,
             fileStageElapsedMs,
@@ -211,7 +217,7 @@ public class ExcelImportOrchestrator {
             template,
             sanitizedFilename,
             xlsxFile,
-            config,
+            sheetMetadata,
             parseResult,
             validationResult,
             fileStageElapsedMs,
@@ -273,7 +279,7 @@ public class ExcelImportOrchestrator {
             template,
             sanitizedFilename,
             xlsxFile,
-            config,
+            sheetMetadata,
             parseResult,
             validationResult,
             fileStageElapsedMs,
@@ -361,7 +367,7 @@ public class ExcelImportOrchestrator {
       TemplateDefinition<T, ?> template,
       String sanitizedFilename,
       Path xlsxFile,
-      ExcelImportConfig config,
+      TemplateSheetMetadata sheetMetadata,
       ExcelParserService.ParseResult<T> parseResult,
       ExcelValidationResult validationResult,
       long fileStageElapsedMs,
@@ -378,7 +384,7 @@ public class ExcelImportOrchestrator {
             xlsxFile,
             validationResult,
             parseResult.columnMappings(),
-            config,
+            sheetMetadata,
             sanitizedFilename,
             template.getMergeRegions());
     long errorReportStageElapsedMs = elapsedMillis(errorReportStageStartedAt);

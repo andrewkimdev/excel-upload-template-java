@@ -130,15 +130,14 @@ Open http://localhost:8080 to access the upload form.
 ```
 src/main/java/com/foo/excel/
 ├── ExcelUploadApplication.java
-├── annotation/          # @ExcelColumn, @ExcelUnique, @ExcelCompositeUnique, HeaderMatchMode
+├── annotation/          # @ExcelSheet, @ExcelColumn, @ExcelUnique, @ExcelCompositeUnique, HeaderMatchMode
 ├── config/
-│   ├── ExcelImportConfig.java               # Template layout interface (header row, data start row, footer marker)
 │   └── ExcelImportProperties.java           # Global properties (file size, max rows, temp dir)
 ├── controller/          # Thin split controllers (REST + Thymeleaf) + shared download endpoint
 ├── service/
 │   ├── contract/
 │   │   ├── MetaData.java                        # Marker interface for template-specific metaData DTOs
-│   │   ├── TemplateDefinition.java                # Type-safe bundle: DTO + metaData + config + handlers
+│   │   ├── TemplateDefinition.java                # Type-safe bundle: DTO + metaData + cached template metadata + handlers
 │   │   ├── PersistenceHandler.java                # Strategy interface for saving parsed rows with typed metaData
 │   │   └── DatabaseUniquenessChecker.java         # Strategy interface for DB-level duplicate checks
 │   ├── file/
@@ -157,10 +156,9 @@ src/main/java/com/foo/excel/
 │           └── ExcelValidationService.java        # JSR-380 + within-file uniqueness validation
 ├── templates/samples/aappcar/             # Example template implementation
 │   ├── config/
-│   │   ├── AAppcarItemImportConfig.java       # ExcelImportConfig for tariff exemption
 │   │   └── AAppcarItemTemplateConfig.java     # Wires the TemplateDefinition bean (includes DB checker)
 │   ├── dto/
-│   │   ├── AAppcarItemDto.java                # DTO with @ExcelColumn + JSR-380 annotations
+│   │   ├── AAppcarItemDto.java                # DTO with @ExcelSheet + @ExcelColumn + JSR-380 annotations
 │   │   └── AAppcarItemMetaData.java         # Tariff template-specific metaData DTO
 │   ├── mapper/
 │   │   └── AAppcarItemMetaDataFormMapper.java # Thymeleaf form -> AAppcarItemMetaData mapper
@@ -235,14 +233,14 @@ See `application.properties` for a detailed security checklist and configuration
    - For horizontally owned cells such as `F:G` or `O:P`, set `columnSpan` on the owning field
    - For shared grouped headers such as `소요량`, place `@ExcelHeaderGroup` on the leftmost field and list the grouped fields in left-to-right order
    - Grouped-header metadata is validated strictly; duplicate membership, non-adjacent fields, reversed order, and inferred merge overlaps fail fast during template metadata resolution
-2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
+2. **Sheet Contract** -- Add `@ExcelSheet` on the DTO to define sheet index, header row, data start row, footer marker, and error column name
 3. **MetaData** -- 템플릿별 DTO를 만들고 `MetaData`를 구현한다 (strict JSON + Bean Validation 대상)
    - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)
 4. **Persistence** -- Implement `PersistenceHandler<T, M>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metaData)` to save parsed rows merged with common fields
 5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, M>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metaData)` if duplicates should be checked against existing data
 6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, M>` `@Bean` with `metaDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
 
-See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemImportConfig`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
+See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
 
 ### Merged Header Example
 
