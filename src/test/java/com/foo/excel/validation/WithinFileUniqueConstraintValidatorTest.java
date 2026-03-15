@@ -154,18 +154,18 @@ class WithinFileUniqueConstraintValidatorTest {
 
   @Data
   public static class UniqueTestDto {
-    @ExcelColumn(header = "Code", column = "B")
+    @ExcelColumn(label = "Code", column = "B")
     @ExcelUnique(message = "중복된 값입니다")
     private String code;
   }
 
   @Data
   public static class MultiUniqueTestDto {
-    @ExcelColumn(header = "Code", column = "B")
+    @ExcelColumn(label = "Code", column = "B")
     @ExcelUnique(message = "코드가 중복되었습니다")
     private String code;
 
-    @ExcelColumn(header = "Name", column = "C")
+    @ExcelColumn(label = "Name", column = "C")
     @ExcelUnique(message = "이름이 중복되었습니다")
     private String name;
   }
@@ -173,7 +173,7 @@ class WithinFileUniqueConstraintValidatorTest {
   @Data
   @ExcelCompositeUnique(fields = {"field1", "missingField"}, message = "복합 중복입니다")
   public static class BrokenCompositeTestDto {
-    @ExcelColumn(header = "Field1", column = "B")
+    @ExcelColumn(label = "Field1", column = "B")
     private String field1;
   }
 

@@ -231,7 +231,10 @@ See `application.properties` for a detailed security checklist and configuration
 
 1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
    - If you use `@ExcelCompositeUnique`, every field name in `fields()` must exist on the DTO class hierarchy; invalid declarations are treated as fail-fast configuration errors during within-file uniqueness validation
-   - For legacy workbooks with merged or multi-line headers, `@ExcelColumn` can opt into a header row range (`headerRowStart`/`headerRowEnd`), a logical header path (`headerPath`), and whitespace-insensitive comparison (`ignoreHeaderWhitespace`)
+   - For legacy workbooks with merged or multi-line headers, `@ExcelColumn` can opt into a header row range (`headerRowStart`/`headerRowCount`), logical header labels (`headerLabels`), and whitespace-insensitive comparison (`ignoreHeaderWhitespace`)
+   - For horizontally owned cells such as `F:G` or `O:P`, set `columnSpan` on the owning field
+   - For shared grouped headers such as `소요량`, place `@ExcelHeaderGroup` on the leftmost field and list the grouped fields in left-to-right order
+   - Grouped-header metadata is validated strictly; duplicate membership, non-adjacent fields, reversed order, and inferred merge overlaps fail fast during template metadata resolution
 2. **Config** -- Create an `ExcelImportConfig` implementation defining header row, data start row, and footer marker
 3. **MetaData** -- 템플릿별 DTO를 만들고 `MetaData`를 구현한다 (strict JSON + Bean Validation 대상)
    - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)
@@ -240,6 +243,33 @@ See `application.properties` for a detailed security checklist and configuration
 6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, M>` `@Bean` with `metaDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
 
 See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemImportConfig`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
+
+### Merged Header Example
+
+```java
+@ExcelColumn(
+    label = "제조용",
+    column = "J",
+    columnSpan = 2,
+    ignoreHeaderWhitespace = true,
+    headerRowStart = 4,
+    headerRowCount = 3,
+    headerLabels = {"소요량", "제조용"})
+@ExcelHeaderGroup(label = "소요량", fields = {"prodQty", "repairQty"})
+private Integer prodQty;
+
+@ExcelColumn(
+    label = "수리용",
+    column = "L",
+    columnSpan = 2,
+    ignoreHeaderWhitespace = true,
+    headerRowStart = 4,
+    headerRowCount = 3,
+    headerLabels = {"소요량", "수리용"})
+private Integer repairQty;
+```
+
+This shape lets the runtime infer grouped header merges and repeating data-row merges without low-level per-row merge annotations.
 
 ## Configuration
 

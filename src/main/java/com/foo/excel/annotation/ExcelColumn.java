@@ -14,7 +14,7 @@ public @interface ExcelColumn {
    * 검증한다. 자동 탐지 모드(column 값이 비어 있음)에서는 헤더 행 셀과 매칭한다. 또한
    * 오류 메시지의 표시 이름으로도 사용된다.
    */
-  String header();
+  String label();
 
   /**
    * Excel 문자 표기 기반 고정 컬럼 위치: "A", "B", ..., "Z", "AA", "AB", ... 설정 시:
@@ -22,6 +22,14 @@ public @interface ExcelColumn {
    * 자동 탐지 모드로 헤더 행을 스캔한다.
    */
   String column() default "";
+
+  /**
+   * 필드가 가로로 소유하는 컬럼 수.
+   *
+   * <p>예: 병합된 `F:G` 셀에서 `F`가 값을 소유하면 `column = "F"`, `columnSpan = 2`로 표현한다.
+   * 템플릿 병합 메타데이터 해석과 오류 리포트 병합 복원에 사용된다.
+   */
+  int columnSpan() default 1;
 
   /** LocalDate/LocalDateTime 필드용 날짜/일시 포맷 패턴. */
   String dateFormat() default "yyyy-MM-dd";
@@ -44,24 +52,24 @@ public @interface ExcelColumn {
    * 멀티 행 헤더가 시작하는 행 번호(1부터 시작, 포함).
    *
    * <p>기본값(-1)이면 {@link com.foo.excel.config.ExcelImportConfig#getHeaderRow()}를 사용한다.
-   * {@link #headerRowEnd()}와 함께 설정해야 한다.
+   * {@link #headerRowCount()}와 함께 설정해야 한다.
    */
   int headerRowStart() default -1;
 
   /**
-   * 멀티 행 헤더가 끝나는 행 번호(1부터 시작, 포함).
+   * 멀티 행 헤더가 차지하는 행 수.
    *
    * <p>기본값(-1)이면 {@link com.foo.excel.config.ExcelImportConfig#getHeaderRow()}를 사용한다.
    * {@link #headerRowStart()}와 함께 설정해야 한다.
    */
-  int headerRowEnd() default -1;
+  int headerRowCount() default -1;
 
   /**
    * 멀티 행 헤더 검증에 사용할 기대 헤더 경로.
    *
-   * <p>예: {"소요량", "제조용"}. 비어 있으면 최종 세그먼트(leaf)와 {@link #header()}를 비교한다.
+   * <p>예: {"소요량", "제조용"}. 비어 있으면 최종 세그먼트(leaf)와 {@link #label()}를 비교한다.
    */
-  String[] headerPath() default {};
+  String[] headerLabels() default {};
 
   /** 이 컬럼의 검증 오류에 사용할 사용자 정의 메시지 접두사. */
   String errorPrefix() default "";

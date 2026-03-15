@@ -2,6 +2,8 @@ package com.foo.excel.service.pipeline.report;
 
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
+import com.foo.excel.service.contract.TemplateMergeRegion;
+import com.foo.excel.service.contract.TemplateMergeScope;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
 import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.util.WorkbookCopyUtils;
@@ -10,10 +12,9 @@ import com.foo.excel.validation.RowError;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.nio.file.Files;N
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -48,6 +49,23 @@ public class ExcelErrorReportService {
       ExcelImportConfig config,
       String originalFilename)
       throws IOException {
+    return generateErrorReport(
+        originalXlsx,
+        validationResult,
+        columnMappings,
+        config,
+        originalFilename,
+        List.of());
+  }
+
+  public Path generateErrorReport(
+      Path originalXlsx,
+      ExcelValidationResult validationResult,
+      List<ExcelParserService.ColumnMapping> columnMappings,
+      ExcelImportConfig config,
+      String originalFilename,
+      List<TemplateMergeRegion> templateMergeRegions)
+      throws IOException {
 
     if (validationResult.isTruncated()) {
       return generateCompactErrorReport(
@@ -55,7 +73,12 @@ public class ExcelErrorReportService {
     }
 
     return generateFullErrorReport(
-        originalXlsx, validationResult, columnMappings, config, originalFilename);
+        originalXlsx,
+        validationResult,
+        columnMappings,
+        config,
+        originalFilename,
+        templateMergeRegions);
   }
 
   private Path generateFullErrorReport(
@@ -63,7 +86,8 @@ public class ExcelErrorReportService {
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
       ExcelImportConfig config,
-      String originalFilename)
+      String originalFilename,
+      List<TemplateMergeRegion> templateMergeRegions)
       throws IOException {
 
     // 1. SecureExcelUtils로 원본을 읽기 전용으로 열기(보안: 쓰기 권한 불필요)
@@ -173,6 +197,8 @@ public class ExcelErrorReportService {
 
           // 7. 데이터 시트에 안내문 추가(마지막 행 아래 2행)
           if (isDataSheet) {
+            applyTemplateMerges(tgtSheet, config, validationResult, errorColIndex, templateMergeRegions);
+
             int disclaimerRowIdx = lastRowNum + 2;
             Row disclaimerRow = tgtSheet.createRow(disclaimerRowIdx);
             Cell disclaimerCell = disclaimerRow.createCell(0);
@@ -242,7 +268,7 @@ public class ExcelErrorReportService {
 
       for (int i = 0; i < sortedMappings.size(); i++) {
         Cell cell = headerRow.createCell(i + 1);
-        cell.setCellValue(sortedMappings.get(i).annotation().header());
+        cell.setCellValue(sortedMappings.get(i).annotation().label());
         cell.setCellStyle(headerStyle);
       }
       Cell errorHeader = headerRow.createCell(sortedMappings.size() + 1);
@@ -291,5 +317,96 @@ public class ExcelErrorReportService {
     }
 
     return errorFilePath;
+  }
+
+  private void applyTemplateMerges(
+      Sheet sheet,
+      ExcelImportConfig config,
+      ExcelValidationResult validationResult,
+      int errorColIndex,
+      List<TemplateMergeRegion> templateMergeRegions) {
+    if (templateMergeRegions == null || templateMergeRegions.isEmpty()) {
+      return;
+    }
+
+    int headerStartRow = config.getHeaderRow() - 1;
+    int dataStartRow = config.getDataStartRow() - 1;
+    int dataEndRow = dataStartRow + validationResult.getTotalRows() - 1;
+
+    for (TemplateMergeRegion mergeRegion : templateMergeRegions) {
+      if (mergeRegion.scope() == TemplateMergeScope.HEADER) {
+        addMergedRegionIfSafe(
+            sheet,
+            new CellRangeAddress(
+                headerStartRow + mergeRegion.rowOffset(),
+                headerStartRow + mergeRegion.rowOffset() + mergeRegion.rowSpan() - 1,
+                mergeRegion.startColumnIndex(),
+                mergeRegion.startColumnIndex() + mergeRegion.columnSpan() - 1),
+            errorColIndex);
+        continue;
+      }
+
+      if (dataEndRow < dataStartRow + mergeRegion.rowOffset()) {
+        continue;
+      }
+
+      if (mergeRegion.repeatOnEveryDataRow()) {
+        for (int rowIndex = dataStartRow + mergeRegion.rowOffset();
+            rowIndex <= dataEndRow;
+            rowIndex++) {
+          addMergedRegionIfSafe(
+              sheet,
+              new CellRangeAddress(
+                  rowIndex,
+                  rowIndex,
+                  mergeRegion.startColumnIndex(),
+                  mergeRegion.startColumnIndex() + mergeRegion.columnSpan() - 1),
+              errorColIndex);
+        }
+        continue;
+      }
+
+      addMergedRegionIfSafe(
+          sheet,
+          new CellRangeAddress(
+              dataStartRow + mergeRegion.rowOffset(),
+              dataStartRow + mergeRegion.rowOffset(),
+              mergeRegion.startColumnIndex(),
+              mergeRegion.startColumnIndex() + mergeRegion.columnSpan() - 1),
+          errorColIndex);
+    }
+  }
+
+  private void addMergedRegionIfSafe(Sheet sheet, CellRangeAddress candidate, int errorColIndex) {
+    if (candidate.getFirstColumn() <= errorColIndex && errorColIndex <= candidate.getLastColumn()) {
+      return;
+    }
+
+    for (CellRangeAddress existing : sheet.getMergedRegions()) {
+      if (sameRegion(existing, candidate)) {
+        return;
+      }
+      if (overlaps(existing, candidate)) {
+        return;
+      }
+    }
+
+    sheet.addMergedRegion(candidate);
+  }
+
+  private boolean sameRegion(CellRangeAddress left, CellRangeAddress right) {
+    return left.getFirstRow() == right.getFirstRow()
+        && left.getLastRow() == right.getLastRow()
+        && left.getFirstColumn() == right.getFirstColumn()
+        && left.getLastColumn() == right.getLastColumn();
+  }
+
+  private boolean overlaps(CellRangeAddress left, CellRangeAddress right) {
+    boolean rowsOverlap =
+        left.getFirstRow() <= right.getLastRow() && right.getFirstRow() <= left.getLastRow();
+    boolean colsOverlap =
+        left.getFirstColumn() <= right.getLastColumn()
+            && right.getFirstColumn() <= left.getLastColumn();
+    return rowsOverlap && colsOverlap;
   }
 }

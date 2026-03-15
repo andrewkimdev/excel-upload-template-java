@@ -313,68 +313,68 @@ class ExcelParserServiceTest {
 
   @Data
   public static class SimpleDto {
-    @ExcelColumn(header = "ExactHeader", column = "B", matchMode = HeaderMatchMode.EXACT)
+    @ExcelColumn(label = "ExactHeader", column = "B", matchMode = HeaderMatchMode.EXACT)
     private String exactField;
 
-    @ExcelColumn(header = "Contains", column = "C", matchMode = HeaderMatchMode.CONTAINS)
+    @ExcelColumn(label = "Contains", column = "C", matchMode = HeaderMatchMode.CONTAINS)
     private String containsField;
 
-    @ExcelColumn(header = "Starts", column = "D", matchMode = HeaderMatchMode.STARTS_WITH)
+    @ExcelColumn(label = "Starts", column = "D", matchMode = HeaderMatchMode.STARTS_WITH)
     private String startsWithField;
   }
 
   @Data
   public static class BooleanDto {
-    @ExcelColumn(header = "Active", column = "B")
+    @ExcelColumn(label = "Active", column = "B")
     private Boolean active;
   }
 
   @Data
   public static class DateDto {
-    @ExcelColumn(header = "Date", column = "B")
+    @ExcelColumn(label = "Date", column = "B")
     private LocalDate date;
   }
 
   @Data
   public static class IntegerDto {
-    @ExcelColumn(header = "Count", column = "B")
+    @ExcelColumn(label = "Count", column = "B")
     private Integer count;
   }
 
   @Data
   public static class OptionalFieldDto {
-    @ExcelColumn(header = "Name", column = "B")
+    @ExcelColumn(label = "Name", column = "B")
     private String name;
 
-    @ExcelColumn(header = "Optional", column = "C", required = false)
+    @ExcelColumn(label = "Optional", column = "C", required = false)
     private String optionalField;
   }
 
   @Data
   public static class TwoRequiredDto {
-    @ExcelColumn(header = "First", column = "B")
+    @ExcelColumn(label = "First", column = "B")
     private String first;
 
-    @ExcelColumn(header = "Second", column = "C")
+    @ExcelColumn(label = "Second", column = "C")
     private String second;
   }
 
   @Data
   public static class AutoDetectDto {
-    @ExcelColumn(header = "Target")
+    @ExcelColumn(label = "Target")
     private String value;
   }
 
   @Data
   public static class AutoDetectMissingDto {
-    @ExcelColumn(header = "NonExistentHeader")
+    @ExcelColumn(label = "NonExistentHeader")
     private String value;
   }
 
   @Data
   public static class WhitespaceEqualsDto {
     @ExcelColumn(
-        header = "순번",
+        label = "순번",
         column = "B",
         matchMode = HeaderMatchMode.EXACT,
         ignoreHeaderWhitespace = true)
@@ -383,7 +383,7 @@ class ExcelParserServiceTest {
 
   @Data
   public static class WhitespaceExactDto {
-    @ExcelColumn(header = "순번", column = "B", matchMode = HeaderMatchMode.EXACT)
+    @ExcelColumn(label = "순번", column = "B", matchMode = HeaderMatchMode.EXACT)
     private String value;
   }
 
@@ -502,7 +502,7 @@ class ExcelParserServiceTest {
 
     sheet.createRow(5);
 
-    sheet.addMergedRegion(new CellRangeAddress(3, 3, 9, 11));
+    sheet.addMergedRegion(new CellRangeAddress(3, 3, 9, 12));
     sheet.addMergedRegion(new CellRangeAddress(4, 4, 9, 10));
     sheet.addMergedRegion(new CellRangeAddress(4, 4, 11, 12));
     sheet.addMergedRegion(new CellRangeAddress(5, 5, 9, 10));

@@ -21,6 +21,7 @@ import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarIte
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.templates.TemplateTypes;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,8 +29,11 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
@@ -176,6 +180,44 @@ class ExcelImportIntegrationTest {
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.errorRows").value(greaterThan(0)))
         .andExpect(jsonPath("$.downloadUrl").value(startsWith("/api/excel/download/")));
+  }
+
+  @Test
+  void upload_invalidDataWithoutHeaderMerges_downloadedErrorReportRebuildsTemplateMerges()
+      throws Exception {
+    byte[] xlsxBytes = createInvalidAAppcarItemXlsxWithoutHeaderMerges();
+    MockMultipartFile file =
+        new MockMultipartFile(
+            "file",
+            "tariff_invalid_unmerged.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            xlsxBytes);
+
+    MvcResult uploadResult =
+        mockMvc
+            .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.downloadUrl").exists())
+            .andReturn();
+
+    String downloadUrl = extractDownloadUrl(uploadResult.getResponse().getContentAsString());
+    byte[] reportBytes =
+        mockMvc
+            .perform(get(downloadUrl))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsByteArray();
+
+    try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(reportBytes))) {
+      Sheet sheet = workbook.getSheetAt(0);
+      assertThat(sheet.getMergedRegions())
+          .anySatisfy(region -> assertThat(region.formatAsString()).isEqualTo("J4:M4"))
+          .anySatisfy(region -> assertThat(region.formatAsString()).isEqualTo("F7:G7"))
+          .anySatisfy(region -> assertThat(region.formatAsString()).isEqualTo("O7:P7"));
+      Cell errorHeaderCell = sheet.getRow(3).getCell(17);
+      assertThat(errorHeaderCell.getStringCellValue()).isEqualTo("_ERRORS");
+    }
   }
 
   @Test
@@ -491,6 +533,16 @@ class ExcelImportIntegrationTest {
     }
   }
 
+  private byte[] createInvalidAAppcarItemXlsxWithoutHeaderMerges() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      fillAAppcarItemSheet(sheet, 1, true, false);
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      wb.write(bos);
+      return bos.toByteArray();
+    }
+  }
+
   private byte[] createValidAAppcarItemXls(int dataRows) throws IOException {
     try (HSSFWorkbook wb = new HSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
@@ -502,7 +554,12 @@ class ExcelImportIntegrationTest {
   }
 
   private void fillAAppcarItemSheet(Sheet sheet, int dataRows, boolean makeInvalid) {
-    createTariffHeaderRows(sheet);
+    fillAAppcarItemSheet(sheet, dataRows, makeInvalid, true);
+  }
+
+  private void fillAAppcarItemSheet(
+      Sheet sheet, int dataRows, boolean makeInvalid, boolean includeHeaderMerges) {
+    createTariffHeaderRows(sheet, includeHeaderMerges);
 
     for (int i = 0; i < dataRows; i++) {
       Row row = sheet.createRow(6 + i);
@@ -528,6 +585,10 @@ class ExcelImportIntegrationTest {
   }
 
   private void createTariffHeaderRows(Sheet sheet) {
+    createTariffHeaderRows(sheet, true);
+  }
+
+  private void createTariffHeaderRows(Sheet sheet, boolean includeHeaderMerges) {
     Row row4 = sheet.createRow(3);
     row4.createCell(0).setCellValue("No");
     row4.createCell(1).setCellValue("순번");
@@ -539,9 +600,9 @@ class ExcelImportIntegrationTest {
     row4.createCell(7).setCellValue("관세율");
     row4.createCell(8).setCellValue("단가($)");
     row4.createCell(9).setCellValue("소요량");
-    row4.createCell(10).setCellValue("");
-    row4.createCell(11).setCellValue("");
-    row4.createCell(12).setCellValue("");
+    row4.createCell(10).setCellValue(includeHeaderMerges ? "" : "소요량");
+    row4.createCell(11).setCellValue(includeHeaderMerges ? "" : "소요량");
+    row4.createCell(12).setCellValue(includeHeaderMerges ? "" : "소요량");
     row4.createCell(13).setCellValue("연간수입예상금액($)");
     row4.createCell(14).setCellValue("심의결과");
     row4.createCell(15).setCellValue("");
@@ -549,9 +610,9 @@ class ExcelImportIntegrationTest {
 
     Row row5 = sheet.createRow(4);
     row5.createCell(9).setCellValue("제조용");
-    row5.createCell(10).setCellValue("");
+    row5.createCell(10).setCellValue(includeHeaderMerges ? "" : "제조용");
     row5.createCell(11).setCellValue("수리용");
-    row5.createCell(12).setCellValue("");
+    row5.createCell(12).setCellValue(includeHeaderMerges ? "" : "수리용");
 
     Row row6 = sheet.createRow(5);
     row6.createCell(9).setCellValue("");
@@ -559,11 +620,13 @@ class ExcelImportIntegrationTest {
     row6.createCell(11).setCellValue("");
     row6.createCell(12).setCellValue("");
 
-    sheet.addMergedRegion(new CellRangeAddress(3, 3, 9, 11));
-    sheet.addMergedRegion(new CellRangeAddress(4, 4, 9, 10));
-    sheet.addMergedRegion(new CellRangeAddress(4, 4, 11, 12));
-    sheet.addMergedRegion(new CellRangeAddress(5, 5, 9, 10));
-    sheet.addMergedRegion(new CellRangeAddress(5, 5, 11, 12));
+    if (includeHeaderMerges) {
+      sheet.addMergedRegion(new CellRangeAddress(3, 3, 9, 12));
+      sheet.addMergedRegion(new CellRangeAddress(4, 4, 9, 10));
+      sheet.addMergedRegion(new CellRangeAddress(4, 4, 11, 12));
+      sheet.addMergedRegion(new CellRangeAddress(5, 5, 9, 10));
+      sheet.addMergedRegion(new CellRangeAddress(5, 5, 11, 12));
+    }
   }
 
   private byte[] createWrongTemplateAAppcarItemXlsx() throws IOException {

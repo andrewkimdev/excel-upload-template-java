@@ -375,7 +375,12 @@ public class ExcelImportOrchestrator {
     long errorReportStageStartedAt = System.nanoTime();
     Path errorFile =
         errorReportService.generateErrorReport(
-            xlsxFile, validationResult, parseResult.columnMappings(), config, sanitizedFilename);
+            xlsxFile,
+            validationResult,
+            parseResult.columnMappings(),
+            config,
+            sanitizedFilename,
+            template.getMergeRegions());
     long errorReportStageElapsedMs = elapsedMillis(errorReportStageStartedAt);
 
     String errorFileId = errorFile.getFileName().toString().replace(".xlsx", "");

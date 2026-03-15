@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.foo.excel.config.ExcelImportConfig;
 import com.foo.excel.config.ExcelImportProperties;
+import com.foo.excel.service.contract.TemplateMergeMetadataResolver;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
+import com.foo.excel.templates.samples.aappcar.config.AAppcarItemImportConfig;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.ExcelValidationResult;
@@ -28,6 +31,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -406,6 +410,143 @@ class ExcelErrorReportServiceTest {
     assertThat(afterCount).isEqualTo(beforeCount);
   }
 
+  @Test
+  void errorReport_preservesExistingHeaderMerges_whenSourceAlreadyContainsThem() throws IOException {
+    Path originalFile = createAAppcarReportWorkbook(true);
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile,
+            createAAppcarValidationResult(),
+            Collections.emptyList(),
+            new AAppcarItemImportConfig(),
+            "aappcar-source.xlsx",
+            TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      Sheet sheet = wb.getSheetAt(0);
+      assertThat(sheet.getMergedRegions())
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("J4:M4"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("J5:K5"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("L5:M5"));
+    }
+  }
+
+  @Test
+  void errorReport_reconstructsTemplateHeaderMerges_whenSourceOmitsThem() throws IOException {
+    Path originalFile = createAAppcarReportWorkbook(false);
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile,
+            createAAppcarValidationResult(),
+            Collections.emptyList(),
+            new AAppcarItemImportConfig(),
+            "aappcar-source.xlsx",
+            TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      Sheet sheet = wb.getSheetAt(0);
+      assertThat(sheet.getMergedRegions())
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("J4:M4"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("J5:K5"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("L5:M5"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("J6:K6"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("L6:M6"));
+    }
+  }
+
+  @Test
+  void errorReport_appliesRepeatingAAppcarDataMerges() throws IOException {
+    Path originalFile = createAAppcarReportWorkbook(false);
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile,
+            createAAppcarValidationResult(),
+            Collections.emptyList(),
+            new AAppcarItemImportConfig(),
+            "aappcar-source.xlsx",
+            TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      Sheet sheet = wb.getSheetAt(0);
+      assertThat(sheet.getMergedRegions())
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("F7:G7"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("J7:K7"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("L8:M8"))
+          .anySatisfy(region -> assertThat(formatRegion(region)).isEqualTo("O8:P8"));
+    }
+  }
+
+  @Test
+  void errorReport_appendsErrorsColumnOutsideTemplateDrivenMergedRegions() throws IOException {
+    Path originalFile = createAAppcarReportWorkbook(false);
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile,
+            createAAppcarValidationResult(),
+            Collections.emptyList(),
+            new AAppcarItemImportConfig(),
+            "aappcar-source.xlsx",
+            TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      Sheet sheet = wb.getSheetAt(0);
+      Cell errorHeaderCell = sheet.getRow(3).getCell(17);
+      assertThat(errorHeaderCell.getStringCellValue()).isEqualTo("_ERRORS");
+      assertThat(sheet.getMergedRegions())
+          .allSatisfy(
+              region ->
+                  assertThat(region.getFirstColumn() <= 17 && 17 <= region.getLastColumn())
+                      .isFalse());
+    }
+  }
+
+  @Test
+  void errorReport_duplicateTemplateMergeApplication_doesNotThrow() throws IOException {
+    Path originalFile = createAAppcarReportWorkbook(true);
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile,
+            createAAppcarValidationResult(),
+            Collections.emptyList(),
+            new AAppcarItemImportConfig(),
+            "aappcar-source.xlsx",
+            TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      assertThat(wb.getSheetAt(0).getNumMergedRegions()).isGreaterThan(0);
+    }
+  }
+
+  @Test
+  void errorReport_highlightingAndMessagesRemainCorrect_afterTemplateMergeApplication()
+      throws IOException {
+    Path originalFile = createAAppcarReportWorkbook(false);
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile,
+            createAAppcarValidationResult(),
+            Collections.emptyList(),
+            new AAppcarItemImportConfig(),
+            "aappcar-source.xlsx",
+            TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class));
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      Sheet sheet = wb.getSheetAt(0);
+      Cell highlightedCell = sheet.getRow(6).getCell(5);
+      Cell errorMessageCell = sheet.getRow(6).getCell(17);
+
+      assertThat(highlightedCell.getCellStyle().getFillForegroundColor())
+          .isEqualTo(IndexedColors.ROSE.getIndex());
+      assertThat(errorMessageCell.getStringCellValue()).contains("HSK 형식이 올바르지 않습니다");
+    }
+  }
+
   // ===== 헬퍼 =====
 
   static class TestConfig implements ExcelImportConfig {
@@ -603,5 +744,98 @@ class ExcelErrorReportServiceTest {
           .filter(name -> name.contains("poi-sxssf-sheet"))
           .count();
     }
+  }
+
+  private Path createAAppcarReportWorkbook(boolean includeHeaderMerges) throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      createAAppcarHeaderRows(sheet, includeHeaderMerges);
+
+      Row firstDataRow = sheet.createRow(6);
+      firstDataRow.createCell(1).setCellValue(1);
+      firstDataRow.createCell(2).setCellValue("Item1");
+      firstDataRow.createCell(5).setCellValue("bad-hs-code");
+      firstDataRow.createCell(9).setCellValue(10);
+      firstDataRow.createCell(11).setCellValue(3);
+      firstDataRow.createCell(14).setCellValue("통과");
+
+      Row secondDataRow = sheet.createRow(7);
+      secondDataRow.createCell(1).setCellValue(2);
+      secondDataRow.createCell(2).setCellValue("Item2");
+      secondDataRow.createCell(5).setCellValue("8481.80-2001");
+      secondDataRow.createCell(9).setCellValue(20);
+      secondDataRow.createCell(11).setCellValue(4);
+      secondDataRow.createCell(14).setCellValue("재검토");
+
+      Path file =
+          tempDir.resolve(
+              includeHeaderMerges ? "aappcar-report-merged.xlsx" : "aappcar-report-unmerged.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private void createAAppcarHeaderRows(Sheet sheet, boolean includeHeaderMerges) {
+    Row row4 = sheet.createRow(3);
+    row4.createCell(0).setCellValue("No");
+    row4.createCell(1).setCellValue("순번");
+    row4.createCell(2).setCellValue("물품명");
+    row4.createCell(3).setCellValue("규격1)");
+    row4.createCell(4).setCellValue("모델명1)");
+    row4.createCell(5).setCellValue("HSK No");
+    row4.createCell(6).setCellValue("");
+    row4.createCell(7).setCellValue("관세율");
+    row4.createCell(8).setCellValue("단가($)");
+    row4.createCell(9).setCellValue("소요량");
+    row4.createCell(10).setCellValue(includeHeaderMerges ? "" : "소요량");
+    row4.createCell(11).setCellValue(includeHeaderMerges ? "" : "소요량");
+    row4.createCell(12).setCellValue(includeHeaderMerges ? "" : "소요량");
+    row4.createCell(13).setCellValue("연간수입예상금액($)");
+    row4.createCell(14).setCellValue("심의결과");
+    row4.createCell(15).setCellValue("");
+    row4.createCell(16).setCellValue("연간 예상소요량");
+
+    Row row5 = sheet.createRow(4);
+    row5.createCell(9).setCellValue("제조용");
+    row5.createCell(10).setCellValue(includeHeaderMerges ? "" : "제조용");
+    row5.createCell(11).setCellValue("수리용");
+    row5.createCell(12).setCellValue(includeHeaderMerges ? "" : "수리용");
+
+    Row row6 = sheet.createRow(5);
+    row6.createCell(9).setCellValue("");
+    row6.createCell(10).setCellValue("");
+    row6.createCell(11).setCellValue("");
+    row6.createCell(12).setCellValue("");
+
+    if (includeHeaderMerges) {
+      sheet.addMergedRegion(new CellRangeAddress(3, 3, 9, 12));
+      sheet.addMergedRegion(new CellRangeAddress(4, 4, 9, 10));
+      sheet.addMergedRegion(new CellRangeAddress(4, 4, 11, 12));
+      sheet.addMergedRegion(new CellRangeAddress(5, 5, 9, 10));
+      sheet.addMergedRegion(new CellRangeAddress(5, 5, 11, 12));
+    }
+  }
+
+  private ExcelValidationResult createAAppcarValidationResult() {
+    CellError cellError =
+        CellError.builder()
+            .columnIndex(5)
+            .columnRef(ExcelColumnRef.ofLetter("F"))
+            .fieldName("hsno")
+            .headerName("HSK")
+            .rejectedValue("bad-hs-code")
+            .message("HSK 형식이 올바르지 않습니다")
+            .build();
+
+    RowError rowError =
+        RowError.builder().rowNumber(7).cellErrors(new ArrayList<>(List.of(cellError))).build();
+
+    return ExcelValidationResult.failure(2, List.of(rowError));
+  }
+
+  private String formatRegion(CellRangeAddress region) {
+    return region.formatAsString();
   }
 }

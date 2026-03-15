@@ -14,6 +14,7 @@ public class TemplateDefinition<T, M extends MetaData> {
   private final Class<T> dtoClass;
   private final Class<M> metaDataClass;
   private final ExcelImportConfig config;
+  private final List<TemplateMergeRegion> mergeRegions;
   private final PersistenceHandler<T, M> persistenceHandler;
   private final UploadPrecheck<M> uploadPrecheck;
   private final DatabaseUniquenessChecker<T, M> dbUniquenessChecker;
@@ -30,6 +31,7 @@ public class TemplateDefinition<T, M extends MetaData> {
     this.dtoClass = dtoClass;
     this.metaDataClass = metaDataClass;
     this.config = config;
+    this.mergeRegions = TemplateMergeMetadataResolver.resolve(dtoClass);
     this.persistenceHandler = persistenceHandler;
     this.uploadPrecheck = uploadPrecheck;
     this.dbUniquenessChecker = dbUniquenessChecker;

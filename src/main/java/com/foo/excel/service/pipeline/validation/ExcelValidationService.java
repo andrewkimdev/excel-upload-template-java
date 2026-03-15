@@ -100,7 +100,7 @@ public class ExcelValidationService {
     String headerName = fieldName;
 
     if (excelColumn != null) {
-      headerName = excelColumn.header();
+      headerName = excelColumn.label();
       if (!excelColumn.column().isEmpty()) {
         columnIndex = ExcelColumnUtil.letterToIndex(excelColumn.column());
         columnRef = ExcelColumnRef.ofLetter(excelColumn.column());

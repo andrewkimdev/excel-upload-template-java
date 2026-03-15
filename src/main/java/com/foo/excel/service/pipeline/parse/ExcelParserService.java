@@ -237,17 +237,17 @@ public class ExcelParserService {
   private HeaderRowRange resolveHeaderRowRange(
       ExcelColumn annotation, ExcelImportConfig config) {
     int start = annotation.headerRowStart();
-    int end = annotation.headerRowEnd();
-    if (start == -1 && end == -1) {
+    int count = annotation.headerRowCount();
+    if (start == -1 && count == -1) {
       int headerRow = config.getHeaderRow() - 1;
       return new HeaderRowRange(headerRow, headerRow);
     }
-    if (start < 1 || end < 1 || start > end) {
+    if (start < 1 || count < 1) {
       throw new IllegalStateException(
-          "Invalid header row range for column '%s': start=%d, end=%d"
-              .formatted(annotation.column(), start, end));
+          "Invalid header row range for column '%s': start=%d, count=%d"
+              .formatted(annotation.column(), start, count));
     }
-    return new HeaderRowRange(start - 1, end - 1);
+    return new HeaderRowRange(start - 1, start + count - 2);
   }
 
   private int resolveHeaderScanColumnCount(Sheet sheet, HeaderRowRange range) {
@@ -267,7 +267,7 @@ public class ExcelParserService {
     }
 
     List<String> expectedSegments = expectedHeaderSegments(annotation);
-    if (annotation.headerPath().length == 0) {
+    if (annotation.headerLabels().length == 0) {
       return matchHeader(
           actualSegments.get(actualSegments.size() - 1),
           expectedSegments.get(0),
@@ -292,10 +292,10 @@ public class ExcelParserService {
   }
 
   private List<String> expectedHeaderSegments(ExcelColumn annotation) {
-    if (annotation.headerPath().length == 0) {
-      return Collections.singletonList(annotation.header());
+    if (annotation.headerLabels().length == 0) {
+      return Collections.singletonList(annotation.label());
     }
-    return Arrays.asList(annotation.headerPath());
+    return Arrays.asList(annotation.headerLabels());
   }
 
   private String expectedHeaderLabel(ExcelColumn annotation) {
@@ -476,7 +476,7 @@ public class ExcelParserService {
               .columnIndex(mapping.resolvedColumnIndex())
               .columnRef(mapping.resolvedColumnRef())
               .fieldName(mapping.field().getName())
-              .headerName(mapping.annotation().header())
+              .headerName(mapping.annotation().label())
               .rejectedValue(rawValue)
               .message("'" + rawValue + "' 값을 " + fieldType.getSimpleName() + " 타입으로 변환할 수 없습니다")
               .build());

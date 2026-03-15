@@ -130,7 +130,7 @@ public class WithinFileUniqueConstraintValidator {
           CellError cellError =
               CellError.builder()
                   .fieldName(field.getName())
-                  .headerName(excelColumn != null ? excelColumn.header() : field.getName())
+                  .headerName(excelColumn != null ? excelColumn.label() : field.getName())
                   .columnIndex(excelColumn != null ? resolveColumnIndex(excelColumn) : -1)
                   .columnRef(excelColumn != null ? resolveColumnRef(excelColumn) : UNKNOWN_COLUMN_REF)
                   .rejectedValue(value)
@@ -213,7 +213,7 @@ public class WithinFileUniqueConstraintValidator {
           CellError cellError =
               CellError.builder()
                   .fieldName(firstField.getName())
-                  .headerName(excelColumn != null ? excelColumn.header() : firstField.getName())
+                  .headerName(excelColumn != null ? excelColumn.label() : firstField.getName())
                   .columnIndex(excelColumn != null ? resolveColumnIndex(excelColumn) : -1)
                   .columnRef(excelColumn != null ? resolveColumnRef(excelColumn) : UNKNOWN_COLUMN_REF)
                   .rejectedValue(compositeKey.toString())
