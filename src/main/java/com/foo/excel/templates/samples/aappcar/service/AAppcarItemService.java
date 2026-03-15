@@ -115,7 +115,7 @@ public class AAppcarItemService
     }
   }
 
-  private void updateEntityFromDto(FF
+  private void updateEntityFromDto(
       AAppcarItem entity, AAppcarItemDto dto, AAppcarItemMetaData metaData) {
     entity.setGoodsDes(dto.getGoodsDes());
     entity.setSpec(dto.getSpec());

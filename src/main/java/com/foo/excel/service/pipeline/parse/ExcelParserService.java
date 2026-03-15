@@ -18,6 +18,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,8 @@ public class ExcelParserService {
 
   private record HeaderRowRange(int startRowIndex, int endRowIndex) {}
 
+  private record CellRef(int rowIndex, int columnIndex) {}
+
   public <T> ParseResult<T> parse(Path xlsxFile, Class<T> dtoClass, ExcelImportConfig config)
       throws IOException {
     return parse(xlsxFile, dtoClass, config, Integer.MAX_VALUE, Integer.MAX_VALUE);
@@ -85,6 +89,8 @@ public class ExcelParserService {
           throw new IllegalStateException("Header row " + config.getHeaderRow() + " is empty");
         }
 
+        Map<CellRef, CellRef> mergedCellLookup = buildMergedCellLookup(sheet);
+        Map<Cell, String> formattedCellCache = new IdentityHashMap<>();
         List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, sheet, config);
         List<RowError> parseErrors = new ArrayList<>();
         List<Integer> sourceRowNumbers = new ArrayList<>();
@@ -98,7 +104,9 @@ public class ExcelParserService {
                 parseErrors,
                 sourceRowNumbers,
                 maxRows,
-                maxErrorRows);
+                maxErrorRows,
+                mergedCellLookup,
+                formattedCellCache);
 
         return new ParseResult<>(rows, sourceRowNumbers, columnMappings, parseErrors);
       }
@@ -335,7 +343,9 @@ public class ExcelParserService {
       List<RowError> parseErrors,
       List<Integer> sourceRowNumbers,
       int maxRows,
-      int maxErrorRows) {
+      int maxErrorRows,
+      Map<CellRef, CellRef> mergedCellLookup,
+      Map<Cell, String> formattedCellCache) {
 
     List<T> rows = new ArrayList<>();
     int lastRowNum = sheet.getLastRowNum();
@@ -347,13 +357,13 @@ public class ExcelParserService {
       }
 
       // 푸터 감지
-      if (isFooterRow(row, footerMarker)) {
+      if (isFooterRow(row, footerMarker, formattedCellCache)) {
         log.debug("Footer marker found at row {}, stopping", i + 1);
         break;
       }
 
       // 빈 행 건너뛰기
-      if (isBlankRow(row)) {
+      if (isBlankRow(row, formattedCellCache)) {
         continue;
       }
 
@@ -368,9 +378,11 @@ public class ExcelParserService {
       List<CellError> cellErrors = new ArrayList<>();
 
       for (ColumnMapping mapping : columnMappings) {
-        Cell cell = resolveEffectiveCell(sheet, i, mapping.resolvedColumnIndex());
+        Cell cell =
+            resolveEffectiveCell(
+                sheet, i, mapping.resolvedColumnIndex(), mergedCellLookup, formattedCellCache);
 
-        Object value = getCellValue(cell, mapping, sheet, cellErrors);
+        Object value = getCellValue(cell, mapping, cellErrors, formattedCellCache);
         try {
           mapping.field().set(dto, value);
         } catch (IllegalAccessException e) {
@@ -405,12 +417,12 @@ public class ExcelParserService {
     return maxErrorRows > 0 && maxErrorRows != Integer.MAX_VALUE && errorRows >= maxErrorRows;
   }
 
-  private boolean isFooterRow(Row row, String footerMarker) {
+  private boolean isFooterRow(Row row, String footerMarker, Map<Cell, String> formattedCellCache) {
     if (footerMarker == null || footerMarker.isEmpty()) {
       return false;
     }
     for (Cell cell : row) {
-      String value = getCellStringValue(cell);
+      String value = getCellStringValue(cell, formattedCellCache);
       if (value != null && value.contains(footerMarker)) {
         return true;
       }
@@ -418,10 +430,10 @@ public class ExcelParserService {
     return false;
   }
 
-  private boolean isBlankRow(Row row) {
+  private boolean isBlankRow(Row row, Map<Cell, String> formattedCellCache) {
     for (Cell cell : row) {
       if (cell != null && cell.getCellType() != CellType.BLANK) {
-        String value = getCellStringValue(cell);
+        String value = getCellStringValue(cell, formattedCellCache);
         if (value != null && !value.isBlank()) {
           return false;
         }
@@ -431,7 +443,10 @@ public class ExcelParserService {
   }
 
   private Object getCellValue(
-      Cell cell, ColumnMapping mapping, Sheet sheet, List<CellError> parseErrors) {
+      Cell cell,
+      ColumnMapping mapping,
+      List<CellError> parseErrors,
+      Map<Cell, String> formattedCellCache) {
     if (cell == null) {
       return null;
     }
@@ -441,21 +456,21 @@ public class ExcelParserService {
 
     try {
       if (fieldType == String.class) {
-        return getStringValue(cell);
+        return getStringValue(cell, formattedCellCache);
       } else if (fieldType == Integer.class || fieldType == int.class) {
-        return getIntegerValue(cell);
+        return getIntegerValue(cell, formattedCellCache);
       } else if (fieldType == BigDecimal.class) {
-        return getBigDecimalValue(cell);
+        return getBigDecimalValue(cell, formattedCellCache);
       } else if (fieldType == LocalDate.class) {
-        return getLocalDateValue(cell, dateFormat);
+        return getLocalDateValue(cell, dateFormat, formattedCellCache);
       } else if (fieldType == LocalDateTime.class) {
-        return getLocalDateTimeValue(cell, dateFormat);
+        return getLocalDateTimeValue(cell, dateFormat, formattedCellCache);
       } else if (fieldType == Boolean.class || fieldType == boolean.class) {
-        return getBooleanValue(cell);
+        return getBooleanValue(cell, formattedCellCache);
       }
-      return getStringValue(cell);
+      return getStringValue(cell, formattedCellCache);
     } catch (Exception e) {
-      String rawValue = getCellStringValue(cell);
+      String rawValue = getCellStringValue(cell, formattedCellCache);
       parseErrors.add(
           CellError.builder()
               .columnIndex(mapping.resolvedColumnIndex())
@@ -469,64 +484,90 @@ public class ExcelParserService {
     }
   }
 
-  private String getStringValue(Cell cell) {
-    String value = DATA_FORMATTER.get().formatCellValue(cell);
+  private String getStringValue(Cell cell, Map<Cell, String> formattedCellCache) {
+    String value = getCellStringValue(cell, formattedCellCache);
     return value != null ? value.trim() : null;
   }
 
-  private Integer getIntegerValue(Cell cell) {
+  private Integer getIntegerValue(Cell cell, Map<Cell, String> formattedCellCache) {
     if (cell.getCellType() == CellType.NUMERIC) {
       return (int) cell.getNumericCellValue();
     }
-    String value = getStringValue(cell);
+    String value = getStringValue(cell, formattedCellCache);
     if (value == null || value.isBlank()) {
       return null;
     }
     return Integer.parseInt(value.replaceAll("[,\\s]", ""));
   }
 
-  private BigDecimal getBigDecimalValue(Cell cell) {
+  private BigDecimal getBigDecimalValue(Cell cell, Map<Cell, String> formattedCellCache) {
     if (cell.getCellType() == CellType.NUMERIC) {
       return BigDecimal.valueOf(cell.getNumericCellValue());
     }
-    String value = getStringValue(cell);
+    String value = getStringValue(cell, formattedCellCache);
     if (value == null || value.isBlank()) {
       return null;
     }
     return new BigDecimal(value.replaceAll("[,\\s]", ""));
   }
 
-  private LocalDate getLocalDateValue(Cell cell, String dateFormat) {
+  private LocalDate getLocalDateValue(
+      Cell cell, String dateFormat, Map<Cell, String> formattedCellCache) {
     if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
       return cell.getLocalDateTimeCellValue().toLocalDate();
     }
-    String value = getStringValue(cell);
+    String value = getStringValue(cell, formattedCellCache);
     if (value == null || value.isBlank()) {
       return null;
     }
     return LocalDate.parse(value, DateTimeFormatter.ofPattern(dateFormat));
   }
 
-  private LocalDateTime getLocalDateTimeValue(Cell cell, String dateFormat) {
+  private LocalDateTime getLocalDateTimeValue(
+      Cell cell, String dateFormat, Map<Cell, String> formattedCellCache) {
     if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
       return cell.getLocalDateTimeCellValue();
     }
-    String value = getStringValue(cell);
+    String value = getStringValue(cell, formattedCellCache);
     if (value == null || value.isBlank()) {
       return null;
     }
     return LocalDateTime.parse(value, DateTimeFormatter.ofPattern(dateFormat));
   }
 
-  private Boolean getBooleanValue(Cell cell) {
+  private Boolean getBooleanValue(Cell cell, Map<Cell, String> formattedCellCache) {
     if (cell.getCellType() == CellType.BOOLEAN) {
       return cell.getBooleanCellValue();
     }
-    String value = getStringValue(cell);
+    String value = getStringValue(cell, formattedCellCache);
     if (value == null || value.isBlank()) {
       return false;
     }
     return "Y".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value);
+  }
+
+  private Map<CellRef, CellRef> buildMergedCellLookup(Sheet sheet) {
+    Map<CellRef, CellRef> mergedCellLookup = new HashMap<>();
+    for (CellRangeAddress range : sheet.getMergedRegions()) {
+      CellRef anchor = new CellRef(range.getFirstRow(), range.getFirstColumn());
+      for (int rowIndex = range.getFirstRow(); rowIndex <= range.getLastRow(); rowIndex++) {
+        for (int columnIndex = range.getFirstColumn();
+            columnIndex <= range.getLastColumn();
+            columnIndex++) {
+          mergedCellLookup.put(new CellRef(rowIndex, columnIndex), anchor);
+        }
+      }
+    }
+    return mergedCellLookup;
+  }
+
+  private Cell resolveMergedCell(Sheet sheet, int rowIdx, int colIdx, Map<CellRef, CellRef> mergedCellLookup) {
+    CellRef anchor = mergedCellLookup.get(new CellRef(rowIdx, colIdx));
+    if (anchor == null) {
+      return null;
+    }
+    Row topRow = sheet.getRow(anchor.rowIndex());
+    return topRow != null ? topRow.getCell(anchor.columnIndex()) : null;
   }
 
   private Cell resolveMergedCell(Sheet sheet, int rowIdx, int colIdx) {
@@ -546,6 +587,16 @@ public class ExcelParserService {
     return getCellStringValue(cell);
   }
 
+  private String resolveCellValue(
+      Sheet sheet,
+      int rowIdx,
+      int colIdx,
+      Map<CellRef, CellRef> mergedCellLookup,
+      Map<Cell, String> formattedCellCache) {
+    Cell cell = resolveEffectiveCell(sheet, rowIdx, colIdx, mergedCellLookup, formattedCellCache);
+    return getCellStringValue(cell, formattedCellCache);
+  }
+
   private Cell resolveEffectiveCell(Sheet sheet, int rowIdx, int colIdx) {
     Row row = sheet.getRow(rowIdx);
     Cell cell = row != null ? row.getCell(colIdx) : null;
@@ -558,9 +609,38 @@ public class ExcelParserService {
     return cell;
   }
 
+  private Cell resolveEffectiveCell(
+      Sheet sheet,
+      int rowIdx,
+      int colIdx,
+      Map<CellRef, CellRef> mergedCellLookup,
+      Map<Cell, String> formattedCellCache) {
+    Row row = sheet.getRow(rowIdx);
+    Cell cell = row != null ? row.getCell(colIdx) : null;
+    if (cell == null || isBlankCellValue(cell, formattedCellCache)) {
+      Cell mergedCell = resolveMergedCell(sheet, rowIdx, colIdx, mergedCellLookup);
+      if (mergedCell != null && !isBlankCellValue(mergedCell, formattedCellCache)) {
+        return mergedCell;
+      }
+    }
+    return cell;
+  }
+
+  private boolean isBlankCellValue(Cell cell, Map<Cell, String> formattedCellCache) {
+    String value = getCellStringValue(cell, formattedCellCache);
+    return value == null || value.isBlank();
+  }
+
   private boolean isBlankCellValue(Cell cell) {
     String value = getCellStringValue(cell);
     return value == null || value.isBlank();
+  }
+
+  private String getCellStringValue(Cell cell, Map<Cell, String> formattedCellCache) {
+    if (cell == null) {
+      return null;
+    }
+    return formattedCellCache.computeIfAbsent(cell, current -> DATA_FORMATTER.get().formatCellValue(current).trim());
   }
 
   private String getCellStringValue(Cell cell) {
