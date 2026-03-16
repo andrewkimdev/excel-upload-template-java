@@ -182,7 +182,7 @@ class ExcelParserServiceTest {
   }
 
   @Test
-  void parse_typeCoercion_boolean_Y_true_blank_false() throws IOException {
+  void parse_typeCoercion_boolean_Y_true_blank_preservesNull() throws IOException {
     Path file = createFileWithBooleanColumn();
     TemplateSheetMetadata boolSheetMetadata =
         TemplateSheetMetadataResolver.resolve(BooleanDto.class);
@@ -192,7 +192,49 @@ class ExcelParserServiceTest {
 
     assertThat(result.rows()).hasSize(2);
     assertThat(result.rows().get(0).getActive()).isTrue();
-    assertThat(result.rows().get(1).getActive()).isFalse();
+    assertThat(result.rows().get(1).getActive()).isNull();
+  }
+
+  @Test
+  void parse_blankCells_preserveDtoDefaultInitializers() throws IOException {
+    Path file = createFileWithDefaultedFields("", "");
+    TemplateSheetMetadata sheetMetadata =
+        TemplateSheetMetadataResolver.resolve(DefaultValueDto.class);
+
+    ExcelParserService.ParseResult<DefaultValueDto> result =
+        parserService.parse(file, DefaultValueDto.class, sheetMetadata);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.rows().get(0).getName()).isEqualTo("DEFAULT_NAME");
+    assertThat(result.rows().get(0).getActive()).isTrue();
+  }
+
+  @Test
+  void parse_missingCells_preserveDtoDefaultInitializers() throws IOException {
+    Path file = createFileWithDefaultedFields(null, null);
+    TemplateSheetMetadata sheetMetadata =
+        TemplateSheetMetadataResolver.resolve(DefaultValueDto.class);
+
+    ExcelParserService.ParseResult<DefaultValueDto> result =
+        parserService.parse(file, DefaultValueDto.class, sheetMetadata);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.rows().get(0).getName()).isEqualTo("DEFAULT_NAME");
+    assertThat(result.rows().get(0).getActive()).isTrue();
+  }
+
+  @Test
+  void parse_nonBlankCells_overrideDtoDefaultInitializers() throws IOException {
+    Path file = createFileWithDefaultedFields("updated", "Y");
+    TemplateSheetMetadata sheetMetadata =
+        TemplateSheetMetadataResolver.resolve(DefaultValueDto.class);
+
+    ExcelParserService.ParseResult<DefaultValueDto> result =
+        parserService.parse(file, DefaultValueDto.class, sheetMetadata);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.rows().get(0).getName()).isEqualTo("updated");
+    assertThat(result.rows().get(0).getActive()).isTrue();
   }
 
   @Test
@@ -339,6 +381,16 @@ class ExcelParserServiceTest {
   public static class BooleanDto {
     @ExcelColumn(label = "Active", column = "B")
     private Boolean active;
+  }
+
+  @Data
+  @ExcelSheet
+  public static class DefaultValueDto {
+    @ExcelColumn(label = "Name", column = "B", required = false)
+    private String name = "DEFAULT_NAME";
+
+    @ExcelColumn(label = "Active", column = "C", required = false)
+    private Boolean active = true;
   }
 
   @Data
@@ -557,6 +609,32 @@ class ExcelParserServiceTest {
       dataRow2.createCell(1).setCellValue(""); // 빈 값 -> false
 
       Path file = tempDir.resolve("boolean_test.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private Path createFileWithDefaultedFields(String nameValue, String activeValue) throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+
+      Row headerRow = sheet.createRow(0);
+      headerRow.createCell(0).setCellValue("Deco");
+      headerRow.createCell(1).setCellValue("Name");
+      headerRow.createCell(2).setCellValue("Active");
+
+      Row dataRow = sheet.createRow(1);
+      dataRow.createCell(0).setCellValue("skip");
+      if (nameValue != null) {
+        dataRow.createCell(1).setCellValue(nameValue);
+      }
+      if (activeValue != null) {
+        dataRow.createCell(2).setCellValue(activeValue);
+      }
+
+      Path file = tempDir.resolve("defaulted_fields_test.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
         wb.write(os);
       }

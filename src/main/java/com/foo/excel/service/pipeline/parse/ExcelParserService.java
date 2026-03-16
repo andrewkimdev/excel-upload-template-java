@@ -389,6 +389,10 @@ public class ExcelParserService {
             resolveEffectiveCell(
                 sheet, i, mapping.resolvedColumnIndex(), mergedCellLookup, formattedCellCache);
 
+        if (cell == null || isBlankCellValue(cell, formattedCellCache)) {
+          continue;
+        }
+
         Object value = getCellValue(cell, mapping, cellErrors, formattedCellCache);
         try {
           mapping.field().set(dto, value);
