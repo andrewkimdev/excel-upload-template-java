@@ -56,7 +56,9 @@ Open http://localhost:8080 to access the upload form.
   - `assignFilePath(String filePath)` accepts the server-assigned stored upload path
 - Template-level temp storage contract:
   - templates may override `TemplateDefinition.resolveTempSubdirectory(metaData)` when uploads should be partitioned under a temp subdirectory
+  - `resolveTempSubdirectory(metaData)` returns a nullable `String`; `null` means the base temp directory, non-null values are sanitized before use
   - current `aappcar` implementation resolves that subdirectory from `customId`
+  - the concrete temp filesystem path is resolved by `ExcelUploadFileService`, not by the template hook
 - `metaData` is parsed in strict mode:
   - reject unknown fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
   - reject scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
@@ -243,7 +245,7 @@ See `application.properties` for a detailed security checklist and configuration
    - `assignFilePath(String filePath)`를 구현해 서버가 저장한 업로드 경로를 받을 수 있어야 한다
 4. **Persistence** -- Implement `PersistenceHandler<T, M>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metaData)` to save parsed rows merged with common fields
 5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, M>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metaData)` if duplicates should be checked against existing data
-6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, M>` `@Bean` with `metaDataClass` (and checker bean if enabled); override `resolveTempSubdirectory(metaData)` only when the template needs temp-path partitioning
+6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, M>` `@Bean` with `metaDataClass` (and checker bean if enabled); override `resolveTempSubdirectory(metaData)` only when the template needs temp-path partitioning, returning `null` when no subdirectory should be used
 
 See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
 
