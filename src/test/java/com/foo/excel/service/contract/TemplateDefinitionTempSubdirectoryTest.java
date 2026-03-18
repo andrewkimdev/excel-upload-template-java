@@ -14,7 +14,7 @@ class TemplateDefinitionTempSubdirectoryTest {
     TemplateDefinition<AAppcarItemDto, AAppcarItemMetaData> template =
         new TemplateDefinition<>("test", AAppcarItemDto.class, AAppcarItemMetaData.class, null, null, null);
 
-    assertThat(template.resolveTempSubdirectory(new AAppcarItemMetaData())).isEmpty();
+    assertThat(template.resolveTempSubdirectory(new AAppcarItemMetaData())).isNull();
   }
 
   @Test
@@ -24,6 +24,6 @@ class TemplateDefinitionTempSubdirectoryTest {
     AAppcarItemTemplateDefinition template =
         new AAppcarItemTemplateDefinition(null, null, null);
 
-    assertThat(template.resolveTempSubdirectory(metaData)).contains("CUSTOM01");
+    assertThat(template.resolveTempSubdirectory(metaData)).isEqualTo("CUSTOM01");
   }
 }

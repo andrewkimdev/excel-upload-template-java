@@ -7,7 +7,6 @@ import com.foo.excel.service.contract.UploadPrecheck;
 import com.foo.excel.templates.TemplateTypes;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
-import java.util.Optional;
 
 public class AAppcarItemTemplateDefinition
     extends TemplateDefinition<AAppcarItemDto, AAppcarItemMetaData> {
@@ -26,7 +25,7 @@ public class AAppcarItemTemplateDefinition
   }
 
   @Override
-  public Optional<String> resolveTempSubdirectory(AAppcarItemMetaData metaData) {
-    return Optional.ofNullable(metaData.getCustomId());
+  public String resolveTempSubdirectory(AAppcarItemMetaData metaData) {
+    return metaData.getCustomId();
   }
 }

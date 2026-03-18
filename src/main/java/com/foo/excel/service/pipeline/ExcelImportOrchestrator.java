@@ -16,7 +16,6 @@ import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.RowError;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import lombok.Builder;
@@ -81,14 +80,13 @@ public class ExcelImportOrchestrator {
 
     TemplateSheetMetadata sheetMetadata = template.getSheetMetadata();
 
-    // 1. 템플릿별 임시 하위 디렉터리 결정
-    Path tempSubDir = resolveTempUploadDirectory(template, typedMetaData);
-    Files.createDirectories(tempSubDir);
+    // 1. 템플릿별 임시 하위 디렉터리 키 결정
+    String tempSubdirectory = resolveTempSubdirectory(template, typedMetaData);
 
     try {
       // 2. xlsx 파일 저장 및 검증
       long fileStageStartedAt = System.nanoTime();
-      StoredUpload storedUpload = uploadFileService.storeAndValidateXlsx(file, tempSubDir);
+      StoredUpload storedUpload = uploadFileService.storeAndValidateXlsx(file, tempSubdirectory);
       Path xlsxFile = storedUpload.path();
       typedMetaData.assignFilePath(xlsxFile.toString());
       String sanitizedFilename = storedUpload.sanitizedFilename();
@@ -299,13 +297,10 @@ public class ExcelImportOrchestrator {
     }
   }
 
-  private <M extends MetaData> Path resolveTempUploadDirectory(
+  private <M extends MetaData> String resolveTempSubdirectory(
       TemplateDefinition<?, M> template, M metaData) {
-    return template
-        .resolveTempSubdirectory(metaData)
-        .map(this::sanitizeTempSubdirectory)
-        .map(properties.getTempDirectoryPath()::resolve)
-        .orElse(properties.getTempDirectoryPath());
+    String tempSubdirectory = template.resolveTempSubdirectory(metaData);
+    return tempSubdirectory == null ? null : sanitizeTempSubdirectory(tempSubdirectory);
   }
 
   private String sanitizeTempSubdirectory(String tempSubdirectory) {

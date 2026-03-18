@@ -3,6 +3,7 @@ package com.foo.excel.service.file;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.foo.excel.config.ExcelImportProperties;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -23,8 +24,11 @@ class ExcelUploadFileServiceTest {
   @TempDir Path tempDir;
 
   @BeforeEach
-  void setUp() {
-    uploadFileService = new ExcelUploadFileService();
+  void setUp() throws IOException {
+    ExcelImportProperties properties = new ExcelImportProperties();
+    properties.setTempDirectory(tempDir.toString());
+    properties.init();
+    uploadFileService = new ExcelUploadFileService(properties);
   }
 
   @Test
@@ -37,9 +41,11 @@ class ExcelUploadFileServiceTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
 
-    ExcelUploadFileService.StoredUpload result = uploadFileService.storeAndValidateXlsx(file, tempDir);
+    ExcelUploadFileService.StoredUpload result =
+        uploadFileService.storeAndValidateXlsx(file, null);
 
     assertThat(result.sanitizedFilename()).isEqualTo("test.xlsx");
+    assertThat(result.path().getParent()).isEqualTo(tempDir);
     assertThat(result.path().getFileName().toString()).isEqualTo(result.sanitizedFilename());
     try (Workbook wb = WorkbookFactory.create(result.path().toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -53,7 +59,7 @@ class ExcelUploadFileServiceTest {
     MockMultipartFile file =
         new MockMultipartFile("file", "test.xls", "application/vnd.ms-excel", xlsxBytes);
 
-    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
+    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.");
   }
@@ -63,7 +69,7 @@ class ExcelUploadFileServiceTest {
     MockMultipartFile file =
         new MockMultipartFile("file", "test.csv", "text/csv", "a,b,c".getBytes());
 
-    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
+    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("유효하지 않은 파일 확장자입니다.");
   }
@@ -73,7 +79,7 @@ class ExcelUploadFileServiceTest {
     MockMultipartFile file =
         new MockMultipartFile("file", null, "application/octet-stream", new byte[0]);
 
-    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
+    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("파일명이 없습니다");
   }
@@ -88,12 +94,29 @@ class ExcelUploadFileServiceTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
 
-    ExcelUploadFileService.StoredUpload result = uploadFileService.storeAndValidateXlsx(file, tempDir);
+    ExcelUploadFileService.StoredUpload result =
+        uploadFileService.storeAndValidateXlsx(file, "CUSTOM01");
 
-    assertThat(result.path().getParent()).isEqualTo(tempDir);
+    assertThat(result.path().getParent()).isEqualTo(tempDir.resolve("CUSTOM01"));
     assertThat(result.path().getFileName().toString()).isEqualTo(result.sanitizedFilename());
     assertThat(result.path().getFileName().toString()).doesNotContain("..");
     assertThat(result.path().getFileName().toString()).doesNotContain("/");
+  }
+
+  @Test
+  void tempSubdirectory_whenPresent_storesFileUnderResolvedSubdirectory() throws IOException {
+    byte[] xlsxBytes = createXlsxBytes("TestValue");
+    MockMultipartFile file =
+        new MockMultipartFile(
+            "file",
+            "test.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            xlsxBytes);
+
+    ExcelUploadFileService.StoredUpload result =
+        uploadFileService.storeAndValidateXlsx(file, "ARCHIVE01");
+
+    assertThat(result.path()).isEqualTo(tempDir.resolve("ARCHIVE01").resolve("test.xlsx"));
   }
 
   @Test
@@ -106,7 +129,7 @@ class ExcelUploadFileServiceTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             pdfBytes);
 
-    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, tempDir))
+    assertThatThrownBy(() -> uploadFileService.storeAndValidateXlsx(file, null))
         .isInstanceOf(SecurityException.class);
   }
 
