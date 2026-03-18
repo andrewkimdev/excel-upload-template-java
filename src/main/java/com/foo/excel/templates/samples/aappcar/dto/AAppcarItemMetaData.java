@@ -72,4 +72,9 @@ public class AAppcarItemMetaData implements MetaData {
     String normalized = getApprovedYn();
     return "Y".equals(normalized);
   }
+
+  @Override
+  public void assignFilePath(String filePath) {
+    this.filePath = filePath;
+  }
 }

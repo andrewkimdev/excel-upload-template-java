@@ -49,4 +49,8 @@ public class TemplateDefinition<T, M extends MetaData> {
     }
     return dbUniquenessChecker.check(rows, dtoClass, sourceRowNumbers, metaData);
   }
+
+  public Optional<String> resolveTempSubdirectory(M metaData) {
+    return Optional.empty();
+  }
 }

@@ -96,6 +96,9 @@ class ExcelImportIntegrationTest {
     assertThat(savedEquip.orElseThrow().getSpec()).isEqualTo("규격A");
     assertThat(savedEquip.orElseThrow().getApprovalYn()).isEqualTo("N");
     assertThat(savedEquip.orElseThrow().getApprovalDate()).isNull();
+    assertThat(savedEquip.orElseThrow().getFilePath())
+        .isEqualTo(
+            properties.getTempDirectoryPath().resolve("CUSTOM01").resolve("tariff.xlsx").toString());
   }
 
   @Test

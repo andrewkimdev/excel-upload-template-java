@@ -46,13 +46,17 @@ Open http://localhost:8080 to access the upload form.
   - `filePath`
   - `approvalYn`
   - `approvalDate`
-- Runtime contract fields (템플릿 `MetaData` 계약):
-  - `customId` (`MetaData#getCustomId`) must resolve to a non-blank value for temp-path partitioning
 - Server-managed fields:
   - `approvalYn`: defaults to `N` when omitted
   - `approvalDate`: saved as `LocalDate.now()` only when effective `approvalYn` is `Y`, otherwise `null`
   - `companyId`: currently forced to `COMPANY01` on server-side controller
   - `customId`: currently forced to `CUSTOM01` on server-side controller
+  - `filePath`: assigned by the upload pipeline to the stored temp path + filename before persistence
+- Shared `MetaData` contract:
+  - `assignFilePath(String filePath)` accepts the server-assigned stored upload path
+- Template-level temp storage contract:
+  - templates may override `TemplateDefinition.resolveTempSubdirectory(metaData)` when uploads should be partitioned under a temp subdirectory
+  - current `aappcar` implementation resolves that subdirectory from `customId`
 - `metaData` is parsed in strict mode:
   - reject unknown fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
   - reject scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
@@ -136,7 +140,7 @@ src/main/java/com/foo/excel/
 ├── controller/          # Thin split controllers (REST + Thymeleaf) + shared download endpoint
 ├── service/
 │   ├── contract/
-│   │   ├── MetaData.java                        # Marker interface for template-specific metaData DTOs
+│   │   ├── MetaData.java                        # Shared metaData contract (server-assigned file path)
 │   │   ├── TemplateDefinition.java                # Type-safe bundle: DTO + metaData + cached template metadata + handlers
 │   │   ├── PersistenceHandler.java                # Strategy interface for saving parsed rows with typed metaData
 │   │   └── DatabaseUniquenessChecker.java         # Strategy interface for DB-level duplicate checks
@@ -156,7 +160,8 @@ src/main/java/com/foo/excel/
 │           └── ExcelValidationService.java        # JSR-380 + within-file uniqueness validation
 ├── templates/samples/aappcar/             # Example template implementation
 │   ├── config/
-│   │   └── AAppcarItemTemplateConfig.java     # Wires the TemplateDefinition bean (includes DB checker)
+│   │   ├── AAppcarItemTemplateConfig.java     # Wires the TemplateDefinition bean (includes DB checker)
+│   │   └── AAppcarItemTemplateDefinition.java # AAppcar-specific temp subdirectory resolution
 │   ├── dto/
 │   │   ├── AAppcarItemDto.java                # DTO with @ExcelSheet + @ExcelColumn + JSR-380 annotations
 │   │   └── AAppcarItemMetaData.java         # Tariff template-specific metaData DTO
@@ -235,10 +240,10 @@ See `application.properties` for a detailed security checklist and configuration
    - Grouped-header metadata is validated strictly; duplicate membership, non-adjacent fields, reversed order, and inferred merge overlaps fail fast during template metadata resolution
 2. **Sheet Contract** -- Add `@ExcelSheet` on the DTO to define sheet index, header row, data start row, footer marker, and error column name
 3. **MetaData** -- 템플릿별 DTO를 만들고 `MetaData`를 구현한다 (strict JSON + Bean Validation 대상)
-   - `getCustomId()`를 통해 non-blank 식별자를 제공해야 한다 (임시 경로 분리용)
+   - `assignFilePath(String filePath)`를 구현해 서버가 저장한 업로드 경로를 받을 수 있어야 한다
 4. **Persistence** -- Implement `PersistenceHandler<T, M>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metaData)` to save parsed rows merged with common fields
 5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, M>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metaData)` if duplicates should be checked against existing data
-6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, M>` `@Bean` with `metaDataClass` (and checker bean if enabled); the orchestrator discovers it automatically
+6. **Wire** -- Create a `@Configuration` class that produces a `TemplateDefinition<T, M>` `@Bean` with `metaDataClass` (and checker bean if enabled); override `resolveTempSubdirectory(metaData)` only when the template needs temp-path partitioning
 
 See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemTemplateConfig`).
 

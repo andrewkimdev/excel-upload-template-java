@@ -12,6 +12,7 @@ import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator;
 import com.foo.excel.templates.TemplateTypes;
+import java.lang.reflect.Modifier;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
@@ -151,6 +152,27 @@ class TariffUploadPlanContractTest {
     assertTrue(
         fieldNames.contains("metaDataClass"),
         "TemplateDefinition에는 metaDataClass 필드가 포함되어야 합니다.");
+  }
+
+  @Test
+  void metaDataContract_requiresAssignFilePath() throws Exception {
+    Method method = MetaData.class.getDeclaredMethod("assignFilePath", String.class);
+
+    assertTrue(
+        method.getReturnType().equals(Void.TYPE)
+            && Modifier.isPublic(method.getModifiers())
+            && method.getParameterCount() == 1,
+        "MetaData는 assignFilePath(String) 계약을 제공해야 합니다.");
+  }
+
+  @Test
+  void templateDefinitionContract_supportsTempSubdirectoryResolution() throws Exception {
+    Method method =
+        TemplateDefinition.class.getDeclaredMethod("resolveTempSubdirectory", MetaData.class);
+
+    assertTrue(
+        method.getReturnType().getSimpleName().equals("Optional"),
+        "TemplateDefinition은 resolveTempSubdirectory(metaData) 계약을 제공해야 합니다.");
   }
 
   @Test

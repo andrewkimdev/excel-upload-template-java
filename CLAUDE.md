@@ -26,7 +26,7 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
   - `equipMean`, `hsno`, `spec`, `taxRate`
 - Optional fields are:
   - `filePath`, `approvalYn`, `approvalDate`
-  - `customId`는 런타임 계약(`MetaData#getCustomId`)상 필수이며, 현재 컨트롤러에서 `CUSTOM01`로 주입됨
+  - `customId`는 현재 `aappcar` 템플릿의 임시 업로드 하위 디렉터리 분리에 사용되며, 현재 컨트롤러에서 `CUSTOM01`로 주입됨
 - `approvalYn`가 비어 있으면 기본값 `N`을 사용하며, 유효 승인값이 `Y`이면 `approvalDate`는 저장 시 현재 날짜를 사용한다.
 - Strict parsing is enabled:
   - `FAIL_ON_UNKNOWN_PROPERTIES`

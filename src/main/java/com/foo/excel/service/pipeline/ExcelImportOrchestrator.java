@@ -81,9 +81,8 @@ public class ExcelImportOrchestrator {
 
     TemplateSheetMetadata sheetMetadata = template.getSheetMetadata();
 
-    // 1. customId 기반 임시 하위 디렉터리 생성
-    String customIdPath = resolveCustomIdPath(typedMetaData);
-    Path tempSubDir = properties.getTempDirectoryPath().resolve(customIdPath);
+    // 1. 템플릿별 임시 하위 디렉터리 결정
+    Path tempSubDir = resolveTempUploadDirectory(template, typedMetaData);
     Files.createDirectories(tempSubDir);
 
     try {
@@ -91,6 +90,7 @@ public class ExcelImportOrchestrator {
       long fileStageStartedAt = System.nanoTime();
       StoredUpload storedUpload = uploadFileService.storeAndValidateXlsx(file, tempSubDir);
       Path xlsxFile = storedUpload.path();
+      typedMetaData.assignFilePath(xlsxFile.toString());
       String sanitizedFilename = storedUpload.sanitizedFilename();
       long fileStageElapsedMs = elapsedMillis(fileStageStartedAt);
       int maxErrorRows = resolveMaxErrorRows();
@@ -299,14 +299,22 @@ public class ExcelImportOrchestrator {
     }
   }
 
-  private String resolveCustomIdPath(MetaData metaData) {
-    String customId = metaData.getCustomId();
-    if (customId == null || customId.isBlank()) {
+  private <M extends MetaData> Path resolveTempUploadDirectory(
+      TemplateDefinition<?, M> template, M metaData) {
+    return template
+        .resolveTempSubdirectory(metaData)
+        .map(this::sanitizeTempSubdirectory)
+        .map(properties.getTempDirectoryPath()::resolve)
+        .orElse(properties.getTempDirectoryPath());
+  }
+
+  private String sanitizeTempSubdirectory(String tempSubdirectory) {
+    if (tempSubdirectory == null || tempSubdirectory.isBlank()) {
       throw new IllegalArgumentException("customId는 필수입니다.");
     }
 
     String sanitized =
-        customId
+        tempSubdirectory
             .trim()
             .replaceAll("[\\x00-\\x1F\\x7F]", "")
             .replaceAll(
