@@ -171,7 +171,7 @@ class TariffUploadPlanContractTest {
         TemplateDefinition.class.getDeclaredMethod("resolveTempSubdirectory", MetaData.class);
 
     assertTrue(
-        method.getReturnType().getSimpleName().equals("Optional"),
+        method.getReturnType().equals(String.class),
         "TemplateDefinition은 resolveTempSubdirectory(metaData) 계약을 제공해야 합니다.");
   }
 

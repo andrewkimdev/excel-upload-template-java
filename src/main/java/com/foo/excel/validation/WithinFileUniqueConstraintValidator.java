@@ -33,8 +33,6 @@ import org.springframework.stereotype.Component;
  * 다른 검증 단계에서 처리해야 한다.
  */
 public class WithinFileUniqueConstraintValidator {
-  private static final ExcelColumnRef UNKNOWN_COLUMN_REF = ExcelColumnRef.unknown();
-
   /**
    * DTO 목록 전체를 순회하면서 파일 내부 중복 제약조건을 점검한다.
    *
@@ -132,7 +130,7 @@ public class WithinFileUniqueConstraintValidator {
                   .fieldName(field.getName())
                   .headerName(excelColumn != null ? excelColumn.label() : field.getName())
                   .columnIndex(excelColumn != null ? resolveColumnIndex(excelColumn) : -1)
-                  .columnRef(excelColumn != null ? resolveColumnRef(excelColumn) : UNKNOWN_COLUMN_REF)
+                  .columnRef(excelColumn != null ? ExcelColumnRef.ofLetter(excelColumn.column()) : null)
                   .rejectedValue(value)
                   .message(uniqueAnnotation.message() + " (행 " + firstRowNum + "과(와) 중복)")
                   .build();
@@ -215,7 +213,7 @@ public class WithinFileUniqueConstraintValidator {
                   .fieldName(firstField.getName())
                   .headerName(excelColumn != null ? excelColumn.label() : firstField.getName())
                   .columnIndex(excelColumn != null ? resolveColumnIndex(excelColumn) : -1)
-                  .columnRef(excelColumn != null ? resolveColumnRef(excelColumn) : UNKNOWN_COLUMN_REF)
+                  .columnRef(excelColumn != null ? ExcelColumnRef.ofLetter(excelColumn.column()) : null)
                   .rejectedValue(compositeKey.toString())
                   .message(composite.message() + " (행 " + firstRowNum + "과(와) 중복)")
                   .build();
@@ -317,26 +315,10 @@ public class WithinFileUniqueConstraintValidator {
   /**
    * {@link ExcelColumn}의 컬럼 문자를 0-based 인덱스로 변환한다.
    *
-   * <p>컬럼 문자가 비어 있으면 위치 정보를 알 수 없으므로 {@code -1}을 반환한다.
-   *
    * @param annotation Excel 컬럼 메타데이터
-   * @return 0-based 컬럼 인덱스, 없으면 {@code -1}
+   * @return 0-based 컬럼 인덱스
    */
   private int resolveColumnIndex(ExcelColumn annotation) {
-    return annotation.column().isEmpty() ? -1 : ExcelColumnUtil.letterToIndex(annotation.column());
-  }
-
-  /**
-   * {@link ExcelColumn}에 선언된 컬럼 문자를 값 객체로 반환한다.
-   *
-   * <p>컬럼 문자가 없으면 사용자 표시용 대체값을 반환한다.
-   *
-   * @param annotation Excel 컬럼 메타데이터
-   * @return 컬럼 참조 값 객체
-   */
-  private ExcelColumnRef resolveColumnRef(ExcelColumn annotation) {
-    return annotation.column().isEmpty()
-        ? UNKNOWN_COLUMN_REF
-        : ExcelColumnRef.ofLetter(annotation.column());
+    return ExcelColumnUtil.letterToIndex(annotation.column());
   }
 }

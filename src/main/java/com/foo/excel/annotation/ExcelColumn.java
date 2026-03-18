@@ -10,18 +10,16 @@ import java.lang.annotation.Target;
 public @interface ExcelColumn {
 
   /**
-   * 기대하는 헤더 텍스트. 고정 컬럼 모드(column 값이 설정됨)에서는 해당 위치의 실제 헤더와
-   * 검증한다. 자동 탐지 모드(column 값이 비어 있음)에서는 헤더 행 셀과 매칭한다. 또한
-   * 오류 메시지의 표시 이름으로도 사용된다.
+   * 기대하는 헤더 텍스트. 선언된 컬럼 위치의 실제 헤더와 검증하며, 오류 메시지의 표시
+   * 이름으로도 사용된다.
    */
   String label();
 
   /**
-   * Excel 문자 표기 기반 고정 컬럼 위치: "A", "B", ..., "Z", "AA", "AB", ... 설정 시:
-   * 파서는 이 위치에서 값을 읽고 헤더 일치 여부도 검증한다. 비어 있으면(기본값):
-   * 자동 탐지 모드로 헤더 행을 스캔한다.
+   * Excel 문자 표기 기반 고정 컬럼 위치: "A", "B", ..., "Z", "AA", "AB", ...
+   * 파서는 이 위치에서 값을 읽고 헤더 일치 여부도 검증한다.
    */
-  String column() default "";
+  String column();
 
   /**
    * 필드가 가로로 소유하는 컬럼 수.
@@ -35,8 +33,7 @@ public @interface ExcelColumn {
   String dateFormat() default "yyyy-MM-dd";
 
   /**
-   * 헤더 매칭 모드. 자동 탐지 스캔과 고정 컬럼 헤더 검증 모두에 사용된다.
-   * 기본값: CONTAINS.
+   * 헤더 매칭 모드. 선언된 고정 컬럼 위치의 헤더 검증에 사용된다. 기본값: CONTAINS.
    */
   HeaderMatchMode matchMode() default HeaderMatchMode.CONTAINS;
 

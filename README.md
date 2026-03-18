@@ -195,7 +195,7 @@ src/main/java/com/foo/excel/
 3. **Content validation** -- verify file magic bytes and allow only OOXML `.xlsx`; reject legacy `.xls`
 4. **Row count pre-check** -- lightweight SAX/StAX count rejects obviously oversized files before full parsing
 5. **Secure parsing** -- Excel opened with XXE and zip bomb protections; parser exits early if rows exceed limit
-6. **Header verification** -- verify actual headers match `@ExcelColumn` expectations at declared positions; templates may opt into multi-row header ranges, merged-header paths, and whitespace-insensitive matching for legacy files; fail-fast with Korean error messages if required columns mismatch
+6. **Header verification** -- verify actual headers match `@ExcelColumn(label=..., column=...)` expectations at declared positions; templates may opt into multi-row header ranges, merged-header paths, and whitespace-insensitive matching for legacy files; fail-fast with Korean error messages if required columns mismatch
 7. **Row parsing** -- read data rows, skip blanks, stop at footer marker (`※`)
 8. **Type coercion** -- String (trimmed), Integer, BigDecimal, LocalDate, LocalDateTime, Boolean (`Y`/`true` -> true); parse errors are collected per cell
 9. **JSR-380 validation** -- `@NotBlank`, `@Size`, `@Pattern`, `@DecimalMin`/`@DecimalMax`, `@Min`
@@ -234,7 +234,7 @@ See `application.properties` for a detailed security checklist and configuration
 
 ## Adding a New Template
 
-1. **DTO** -- Create a DTO class with `@ExcelColumn` and JSR-380 validation annotations on each field
+1. **DTO** -- Create a DTO class with `@ExcelColumn(label = ..., column = ...)` and JSR-380 validation annotations on each field
    - If you use `@ExcelCompositeUnique`, every field name in `fields()` must exist on the DTO class hierarchy; invalid declarations are treated as fail-fast configuration errors during within-file uniqueness validation
    - For legacy workbooks with merged or multi-line headers, `@ExcelColumn` can opt into a header row range (`headerRowStart`/`headerRowCount`), logical header labels (`headerLabels`), and whitespace-insensitive comparison (`ignoreHeaderWhitespace`)
    - For horizontally owned cells such as `F:G` or `O:P`, set `columnSpan` on the owning field

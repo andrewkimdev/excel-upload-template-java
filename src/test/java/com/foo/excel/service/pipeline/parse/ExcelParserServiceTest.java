@@ -333,34 +333,6 @@ class ExcelParserServiceTest {
             });
   }
 
-  @Test
-  void parse_autoDetect_findsColumn() throws Exception {
-    Path file = createFileForAutoDetect();
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(AutoDetectDto.class);
-
-    ExcelParserService.ParseResult<AutoDetectDto> result =
-        parserService.parse(file, AutoDetectDto.class, sheetMetadata);
-
-    assertThat(result.rows()).hasSize(1);
-    assertThat(result.rows().get(0).getValue()).isEqualTo("found");
-  }
-
-  @Test
-  void parse_autoDetect_notFound_requiredColumn_throwsException() throws Exception {
-    Path file = createFileForAutoDetect();
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(AutoDetectMissingDto.class);
-
-    assertThatThrownBy(() -> parserService.parse(file, AutoDetectMissingDto.class, sheetMetadata))
-        .isInstanceOf(ColumnResolutionBatchException.class)
-        .satisfies(
-            ex -> {
-              var batch = (ColumnResolutionBatchException) ex;
-              assertThat(batch.toKoreanMessage()).contains("컬럼을 찾을 수 없습니다");
-            });
-  }
-
   // ===== 헬퍼 DTO =====
 
   @Data
@@ -425,20 +397,6 @@ class ExcelParserServiceTest {
 
     @ExcelColumn(label = "Second", column = "C")
     private String second;
-  }
-
-  @Data
-  @ExcelSheet
-  public static class AutoDetectDto {
-    @ExcelColumn(label = "Target")
-    private String value;
-  }
-
-  @Data
-  @ExcelSheet
-  public static class AutoDetectMissingDto {
-    @ExcelColumn(label = "NonExistentHeader")
-    private String value;
   }
 
   @Data
@@ -760,28 +718,6 @@ class ExcelParserServiceTest {
       dataRow.createCell(2).setCellValue("val2");
 
       Path file = tempDir.resolve("all_wrong_headers_test.xlsx");
-      try (OutputStream os = Files.newOutputStream(file)) {
-        wb.write(os);
-      }
-      return file;
-    }
-  }
-
-  private Path createFileForAutoDetect() throws IOException {
-    try (XSSFWorkbook wb = new XSSFWorkbook()) {
-      Sheet sheet = wb.createSheet("Sheet1");
-
-      Row headerRow = sheet.createRow(0);
-      headerRow.createCell(0).setCellValue("Irrelevant");
-      headerRow.createCell(1).setCellValue("Also Irrelevant");
-      headerRow.createCell(2).setCellValue("Target");
-
-      Row dataRow = sheet.createRow(1);
-      dataRow.createCell(0).setCellValue("skip");
-      dataRow.createCell(1).setCellValue("skip");
-      dataRow.createCell(2).setCellValue("found");
-
-      Path file = tempDir.resolve("auto_detect_test.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
         wb.write(os);
       }

@@ -32,14 +32,6 @@ class ColumnResolutionExceptionTest {
   }
 
   @Test
-  void toKoreanMessage_autoDetectFailure_mentionsHeaderNotFound() {
-    var ex =
-        new ColumnResolutionException("somefield", "찾을수없는헤더", null, null, HeaderMatchMode.CONTAINS);
-
-    assertThat(ex.toKoreanMessage()).contains("찾을수없는헤더").contains("컬럼을 찾을 수 없습니다");
-  }
-
-  @Test
   void batchException_aggregatesMessages() {
     var ex1 =
         new ColumnResolutionException(

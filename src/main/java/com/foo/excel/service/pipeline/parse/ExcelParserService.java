@@ -158,66 +158,30 @@ public class ExcelParserService {
 
   private int resolveColumnIndex(
       ExcelColumn annotation, String fieldName, Sheet sheet, TemplateSheetMetadata sheetMetadata) {
-    // 모드 1: 헤더 검증이 포함된 고정 컬럼
-    if (!annotation.column().isEmpty()) {
-      int index = ExcelColumnUtil.letterToIndex(annotation.column());
-      List<String> actualSegments = resolveHeaderSegments(sheet, annotation, sheetMetadata, index);
-      String actual = formatResolvedHeader(actualSegments);
-      String expected = expectedHeaderLabel(annotation);
+    int index = ExcelColumnUtil.letterToIndex(annotation.column());
+    List<String> actualSegments = resolveHeaderSegments(sheet, annotation, sheetMetadata, index);
+    String actual = formatResolvedHeader(actualSegments);
+    String expected = expectedHeaderLabel(annotation);
 
-      if (matchesResolvedHeader(annotation, actualSegments)) {
-        return index;
-      }
-
-      // 헤더 불일치
-      if (annotation.required()) {
-        throw new ColumnResolutionException(
-            fieldName,
-            expected,
-            actual,
-            ExcelColumnRef.ofLetter(annotation.column()),
-            annotation.matchMode());
-      }
-      log.warn(
-          "Header mismatch for optional field '{}' at column {}: expected '{}', actual '{}'",
-          fieldName,
-          annotation.column(),
-          expected,
-          actual);
-      return -1;
+    if (matchesResolvedHeader(annotation, actualSegments)) {
+      return index;
     }
 
-    // 모드 2: 헤더 텍스트 기반 자동 탐지
-    for (var entry : buildResolvedHeaderMap(sheet, annotation, sheetMetadata).entrySet()) {
-      if (matchesResolvedHeader(annotation, entry.getValue())) {
-        return entry.getKey();
-      }
-    }
-
-    // 찾지 못함
     if (annotation.required()) {
       throw new ColumnResolutionException(
-          fieldName, expectedHeaderLabel(annotation), null, null, annotation.matchMode());
+          fieldName,
+          expected,
+          actual,
+          ExcelColumnRef.ofLetter(annotation.column()),
+          annotation.matchMode());
     }
     log.warn(
-        "Could not resolve column for optional field '{}' with header '{}'",
+        "Header mismatch for optional field '{}' at column {}: expected '{}', actual '{}'",
         fieldName,
-        expectedHeaderLabel(annotation));
+        annotation.column(),
+        expected,
+        actual);
     return -1;
-  }
-
-  private Map<Integer, List<String>> buildResolvedHeaderMap(
-      Sheet sheet, ExcelColumn annotation, TemplateSheetMetadata sheetMetadata) {
-    HeaderRowRange range = resolveHeaderRowRange(annotation, sheetMetadata);
-    int maxColumns = resolveHeaderScanColumnCount(sheet, range);
-    var map = new LinkedHashMap<Integer, List<String>>();
-    for (int i = 0; i < maxColumns; i++) {
-      List<String> segments = resolveHeaderSegments(sheet, range, i);
-      if (!segments.isEmpty()) {
-        map.put(i, segments);
-      }
-    }
-    return map;
   }
 
   private List<String> resolveHeaderSegments(
@@ -255,17 +219,6 @@ public class ExcelParserService {
               .formatted(annotation.column(), start, count));
     }
     return new HeaderRowRange(start - 1, start + count - 2);
-  }
-
-  private int resolveHeaderScanColumnCount(Sheet sheet, HeaderRowRange range) {
-    int maxColumns = 0;
-    for (int rowIndex = range.startRowIndex(); rowIndex <= range.endRowIndex(); rowIndex++) {
-      Row row = sheet.getRow(rowIndex);
-      if (row != null && row.getLastCellNum() > maxColumns) {
-        maxColumns = row.getLastCellNum();
-      }
-    }
-    return maxColumns;
   }
 
   private boolean matchesResolvedHeader(ExcelColumn annotation, List<String> actualSegments) {

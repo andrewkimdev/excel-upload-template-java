@@ -44,8 +44,12 @@ public final class TemplateMergeMetadataResolver {
     Map<String, ColumnMetadata> columnsByField = new LinkedHashMap<>();
     for (Field field : dtoClass.getDeclaredFields()) {
       ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
-      if (annotation == null || annotation.column().isBlank()) {
+      if (annotation == null) {
         continue;
+      }
+      if (annotation.column().isBlank()) {
+        throw new IllegalStateException(
+            "Blank column for field '%s'".formatted(field.getName()));
       }
       if (annotation.columnSpan() < 1) {
         throw new IllegalStateException(
