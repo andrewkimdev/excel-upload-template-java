@@ -6,9 +6,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-public class ExcelUploadApplication {
+public class ExcelImportApplication {
 
   public static void main(String[] args) {
-    SpringApplication.run(ExcelUploadApplication.class, args);
+    SpringApplication.run(ExcelImportApplication.class, args);
   }
 }

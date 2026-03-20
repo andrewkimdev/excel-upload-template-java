@@ -13,14 +13,14 @@ In this repo, the Thymeleaf result page only shows the link when `result.errorFi
    The copied code must still call `errorReportService.generateErrorReport(...)` and then set both fields. If that block was simplified, the page will show counts/messages but no link.
 
 3. Compare the controller/view contract.
-   The page flow passes the raw `ImportResult` to the model in [AAppcarItemUploadPageController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemUploadPageController.java#L65). The API flow strips that down to a `Map` and only exposes `downloadUrl`, not `errorFileId`, in [ExcelUploadRequestService.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/service/pipeline/ExcelUploadRequestService.java#L47).
+   The page flow passes the raw `ImportResult` to the model in [AAppcarItemImportPageController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemImportPageController.java#L63). The API flow strips that down to a `Map` and only exposes `downloadUrl`, not `errorFileId`, in [ExcelImportRequestService.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/service/pipeline/ExcelImportRequestService.java#L47).
    If your other project switched from server-side page rendering to API JSON + custom JS, and the HTML still checks `errorFileId`, that is enough to explain the missing link.
 
 4. Compare the download endpoint.
    The link target must still exist at [ExcelFileController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/ExcelFileController.java#L31). If this controller was not copied or the route changed, the backend may avoid surfacing the link or the link may be dead.
 
 5. Check logs for the error-report generation stage.
-   If `generateErrorReport` fails, the page controller falls into generic exception handling and renders a plain failure without `errorFileId` at [AAppcarItemUploadPageController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemUploadPageController.java#L81). Search the other project logs for:
+   If `generateErrorReport` fails, the page controller falls into generic exception handling and renders a plain failure without `errorFileId` at [AAppcarItemImportPageController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemImportPageController.java#L78). Search the other project logs for:
    - `Error report generated:`
    - `Compact error report generated:`
    - `업로드 처리 실패`
@@ -35,9 +35,9 @@ In this repo, `goodsSeqNo` is not annotated for within-file uniqueness in [AAppc
 - `rg -n "errorFileId|downloadUrl|generateErrorReport|/api/excel/download|업로드 처리 실패|Error report generated"`
 - Diff the copied orchestrator, page controller, API controller, result template, and download controller against:
   - [ExcelImportOrchestrator.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/service/pipeline/ExcelImportOrchestrator.java)
-  - [ExcelUploadRequestService.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/service/pipeline/ExcelUploadRequestService.java)
-  - [AAppcarItemUploadPageController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemUploadPageController.java)
-  - [AAppcarItemUploadApiController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemUploadApiController.java)
+  - [ExcelImportRequestService.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/service/pipeline/ExcelImportRequestService.java)
+  - [AAppcarItemImportPageController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemImportPageController.java)
+  - [AAppcarItemImportApiController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/AAppcarItemImportApiController.java)
   - [ExcelFileController.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/controller/ExcelFileController.java)
   - [result.html](/workspaces/excel-upload-template-java/src/main/resources/templates/result.html)
 

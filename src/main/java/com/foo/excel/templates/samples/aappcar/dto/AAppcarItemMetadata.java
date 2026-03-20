@@ -1,10 +1,10 @@
 package com.foo.excel.templates.samples.aappcar.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.foo.excel.service.contract.MetaData;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.DecimalMin;
+import com.foo.excel.service.contract.Metadata;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AAppcarItemMetaData implements MetaData {
+public class AAppcarItemMetadata implements Metadata {
 
   private static final String DEFAULT_APPROVED_YN = "N";
 

@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -40,7 +40,7 @@ class AAppcarItemDbUniquenessCheckerTest {
             List.of(new AAppcarItemDto()),
             AAppcarItemDto.class,
             List.of(7),
-            createMetaData("2026", "1", "1", "EQ-01"));
+            createMetadata("2026", "1", "1", "EQ-01"));
 
     assertThat(result).isEmpty();
   }
@@ -58,7 +58,7 @@ class AAppcarItemDbUniquenessCheckerTest {
             List.of(new AAppcarItemDto(), new AAppcarItemDto()),
             AAppcarItemDto.class,
             List.of(7, 8),
-            createMetaData("2026", "1", "1", "EQ-01"));
+            createMetadata("2026", "1", "1", "EQ-01"));
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).getRowNumber()).isEqualTo(8);
@@ -68,15 +68,15 @@ class AAppcarItemDbUniquenessCheckerTest {
         .contains("품목 테이블에 이미 존재하는 ID");
   }
 
-  private AAppcarItemMetaData createMetaData(
+  private AAppcarItemMetadata createMetadata(
       String comeYear, String comeOrder, String uploadSeq, String equipCode) {
-    AAppcarItemMetaData metaData = new AAppcarItemMetaData();
-    metaData.setComeYear(comeYear);
-    metaData.setComeOrder(comeOrder);
-    metaData.setUploadSeq(uploadSeq);
-    metaData.setEquipCode(equipCode);
-    metaData.setCompanyId("COMPANY01");
-    metaData.setCustomId("CUSTOM01");
-    return metaData;
+    AAppcarItemMetadata metadata = new AAppcarItemMetadata();
+    metadata.setComeYear(comeYear);
+    metadata.setComeOrder(comeOrder);
+    metadata.setUploadSeq(uploadSeq);
+    metadata.setEquipCode(equipCode);
+    metadata.setCompanyId("COMPANY01");
+    metadata.setCustomId("CUSTOM01");
+    return metadata;
   }
 }

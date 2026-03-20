@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.foo.excel.service.pipeline.ExcelUploadRequestService;
-import com.foo.excel.templates.TemplateTypes;
+import com.foo.excel.service.pipeline.ExcelImportRequestService;
+import com.foo.excel.templates.ImportTypes;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -21,24 +21,24 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-@WebMvcTest(AAppcarItemUploadApiController.class)
+@WebMvcTest(AAppcarItemImportApiController.class)
 @Import(ExcelApiExceptionHandler.class)
 class ExcelApiExceptionHandlerTest {
 
   @Autowired private MockMvc mockMvc;
 
-  @MockBean private ExcelUploadRequestService uploadRequestService;
+  @MockBean private ExcelImportRequestService importRequestService;
 
   @Test
   void unexpectedException_hidesInternalDetails() throws Exception {
-    when(uploadRequestService.upload(any(), anyString(), anyString()))
+    when(importRequestService.upload(any(), anyString(), anyString()))
         .thenThrow(new RuntimeException("internal /tmp/secret details"));
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/" + TemplateTypes.AAPPCAR)
+            multipart("/api/excel/upload/" + ImportTypes.AAPPCAR)
                 .file(filePart())
-                .file(metaDataPart()))
+                .file(metadataPart()))
         .andExpect(status().isInternalServerError())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.message").value("파일 처리 중 오류가 발생했습니다. 관리자에게 문의하세요."))
@@ -48,14 +48,14 @@ class ExcelApiExceptionHandlerTest {
 
   @Test
   void maxUploadSize_mapsTo413() throws Exception {
-    when(uploadRequestService.upload(any(), anyString(), anyString()))
+    when(importRequestService.upload(any(), anyString(), anyString()))
         .thenThrow(new MaxUploadSizeExceededException(1024));
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/" + TemplateTypes.AAPPCAR)
+            multipart("/api/excel/upload/" + ImportTypes.AAPPCAR)
                 .file(filePart())
-                .file(metaDataPart()))
+                .file(metadataPart()))
         .andExpect(status().isPayloadTooLarge())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.message").value("업로드 파일 크기가 제한을 초과했습니다."));
@@ -69,10 +69,10 @@ class ExcelApiExceptionHandlerTest {
         "a".getBytes());
   }
 
-  private MockMultipartFile metaDataPart() {
+  private MockMultipartFile metadataPart() {
     return new MockMultipartFile(
-        "metaData",
-        "metaData",
+        "metadata",
+        "metadata",
         MediaType.APPLICATION_JSON_VALUE,
         ("{"
                 + "\"comeYear\":\"2026\","

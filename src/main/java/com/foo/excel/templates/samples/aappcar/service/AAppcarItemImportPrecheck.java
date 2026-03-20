@@ -1,9 +1,9 @@
 package com.foo.excel.templates.samples.aappcar.service;
 
+import com.foo.excel.service.contract.ImportPrecheck;
+import com.foo.excel.service.contract.ImportPrecheckFailure;
 import com.foo.excel.service.contract.MetadataConflict;
-import com.foo.excel.service.contract.UploadPrecheck;
-import com.foo.excel.service.contract.UploadPrecheckFailure;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import java.util.List;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class AAppcarItemUploadPrecheck implements UploadPrecheck<AAppcarItemMetaData> {
+public class AAppcarItemImportPrecheck implements ImportPrecheck<AAppcarItemMetadata> {
 
   private static final String APPROVED_EQUIP_EXISTS_MESSAGE =
       "입력한 메타데이터 조합과 일치하는 승인된 장비가 이미 존재합니다.";
@@ -25,11 +25,11 @@ public class AAppcarItemUploadPrecheck implements UploadPrecheck<AAppcarItemMeta
   private final AAppcarItemKeyFactory keyFactory;
 
   @Override
-  public Optional<UploadPrecheckFailure> check(AAppcarItemMetaData metaData) {
-    AAppcarEquipId equipId = keyFactory.buildEquipId(metaData);
+  public Optional<ImportPrecheckFailure> check(AAppcarItemMetadata metadata) {
+    AAppcarEquipId equipId = keyFactory.buildEquipId(metadata);
     if (equipRepository.existsByIdAndApprovalYn(equipId, "Y")) {
       return Optional.of(
-          new UploadPrecheckFailure(
+          new ImportPrecheckFailure(
               APPROVED_EQUIP_EXISTS_MESSAGE, buildMetadataConflict(equipId)));
     }
     return Optional.empty();

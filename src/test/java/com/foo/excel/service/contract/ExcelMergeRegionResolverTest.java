@@ -9,42 +9,42 @@ import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class TemplateMergeMetadataResolverTest {
+class ExcelMergeRegionResolverTest {
 
   @Test
   void resolve_aAppcarExpandsReadableFieldMetadataIntoExpectedMergeRegions() {
-    List<TemplateMergeRegion> regions = TemplateMergeMetadataResolver.resolve(AAppcarItemDto.class);
+    List<ExcelMergeRegion> regions = ExcelMergeRegionResolver.resolve(AAppcarItemDto.class);
 
     assertThat(regions)
         .contains(
-            new TemplateMergeRegion(TemplateMergeScope.DATA, 0, 1, 5, 2, true),
-            new TemplateMergeRegion(TemplateMergeScope.DATA, 0, 1, 9, 2, true),
-            new TemplateMergeRegion(TemplateMergeScope.DATA, 0, 1, 11, 2, true),
-            new TemplateMergeRegion(TemplateMergeScope.DATA, 0, 1, 14, 2, true),
-            new TemplateMergeRegion(TemplateMergeScope.HEADER, 0, 1, 9, 4, false),
-            new TemplateMergeRegion(TemplateMergeScope.HEADER, 1, 1, 9, 2, false),
-            new TemplateMergeRegion(TemplateMergeScope.HEADER, 2, 1, 9, 2, false),
-            new TemplateMergeRegion(TemplateMergeScope.HEADER, 1, 1, 11, 2, false),
-            new TemplateMergeRegion(TemplateMergeScope.HEADER, 2, 1, 11, 2, false));
+            new ExcelMergeRegion(ExcelMergeScope.DATA, 0, 1, 5, 2, true),
+            new ExcelMergeRegion(ExcelMergeScope.DATA, 0, 1, 9, 2, true),
+            new ExcelMergeRegion(ExcelMergeScope.DATA, 0, 1, 11, 2, true),
+            new ExcelMergeRegion(ExcelMergeScope.DATA, 0, 1, 14, 2, true),
+            new ExcelMergeRegion(ExcelMergeScope.HEADER, 0, 1, 9, 4, false),
+            new ExcelMergeRegion(ExcelMergeScope.HEADER, 1, 1, 9, 2, false),
+            new ExcelMergeRegion(ExcelMergeScope.HEADER, 2, 1, 9, 2, false),
+            new ExcelMergeRegion(ExcelMergeScope.HEADER, 1, 1, 11, 2, false),
+            new ExcelMergeRegion(ExcelMergeScope.HEADER, 2, 1, 11, 2, false));
   }
 
   @Test
   void resolve_failsFastWhenHeaderGroupReusesAFieldAcrossGroups() {
-    assertThatThrownBy(() -> TemplateMergeMetadataResolver.resolve(DuplicateGroupMembershipDto.class))
+    assertThatThrownBy(() -> ExcelMergeRegionResolver.resolve(DuplicateGroupMembershipDto.class))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("reuses field 'second'");
   }
 
   @Test
   void resolve_failsFastWhenHeaderGroupFieldsAreNotAdjacent() {
-    assertThatThrownBy(() -> TemplateMergeMetadataResolver.resolve(NonAdjacentHeaderGroupDto.class))
+    assertThatThrownBy(() -> ExcelMergeRegionResolver.resolve(NonAdjacentHeaderGroupDto.class))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("non-adjacent or out-of-order field 'third'");
   }
 
   @Test
   void resolve_failsFastWhenInferredRegionsOverlap() {
-    assertThatThrownBy(() -> TemplateMergeMetadataResolver.resolve(OverlappingDataSpanDto.class))
+    assertThatThrownBy(() -> ExcelMergeRegionResolver.resolve(OverlappingDataSpanDto.class))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Overlapping inferred merge regions");
   }

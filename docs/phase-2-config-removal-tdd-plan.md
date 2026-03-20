@@ -32,7 +32,7 @@ The goal is to eliminate `ExcelImportConfig` and per-template config classes suc
 4. Delete old config types after runtime conversion is complete.
    - Delete `ExcelImportConfig`.
    - Delete `AAppcarItemImportConfig`.
-   - Update `AAppcarItemTemplateConfig` so `TemplateDefinition` is built without config.
+   - Update `AAppcarItemImportConfig` so `ExcelImportDefinition` is built without config.
 
 5. Preserve all existing semantics.
    - Parsing behavior must remain the same:

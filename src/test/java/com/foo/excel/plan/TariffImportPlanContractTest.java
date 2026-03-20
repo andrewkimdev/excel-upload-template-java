@@ -6,12 +6,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.foo.excel.ExcelUploadApplication;
-import com.foo.excel.service.contract.MetaData;
+import com.foo.excel.ExcelImportApplication;
+import com.foo.excel.service.contract.ExcelImportDefinition;
+import com.foo.excel.service.contract.Metadata;
 import com.foo.excel.service.contract.PersistenceHandler;
-import com.foo.excel.service.contract.TemplateDefinition;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator;
-import com.foo.excel.templates.TemplateTypes;
+import com.foo.excel.templates.ImportTypes;
 import java.lang.reflect.Modifier;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
@@ -36,19 +36,19 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest(classes = ExcelUploadApplication.class)
+@SpringBootTest(classes = ExcelImportApplication.class)
 @AutoConfigureMockMvc
-class TariffUploadPlanContractTest {
+class TariffImportPlanContractTest {
 
   private static final String API_UPLOAD_TARIFF =
-      "/api/excel/upload/" + TemplateTypes.AAPPCAR;
+      "/api/excel/upload/" + ImportTypes.AAPPCAR;
 
   @Autowired private MockMvc mockMvc;
 
   @Autowired private ApplicationContext applicationContext;
 
   @Test
-  void tariffApiUpload_requiresMetaDataPart() throws Exception {
+  void tariffApiUpload_requiresMetadataPart() throws Exception {
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -59,11 +59,11 @@ class TariffUploadPlanContractTest {
     mockMvc
         .perform(multipart(API_UPLOAD_TARIFF).file(file))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message", containsString("metaData")));
+        .andExpect(jsonPath("$.message", containsString("metadata")));
   }
 
   @Test
-  void tariffApiUpload_rejectsUnknownMetaDataField() throws Exception {
+  void tariffApiUpload_rejectsUnknownMetadataField() throws Exception {
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
@@ -71,10 +71,10 @@ class TariffUploadPlanContractTest {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             createValidAAppcarItemXlsx());
 
-    MockMultipartFile metaData =
+    MockMultipartFile metadata =
         new MockMultipartFile(
-            "metaData",
-            "metaData",
+            "metadata",
+            "metadata",
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":\"2026\","
@@ -86,7 +86,7 @@ class TariffUploadPlanContractTest {
                 .getBytes());
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(metaData))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(metadata))
         .andExpect(status().isBadRequest());
   }
 
@@ -96,36 +96,36 @@ class TariffUploadPlanContractTest {
         new MockMultipartFile(
             "file", "tariff.xls", "application/vnd.ms-excel", createValidAAppcarItemXls());
 
-    MockMultipartFile metaData =
+    MockMultipartFile metadata =
         new MockMultipartFile(
-            "metaData",
-            "metaData",
+            "metadata",
+            "metadata",
             MediaType.APPLICATION_JSON_VALUE,
-            requiredMetaDataJson().getBytes());
+            requiredMetadataJson().getBytes());
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(metaData))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(metadata))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message", containsString("xlsx")));
   }
 
   @Test
-  void orchestratorContract_includesMetaDataParameter() {
+  void orchestratorContract_includesMetadataParameter() {
     boolean hasNewSignature =
         Arrays.stream(ExcelImportOrchestrator.class.getDeclaredMethods())
-            .filter(method -> method.getName().equals("processUpload"))
+            .filter(method -> method.getName().equals("processImport"))
             .anyMatch(
                 method ->
                     method.getParameterCount() == 3
-                        && method.getParameterTypes()[2].equals(MetaData.class));
+                        && method.getParameterTypes()[2].equals(Metadata.class));
 
     assertTrue(
         hasNewSignature,
-        "ExcelImportOrchestrator.processUpload(file, templateType, metaData) 시그니처가 필요합니다.");
+        "ExcelImportOrchestrator.processImport(file, importType, metadata) 시그니처가 필요합니다.");
   }
 
   @Test
-  void persistenceHandlerContract_requiresSourceRowsAndMetaData() {
+  void persistenceHandlerContract_requiresSourceRowsAndMetadata() {
     Method[] methods = PersistenceHandler.class.getDeclaredMethods();
     boolean hasNewSaveAllSignature =
         Arrays.stream(methods)
@@ -135,44 +135,44 @@ class TariffUploadPlanContractTest {
                     method.getParameterCount() == 3
                         && List.class.isAssignableFrom(method.getParameterTypes()[0])
                         && List.class.isAssignableFrom(method.getParameterTypes()[1])
-                        && MetaData.class.isAssignableFrom(method.getParameterTypes()[2]));
+                        && Metadata.class.isAssignableFrom(method.getParameterTypes()[2]));
 
     assertTrue(
         hasNewSaveAllSignature,
-        "PersistenceHandler.saveAll(rows, sourceRowNumbers, metaData) 시그니처가 필요합니다.");
+        "PersistenceHandler.saveAll(rows, sourceRowNumbers, metadata) 시그니처가 필요합니다.");
   }
 
   @Test
-  void templateDefinitionContract_includesMetaDataClassField() {
+  void excelImportDefinitionContract_includesMetadataClassField() {
     List<String> fieldNames =
-        Arrays.stream(TemplateDefinition.class.getDeclaredFields())
+        Arrays.stream(ExcelImportDefinition.class.getDeclaredFields())
             .map(Field::getName)
             .collect(Collectors.toList());
 
     assertTrue(
-        fieldNames.contains("metaDataClass"),
-        "TemplateDefinition에는 metaDataClass 필드가 포함되어야 합니다.");
+        fieldNames.contains("metadataClass"),
+        "ExcelImportDefinition에는 metadataClass 필드가 포함되어야 합니다.");
   }
 
   @Test
-  void metaDataContract_requiresAssignFilePath() throws Exception {
-    Method method = MetaData.class.getDeclaredMethod("assignFilePath", String.class);
+  void metadataContract_requiresAssignFilePath() throws Exception {
+    Method method = Metadata.class.getDeclaredMethod("assignFilePath", String.class);
 
     assertTrue(
         method.getReturnType().equals(Void.TYPE)
             && Modifier.isPublic(method.getModifiers())
             && method.getParameterCount() == 1,
-        "MetaData는 assignFilePath(String) 계약을 제공해야 합니다.");
+        "Metadata는 assignFilePath(String) 계약을 제공해야 합니다.");
   }
 
   @Test
-  void templateDefinitionContract_supportsTempSubdirectoryResolution() throws Exception {
+  void excelImportDefinitionContract_supportsTempSubdirectoryResolution() throws Exception {
     Method method =
-        TemplateDefinition.class.getDeclaredMethod("resolveTempSubdirectory", MetaData.class);
+        ExcelImportDefinition.class.getDeclaredMethod("resolveTempSubdirectory", Metadata.class);
 
     assertTrue(
         method.getReturnType().equals(String.class),
-        "TemplateDefinition은 resolveTempSubdirectory(metaData) 계약을 제공해야 합니다.");
+        "ExcelImportDefinition은 resolveTempSubdirectory(metadata) 계약을 제공해야 합니다.");
   }
 
   @Test
@@ -196,7 +196,7 @@ class TariffUploadPlanContractTest {
         "AAppcarItem must include approvalYn");
   }
 
-  private String requiredMetaDataJson() {
+  private String requiredMetadataJson() {
     return "{"
         + "\"comeYear\":\"2026\","
         + "\"comeOrder\":\"001\","

@@ -1,6 +1,6 @@
 package com.foo.excel.service.contract;
 
-public enum TemplateMergeScope {
+public enum ExcelMergeScope {
   HEADER,
   DATA
 }

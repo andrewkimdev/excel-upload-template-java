@@ -5,8 +5,8 @@ This guide is a practical reading order for the current implementation.
 ## 1) Start with runtime truth
 
 1. `src/main/java/com/foo/excel/controller/ExcelFileController.java`
-2. `src/main/java/com/foo/excel/controller/AAppcarItemUploadApiController.java`
-3. `src/main/java/com/foo/excel/service/pipeline/ExcelUploadRequestService.java`
+2. `src/main/java/com/foo/excel/controller/AAppcarItemImportApiController.java`
+3. `src/main/java/com/foo/excel/service/pipeline/ExcelImportRequestService.java`
 4. `src/main/java/com/foo/excel/service/pipeline/ExcelImportOrchestrator.java`
 5. `src/main/java/com/foo/excel/service/file/ExcelUploadFileService.java`
 6. `src/main/java/com/foo/excel/service/pipeline/parse/ExcelParserService.java`
@@ -14,15 +14,15 @@ This guide is a practical reading order for the current implementation.
 8. `src/main/java/com/foo/excel/validation/WithinFileUniqueConstraintValidator.java`
 9. `src/main/java/com/foo/excel/service/pipeline/report/ExcelErrorReportService.java`
 
-These files show the full upload flow end-to-end.
+These files show the full import flow end-to-end.
 
 ## 2) Keep these current behavior facts in mind
 
 - Upload accepts `.xlsx` only. `.xls` is rejected in `ExcelUploadFileService`.
 - `metaData` is required for REST upload (`/api/excel/upload/aappcar`).
 - `metaData` is parsed strictly (`FAIL_ON_UNKNOWN_PROPERTIES`, coercion disabled).
-- Server-managed fields are fixed by template metaData DTOs (for tariff: `AAppcarItemMetaData`): `createdBy=user01`, `approvedYn=N`.
-- `MetaData`는 `getCustomId()` 계약을 제공해야 하며, orchestrator가 temp 경로 분리에 사용합니다.
+- Server-managed fields are fixed by import metadata DTOs (for tariff: `AAppcarItemMetadata`): `companyId`, `customId`, stored `filePath`, and approval defaults.
+- `Metadata`는 `assignFilePath(String)` 계약을 제공하며, orchestrator가 저장된 업로드 경로를 주입합니다.
 - Security path uses filename sanitization, magic-byte validation, secure workbook open, row pre-count, parser row-limit early-exit.
 - Error reports preserve formatting, add `_ERRORS`, sanitize formula-like values, and store original filename in a `.meta` file.
 
@@ -33,9 +33,8 @@ These files show the full upload flow end-to-end.
 - `src/main/java/com/foo/excel/annotation/ExcelUnique.java`
 - `src/main/java/com/foo/excel/annotation/ExcelCompositeUnique.java`
 - `src/main/java/com/foo/excel/annotation/ExcelCompositeUniques.java`
-- `src/main/java/com/foo/excel/config/ExcelImportConfig.java`
 - `src/main/java/com/foo/excel/config/ExcelImportProperties.java`
-- `src/main/java/com/foo/excel/service/contract/TemplateDefinition.java`
+- `src/main/java/com/foo/excel/service/contract/ExcelImportDefinition.java`
 
 ## 4) Read utilities and error model
 
@@ -46,11 +45,10 @@ These files show the full upload flow end-to-end.
 - `src/main/java/com/foo/excel/validation/RowError.java`
 - `src/main/java/com/foo/excel/validation/ExcelValidationResult.java`
 
-## 5) Read the sample template implementation
+## 5) Read the sample import implementation
 
 - `src/main/java/com/foo/excel/templates/samples/aappcar/dto/AAppcarItemDto.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/config/AAppcarItemImportConfig.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/config/AAppcarItemTemplateConfig.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/service/AAppcarItemService.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/entity/AAppcarItem.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/entity/AAppcarEquip.java`
@@ -58,7 +56,7 @@ These files show the full upload flow end-to-end.
 - `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/repository/AAppcarEquipRepository.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/service/AAppcarItemDbUniquenessChecker.java`
 
-Note: `AAppcarItemTemplateConfig` wires `AAppcarItemDbUniquenessChecker`, so DB uniqueness is enabled for this template.
+Note: `AAppcarItemImportConfig` is the import wiring entry point for the sample module.
 
 ## 6) Read the web layer
 
@@ -79,7 +77,7 @@ Note: `AAppcarItemTemplateConfig` wires `AAppcarItemDbUniquenessChecker`, so DB 
 - `src/test/java/com/foo/excel/util/WorkbookCopyUtilsTest.java`
 - `src/test/java/com/foo/excel/util/ExcelColumnUtilTest.java`
 - `src/test/java/com/foo/excel/service/pipeline/parse/ColumnResolutionExceptionTest.java`
-- `src/test/java/com/foo/excel/plan/TariffUploadPlanContractTest.java`
+- `src/test/java/com/foo/excel/plan/TariffImportPlanContractTest.java`
 
 ## 8) Quick manual check before deep reading
 

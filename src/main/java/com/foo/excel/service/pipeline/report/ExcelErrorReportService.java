@@ -1,9 +1,9 @@
 package com.foo.excel.service.pipeline.report;
 
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.service.contract.TemplateMergeRegion;
-import com.foo.excel.service.contract.TemplateMergeScope;
-import com.foo.excel.service.contract.TemplateSheetMetadata;
+import com.foo.excel.service.contract.ExcelMergeRegion;
+import com.foo.excel.service.contract.ExcelMergeScope;
+import com.foo.excel.service.contract.ExcelSheetSpec;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
 import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.util.WorkbookCopyUtils;
@@ -46,14 +46,14 @@ public class ExcelErrorReportService {
       Path originalXlsx,
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
-      TemplateSheetMetadata sheetMetadata,
+      ExcelSheetSpec sheetSpec,
       String originalFilename)
       throws IOException {
     return generateErrorReport(
         originalXlsx,
         validationResult,
         columnMappings,
-        sheetMetadata,
+        sheetSpec,
         originalFilename,
         List.of());
   }
@@ -62,30 +62,30 @@ public class ExcelErrorReportService {
       Path originalXlsx,
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
-      TemplateSheetMetadata sheetMetadata,
+      ExcelSheetSpec sheetSpec,
       String originalFilename,
-      List<TemplateMergeRegion> templateMergeRegions)
+      List<ExcelMergeRegion> excelMergeRegions)
       throws IOException {
 
     if (validationResult.isTruncated()) {
       return generateCompactErrorReport(
-          originalXlsx, validationResult, columnMappings, sheetMetadata, originalFilename);
+          originalXlsx, validationResult, columnMappings, sheetSpec, originalFilename);
     }
 
     return generateFullErrorReport(
         originalXlsx,
         validationResult,
-        sheetMetadata,
+        sheetSpec,
         originalFilename,
-        templateMergeRegions);
+        excelMergeRegions);
   }
 
   private Path generateFullErrorReport(
       Path originalXlsx,
       ExcelValidationResult validationResult,
-      TemplateSheetMetadata sheetMetadata,
+      ExcelSheetSpec sheetSpec,
       String originalFilename,
-      List<TemplateMergeRegion> templateMergeRegions)
+      List<ExcelMergeRegion> excelMergeRegions)
       throws IOException {
 
     // 1. SecureExcelUtils로 원본을 읽기 전용으로 열기(보안: 쓰기 권한 불필요)
@@ -102,8 +102,8 @@ public class ExcelErrorReportService {
           errorsByRow.put(rowError.getRowNumber(), rowError);
         }
 
-        int dataSheetIndex = sheetMetadata.sheetIndex();
-        int headerRowIdx = sheetMetadata.headerRow() - 1;
+        int dataSheetIndex = sheetSpec.sheetIndex();
+        int headerRowIdx = sheetSpec.headerRow() - 1;
         var errorStyleCache = new HashMap<Integer, CellStyle>();
 
         // 5. 모든 시트 복사
@@ -174,7 +174,7 @@ public class ExcelErrorReportService {
             if (isDataSheet) {
               if (isHeaderRow) {
                 Cell errorHeaderCell = tgtRow.createCell(errorColIndex);
-                errorHeaderCell.setCellValue(sheetMetadata.errorColumnName());
+                errorHeaderCell.setCellValue(sheetSpec.errorColumnName());
 
                 CellStyle headerStyle = sxssfWb.createCellStyle();
                 Font boldFont = sxssfWb.createFont();
@@ -196,7 +196,7 @@ public class ExcelErrorReportService {
           // 7. 데이터 시트에 안내문 추가(마지막 행 아래 2행)
           if (isDataSheet) {
             applyTemplateMerges(
-                tgtSheet, sheetMetadata, validationResult, errorColIndex, templateMergeRegions);
+                tgtSheet, sheetSpec, validationResult, errorColIndex, excelMergeRegions);
 
             int disclaimerRowIdx = lastRowNum + 2;
             Row disclaimerRow = tgtSheet.createRow(disclaimerRowIdx);
@@ -230,13 +230,13 @@ public class ExcelErrorReportService {
       Path originalXlsx,
       ExcelValidationResult validationResult,
       List<ExcelParserService.ColumnMapping> columnMappings,
-      TemplateSheetMetadata sheetMetadata,
+      ExcelSheetSpec sheetSpec,
       String originalFilename)
       throws IOException {
     try (Workbook sourceWb = SecureExcelUtils.createWorkbook(originalXlsx);
         XSSFWorkbook targetXssf = new XSSFWorkbook();
         SXSSFWorkbook sxssfWb = new SXSSFWorkbook(targetXssf, 100)) {
-      Sheet sourceSheet = sourceWb.getSheetAt(sheetMetadata.sheetIndex());
+      Sheet sourceSheet = sourceWb.getSheetAt(sheetSpec.sheetIndex());
       SXSSFSheet summarySheet = sxssfWb.createSheet("오류요약");
       DataFormatter formatter = new DataFormatter();
 
@@ -271,7 +271,7 @@ public class ExcelErrorReportService {
         cell.setCellStyle(headerStyle);
       }
       Cell errorHeader = headerRow.createCell(sortedMappings.size() + 1);
-      errorHeader.setCellValue(sheetMetadata.errorColumnName());
+      errorHeader.setCellValue(sheetSpec.errorColumnName());
       errorHeader.setCellStyle(headerStyle);
 
       for (RowError rowError : validationResult.getRowErrors()) {
@@ -320,20 +320,20 @@ public class ExcelErrorReportService {
 
   private void applyTemplateMerges(
       Sheet sheet,
-      TemplateSheetMetadata sheetMetadata,
+      ExcelSheetSpec sheetSpec,
       ExcelValidationResult validationResult,
       int errorColIndex,
-      List<TemplateMergeRegion> templateMergeRegions) {
-    if (templateMergeRegions == null || templateMergeRegions.isEmpty()) {
+      List<ExcelMergeRegion> excelMergeRegions) {
+    if (excelMergeRegions == null || excelMergeRegions.isEmpty()) {
       return;
     }
 
-    int headerStartRow = sheetMetadata.headerRow() - 1;
-    int dataStartRow = sheetMetadata.dataStartRow() - 1;
+    int headerStartRow = sheetSpec.headerRow() - 1;
+    int dataStartRow = sheetSpec.dataStartRow() - 1;
     int dataEndRow = dataStartRow + validationResult.getTotalRows() - 1;
 
-    for (TemplateMergeRegion mergeRegion : templateMergeRegions) {
-      if (mergeRegion.scope() == TemplateMergeScope.HEADER) {
+    for (ExcelMergeRegion mergeRegion : excelMergeRegions) {
+      if (mergeRegion.scope() == ExcelMergeScope.HEADER) {
         addMergedRegionIfSafe(
             sheet,
             new CellRangeAddress(

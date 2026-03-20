@@ -2,7 +2,7 @@ package com.foo.excel.service.pipeline.parse;
 
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
-import com.foo.excel.service.contract.TemplateSheetMetadata;
+import com.foo.excel.service.contract.ExcelSheetSpec;
 import com.foo.excel.util.ExcelColumnUtil;
 import com.foo.excel.util.SecureExcelUtils;
 import com.foo.excel.validation.CellError;
@@ -60,29 +60,29 @@ public class ExcelParserService {
   private record CellRef(int rowIndex, int columnIndex) {}
 
   public <T> ParseResult<T> parse(
-      Path xlsxFile, Class<T> dtoClass, TemplateSheetMetadata sheetMetadata)
+      Path xlsxFile, Class<T> dtoClass, ExcelSheetSpec sheetSpec)
       throws IOException {
-    return parse(xlsxFile, dtoClass, sheetMetadata, Integer.MAX_VALUE, Integer.MAX_VALUE);
+    return parse(xlsxFile, dtoClass, sheetSpec, Integer.MAX_VALUE, Integer.MAX_VALUE);
   }
 
   public <T> ParseResult<T> parse(
-      Path xlsxFile, Class<T> dtoClass, TemplateSheetMetadata sheetMetadata, int maxRows)
+      Path xlsxFile, Class<T> dtoClass, ExcelSheetSpec sheetSpec, int maxRows)
       throws IOException {
-    return parse(xlsxFile, dtoClass, sheetMetadata, maxRows, Integer.MAX_VALUE);
+    return parse(xlsxFile, dtoClass, sheetSpec, maxRows, Integer.MAX_VALUE);
   }
 
   public <T> ParseResult<T> parse(
       Path xlsxFile,
       Class<T> dtoClass,
-      TemplateSheetMetadata sheetMetadata,
+      ExcelSheetSpec sheetSpec,
       int maxRows,
       int maxErrorRows)
       throws IOException {
 
-    int headerRowNum = sheetMetadata.headerRow() - 1; // 0-based로 변환
-    int dataStartRowNum = sheetMetadata.dataStartRow() - 1;
-    int sheetIndex = sheetMetadata.sheetIndex();
-    String footerMarker = sheetMetadata.footerMarker();
+    int headerRowNum = sheetSpec.headerRow() - 1; // 0-based로 변환
+    int dataStartRowNum = sheetSpec.dataStartRow() - 1;
+    int sheetIndex = sheetSpec.sheetIndex();
+    String footerMarker = sheetSpec.footerMarker();
 
     // 보안: XXE 및 Zip Bomb 공격 방지를 위해 SecureExcelUtils 사용.
     // 설정된 제한과 보호 내용은 SecureExcelUtils를 참고.
@@ -92,12 +92,12 @@ public class ExcelParserService {
         Row headerRow = sheet.getRow(headerRowNum);
 
         if (headerRow == null) {
-          throw new IllegalStateException("Header row " + sheetMetadata.headerRow() + " is empty");
+          throw new IllegalStateException("Header row " + sheetSpec.headerRow() + " is empty");
         }
 
         Map<CellRef, CellRef> mergedCellLookup = buildMergedCellLookup(sheet);
         Map<Cell, String> formattedCellCache = new IdentityHashMap<>();
-        List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, sheet, sheetMetadata);
+        List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, sheet, sheetSpec);
         List<RowError> parseErrors = new ArrayList<>();
         List<Integer> sourceRowNumbers = new ArrayList<>();
         List<T> rows =
@@ -122,7 +122,7 @@ public class ExcelParserService {
   }
 
   private <T> List<ColumnMapping> resolveColumnMappings(
-      Class<T> dtoClass, Sheet sheet, TemplateSheetMetadata sheetMetadata) {
+      Class<T> dtoClass, Sheet sheet, ExcelSheetSpec sheetSpec) {
     List<ColumnMapping> mappings = new ArrayList<>();
     List<ColumnResolutionException> errors = new ArrayList<>();
 
@@ -133,7 +133,7 @@ public class ExcelParserService {
       }
 
       try {
-        int resolvedIndex = resolveColumnIndex(annotation, field.getName(), sheet, sheetMetadata);
+        int resolvedIndex = resolveColumnIndex(annotation, field.getName(), sheet, sheetSpec);
 
         if (resolvedIndex < 0) {
           // 선택 필드이며 찾지 못함
@@ -157,9 +157,9 @@ public class ExcelParserService {
   }
 
   private int resolveColumnIndex(
-      ExcelColumn annotation, String fieldName, Sheet sheet, TemplateSheetMetadata sheetMetadata) {
+      ExcelColumn annotation, String fieldName, Sheet sheet, ExcelSheetSpec sheetSpec) {
     int index = ExcelColumnUtil.letterToIndex(annotation.column());
-    List<String> actualSegments = resolveHeaderSegments(sheet, annotation, sheetMetadata, index);
+    List<String> actualSegments = resolveHeaderSegments(sheet, annotation, sheetSpec, index);
     String actual = formatResolvedHeader(actualSegments);
     String expected = expectedHeaderLabel(annotation);
 
@@ -185,9 +185,9 @@ public class ExcelParserService {
   }
 
   private List<String> resolveHeaderSegments(
-      Sheet sheet, ExcelColumn annotation, TemplateSheetMetadata sheetMetadata, int columnIndex) {
+      Sheet sheet, ExcelColumn annotation, ExcelSheetSpec sheetSpec, int columnIndex) {
     return resolveHeaderSegments(
-        sheet, resolveHeaderRowRange(annotation, sheetMetadata), columnIndex);
+        sheet, resolveHeaderRowRange(annotation, sheetSpec), columnIndex);
   }
 
   private List<String> resolveHeaderSegments(
@@ -206,11 +206,11 @@ public class ExcelParserService {
   }
 
   private HeaderRowRange resolveHeaderRowRange(
-      ExcelColumn annotation, TemplateSheetMetadata sheetMetadata) {
+      ExcelColumn annotation, ExcelSheetSpec sheetSpec) {
     int start = annotation.headerRowStart();
     int count = annotation.headerRowCount();
     if (start == -1 && count == -1) {
-      int headerRow = sheetMetadata.headerRow() - 1;
+      int headerRow = sheetSpec.headerRow() - 1;
       return new HeaderRowRange(headerRow, headerRow);
     }
     if (start < 1 || count < 1) {

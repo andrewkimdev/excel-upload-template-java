@@ -1,11 +1,11 @@
 package com.foo.excel.service.pipeline;
 
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.service.contract.MetaData;
+import com.foo.excel.service.contract.ExcelImportDefinition;
+import com.foo.excel.service.contract.ExcelSheetSpec;
+import com.foo.excel.service.contract.Metadata;
 import com.foo.excel.service.contract.MetadataConflict;
 import com.foo.excel.service.contract.PersistenceHandler;
-import com.foo.excel.service.contract.TemplateDefinition;
-import com.foo.excel.service.contract.TemplateSheetMetadata;
 import com.foo.excel.service.file.ExcelUploadFileService;
 import com.foo.excel.service.file.ExcelUploadFileService.StoredUpload;
 import com.foo.excel.service.pipeline.parse.ColumnResolutionBatchException;
@@ -34,7 +34,7 @@ public class ExcelImportOrchestrator {
   private final ExcelValidationService validationService;
   private final ExcelErrorReportService errorReportService;
   private final ExcelImportProperties properties;
-  private final List<TemplateDefinition<?, ?>> templateDefinitions;
+  private final List<ExcelImportDefinition<?, ?>> importDefinitions;
 
   @Builder
   public record ImportResult(
@@ -47,59 +47,59 @@ public class ExcelImportOrchestrator {
       String errorFileId,
       String downloadUrl,
       String originalFilename,
-      MetadataConflict metadataConflict,
+      MetadataConflict uploadMetadataConflict,
       String message) {}
 
-  public ImportResult processUpload(MultipartFile file, String templateType, MetaData metaData)
+  public ImportResult processImport(MultipartFile file, String importType, Metadata metadata)
       throws IOException {
-    TemplateDefinition<?, ?> template = findTemplate(templateType);
-    return doProcess(template, file, metaData);
+    ExcelImportDefinition<?, ?> importDefinition = findDefinition(importType);
+    return doProcess(importDefinition, file, metadata);
   }
 
-  public Class<? extends MetaData> getMetaDataClass(String templateType) {
-    return findTemplate(templateType).getMetaDataClass();
+  public Class<? extends Metadata> getMetadataClass(String importType) {
+    return findDefinition(importType).getMetadataClass();
   }
 
-  private TemplateDefinition<?, ?> findTemplate(String templateType) {
-    return templateDefinitions.stream()
-        .filter(t -> t.getTemplateType().equals(templateType))
+  private ExcelImportDefinition<?, ?> findDefinition(String importType) {
+    return importDefinitions.stream()
+        .filter(t -> t.getImportType().equals(importType))
         .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("알 수 없는 템플릿 타입입니다: " + templateType));
+        .orElseThrow(() -> new IllegalArgumentException("알 수 없는 import 타입입니다: " + importType));
   }
 
   @SuppressWarnings("unchecked")
-  private <T, M extends MetaData> ImportResult doProcess(
-      TemplateDefinition<?, ?> rawTemplate, MultipartFile file, MetaData metaData)
+  private <T, M extends Metadata> ImportResult doProcess(
+      ExcelImportDefinition<?, ?> rawDefinition, MultipartFile file, Metadata metadata)
       throws IOException {
     long requestStartedAt = System.nanoTime();
-    TemplateDefinition<T, M> template = (TemplateDefinition<T, M>) rawTemplate;
-    if (!template.getMetaDataClass().isInstance(metaData)) {
-      throw new IllegalArgumentException("metaData 형식이 템플릿과 일치하지 않습니다.");
+    ExcelImportDefinition<T, M> importDefinition = (ExcelImportDefinition<T, M>) rawDefinition;
+    if (!importDefinition.getMetadataClass().isInstance(metadata)) {
+      throw new IllegalArgumentException("metadata 형식이 import와 일치하지 않습니다.");
     }
-    M typedMetaData = template.getMetaDataClass().cast(metaData);
+    M typedMetadata = importDefinition.getMetadataClass().cast(metadata);
 
-    TemplateSheetMetadata sheetMetadata = template.getSheetMetadata();
+    ExcelSheetSpec sheetSpec = importDefinition.getSheetSpec();
 
-    // 1. 템플릿별 임시 하위 디렉터리 키 결정
-    String tempSubdirectory = resolveTempSubdirectory(template, typedMetaData);
+    // 1. import별 임시 하위 디렉터리 키 결정
+    String tempSubdirectory = resolveTempSubdirectory(importDefinition, typedMetadata);
 
     try {
       // 2. xlsx 파일 저장 및 검증
       long fileStageStartedAt = System.nanoTime();
       StoredUpload storedUpload = uploadFileService.storeAndValidateXlsx(file, tempSubdirectory);
       Path xlsxFile = storedUpload.path();
-      typedMetaData.assignFilePath(xlsxFile.toString());
+      typedMetadata.assignFilePath(xlsxFile.toString());
       String sanitizedFilename = storedUpload.sanitizedFilename();
       long fileStageElapsedMs = elapsedMillis(fileStageStartedAt);
       int maxErrorRows = resolveMaxErrorRows();
 
-      // 2a. upload-level 선행 차단 조건은 파싱 전에 확인한다.
-      var uploadPrecheckFailure = template.runUploadPrecheck(typedMetaData);
-      if (uploadPrecheckFailure.isPresent()) {
-        var failure = uploadPrecheckFailure.orElseThrow();
+      // 2a. import-level 선행 차단 조건은 파싱 전에 확인한다.
+      var importPrecheckFailure = importDefinition.runImportPrecheck(typedMetadata);
+      if (importPrecheckFailure.isPresent()) {
+        var failure = importPrecheckFailure.orElseThrow();
         log.info(
-            "Upload stage timing [templateType={}, file={}, fileMs={}, totalMs={}, reportMode=skipped]: upload-level blocked",
-            template.getTemplateType(),
+            "Import stage timing [importType={}, file={}, fileMs={}, totalMs={}, reportMode=skipped]: import-level blocked",
+            importDefinition.getImportType(),
             sanitizedFilename,
             fileStageElapsedMs,
             elapsedMillis(requestStartedAt));
@@ -108,23 +108,23 @@ public class ExcelImportOrchestrator {
             .rowsProcessed(0)
             .errorRows(0)
             .errorCount(0)
-            .metadataConflict(failure.metadataConflict())
+            .uploadMetadataConflict(failure.uploadMetadataConflict())
             .message(failure.message())
             .build();
       }
 
       // 2b. 빠른 행 수 사전 점검(경량 SAX, 대용량 파일의 전체 파싱 회피)
       long preCountStageStartedAt = System.nanoTime();
-      int roughRowCount = SecureExcelUtils.countRows(xlsxFile, sheetMetadata.sheetIndex());
+      int roughRowCount = SecureExcelUtils.countRows(xlsxFile, sheetSpec.sheetIndex());
       int preCountThreshold =
           properties.getMaxRows()
-              + (sheetMetadata.dataStartRow() - 1)
+              + (sheetSpec.dataStartRow() - 1)
               + properties.getPreCountBuffer();
       long preCountStageElapsedMs = elapsedMillis(preCountStageStartedAt);
       if (roughRowCount > preCountThreshold) {
         log.info(
-            "Upload stage timing [templateType={}, file={}, fileMs={}, preCountMs={}, totalMs={}]: pre-count rejected, roughRows={}, threshold={}",
-            template.getTemplateType(),
+            "Import stage timing [importType={}, file={}, fileMs={}, preCountMs={}, totalMs={}]: pre-count rejected, roughRows={}, threshold={}",
+            importDefinition.getImportType(),
             sanitizedFilename,
             fileStageElapsedMs,
             preCountStageElapsedMs,
@@ -149,8 +149,8 @@ public class ExcelImportOrchestrator {
       ExcelParserService.ParseResult<T> parseResult =
           parserService.parse(
               xlsxFile,
-              template.getDtoClass(),
-              sheetMetadata,
+              importDefinition.getDtoClass(),
+              sheetSpec,
               properties.getMaxRows(),
               maxErrorRows);
       long parseStageElapsedMs = elapsedMillis(parseStageStartedAt);
@@ -158,8 +158,8 @@ public class ExcelImportOrchestrator {
       // 4. 최대 행 수 확인
       if (parseResult.rows().size() > properties.getMaxRows()) {
         log.info(
-            "Upload stage timing [templateType={}, file={}, fileMs={}, preCountMs={}, parseMs={}, totalMs={}]: row limit exceeded after parse, rowsProcessed={}, maxRows={}",
-            template.getTemplateType(),
+            "Import stage timing [importType={}, file={}, fileMs={}, preCountMs={}, parseMs={}, totalMs={}]: row limit exceeded after parse, rowsProcessed={}, maxRows={}",
+            importDefinition.getImportType(),
             sanitizedFilename,
             fileStageElapsedMs,
             preCountStageElapsedMs,
@@ -184,10 +184,10 @@ public class ExcelImportOrchestrator {
         ExcelValidationResult validationResult =
             capRowErrors(parseResult.rows().size(), parseResult.parseErrors(), maxErrorRows);
         return buildFailureResult(
-            template,
+            importDefinition,
             sanitizedFilename,
             xlsxFile,
-            sheetMetadata,
+            sheetSpec,
             parseResult,
             validationResult,
             fileStageElapsedMs,
@@ -204,7 +204,7 @@ public class ExcelImportOrchestrator {
       ExcelValidationResult validationResult =
           validationService.validate(
               parseResult.rows(),
-              template.getDtoClass(),
+              importDefinition.getDtoClass(),
               parseResult.sourceRowNumbers(),
               remainingErrorRowBudget(maxErrorRows, 0));
       long validationStageElapsedMs = elapsedMillis(validationStageStartedAt);
@@ -212,10 +212,10 @@ public class ExcelImportOrchestrator {
       // 7. 이미 유효하지 않으면 DB 유일성 검사를 생략한다.
       if (!validationResult.isValid()) {
         return buildFailureResult(
-            template,
+            importDefinition,
             sanitizedFilename,
             xlsxFile,
-            sheetMetadata,
+            sheetSpec,
             parseResult,
             validationResult,
             fileStageElapsedMs,
@@ -230,8 +230,8 @@ public class ExcelImportOrchestrator {
       // 8. DB 유일성 검사
       long dbUniquenessStageStartedAt = System.nanoTime();
       List<RowError> dbErrors =
-          template.checkDbUniqueness(
-              parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
+          importDefinition.checkDbUniqueness(
+              parseResult.rows(), parseResult.sourceRowNumbers(), typedMetadata);
       long dbUniquenessStageElapsedMs = elapsedMillis(dbUniquenessStageStartedAt);
       if (!dbErrors.isEmpty()) {
         List<RowError> cappedDbErrors =
@@ -247,14 +247,13 @@ public class ExcelImportOrchestrator {
         // 9. 저장
         long saveStageStartedAt = System.nanoTime();
         PersistenceHandler.SaveResult saveResult =
-            template
-                .getPersistenceHandler()
-                .saveAll(parseResult.rows(), parseResult.sourceRowNumbers(), typedMetaData);
+            importDefinition.getPersistenceHandler()
+                .saveAll(parseResult.rows(), parseResult.sourceRowNumbers(), typedMetadata);
         long saveStageElapsedMs = elapsedMillis(saveStageStartedAt);
 
         log.info(
-            "Upload stage timing [templateType={}, file={}, rowsProcessed={}, fileMs={}, preCountMs={}, parseMs={}, validationMs={}, dbUniquenessMs={}, saveMs={}, totalMs={}]: success",
-            template.getTemplateType(),
+            "Import stage timing [importType={}, file={}, rowsProcessed={}, fileMs={}, preCountMs={}, parseMs={}, validationMs={}, dbUniquenessMs={}, saveMs={}, totalMs={}]: success",
+            importDefinition.getImportType(),
             sanitizedFilename,
             parseResult.rows().size(),
             fileStageElapsedMs,
@@ -274,10 +273,10 @@ public class ExcelImportOrchestrator {
             .build();
       } else {
         return buildFailureResult(
-            template,
+            importDefinition,
             sanitizedFilename,
             xlsxFile,
-            sheetMetadata,
+            sheetSpec,
             parseResult,
             validationResult,
             fileStageElapsedMs,
@@ -292,14 +291,14 @@ public class ExcelImportOrchestrator {
       log.warn("컬럼 해석에 실패했습니다: {}", e.getMessage());
       return ImportResult.builder().success(false).message(e.toKoreanMessage()).build();
     } catch (Exception e) {
-      log.error("업로드 처리 중 오류가 발생했습니다", e);
+      log.error("import 처리 중 오류가 발생했습니다", e);
       throw e;
     }
   }
 
-  private <M extends MetaData> String resolveTempSubdirectory(
-      TemplateDefinition<?, M> template, M metaData) {
-    String tempSubdirectory = template.resolveTempSubdirectory(metaData);
+  private <M extends Metadata> String resolveTempSubdirectory(
+      ExcelImportDefinition<?, M> importDefinition, M metadata) {
+    String tempSubdirectory = importDefinition.resolveTempSubdirectory(metadata);
     return tempSubdirectory == null ? null : sanitizeTempSubdirectory(tempSubdirectory);
   }
 
@@ -367,10 +366,10 @@ public class ExcelImportOrchestrator {
   }
 
   private <T> ImportResult buildFailureResult(
-      TemplateDefinition<T, ?> template,
+      ExcelImportDefinition<T, ?> importDefinition,
       String sanitizedFilename,
       Path xlsxFile,
-      TemplateSheetMetadata sheetMetadata,
+      ExcelSheetSpec sheetSpec,
       ExcelParserService.ParseResult<T> parseResult,
       ExcelValidationResult validationResult,
       long fileStageElapsedMs,
@@ -387,9 +386,9 @@ public class ExcelImportOrchestrator {
             xlsxFile,
             validationResult,
             parseResult.columnMappings(),
-            sheetMetadata,
+            sheetSpec,
             sanitizedFilename,
-            template.getMergeRegions());
+            importDefinition.getMergeRegions());
     long errorReportStageElapsedMs = elapsedMillis(errorReportStageStartedAt);
 
     String errorFileId = errorFile.getFileName().toString().replace(".xlsx", "");
@@ -403,8 +402,8 @@ public class ExcelImportOrchestrator {
     }
 
     log.info(
-        "Upload stage timing [templateType={}, file={}, rowsProcessed={}, errorRows={}, errorCount={}, fileMs={}, preCountMs={}, parseMs={}, validationMs={}, dbUniquenessMs={}, errorReportMs={}, totalMs={}, reportMode={}]: {}",
-        template.getTemplateType(),
+        "Import stage timing [importType={}, file={}, rowsProcessed={}, errorRows={}, errorCount={}, fileMs={}, preCountMs={}, parseMs={}, validationMs={}, dbUniquenessMs={}, errorReportMs={}, totalMs={}, reportMode={}]: {}",
+        importDefinition.getImportType(),
         sanitizedFilename,
         validationResult.getTotalRows(),
         validationResult.getErrorRowCount(),

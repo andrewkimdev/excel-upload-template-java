@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.type.LogicalType;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.service.contract.MetaData;
+import com.foo.excel.service.contract.Metadata;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -22,26 +22,26 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
-public class ExcelUploadRequestService {
+public class ExcelImportRequestService {
 
   private final ExcelImportOrchestrator orchestrator;
   private final ExcelImportProperties properties;
   private final ObjectMapper objectMapper;
   private final Validator validator;
 
-  public ImportResult upload(MultipartFile file, String templateType, String metaDataJson)
+  public ImportResult upload(MultipartFile file, String importType, String metadataJson)
       throws IOException {
     checkFileSize(file);
-    Class<? extends MetaData> metaDataClass = orchestrator.getMetaDataClass(templateType);
-    MetaData metaData = parseAndValidateMetaData(metaDataJson, metaDataClass);
-    return orchestrator.processUpload(file, templateType, metaData);
+    Class<? extends Metadata> metadataClass = orchestrator.getMetadataClass(importType);
+    Metadata metadata = parseAndValidateMetadata(metadataJson, metadataClass);
+    return orchestrator.processImport(file, importType, metadata);
   }
 
-  public ImportResult upload(MultipartFile file, String templateType, MetaData metaData)
+  public ImportResult upload(MultipartFile file, String importType, Metadata metadata)
       throws IOException {
     checkFileSize(file);
-    validateMetaData(metaData);
-    return orchestrator.processUpload(file, templateType, metaData);
+    validateMetadata(metadata);
+    return orchestrator.processImport(file, importType, metadata);
   }
 
   public Map<String, Object> toApiResponse(ImportResult result) {
@@ -58,8 +58,8 @@ public class ExcelUploadRequestService {
 
     response.put("errorRows", result.errorRows());
     response.put("errorCount", result.errorCount());
-    if (result.metadataConflict() != null) {
-      response.put("metadataConflict", result.metadataConflict());
+    if (result.uploadMetadataConflict() != null) {
+      response.put("uploadMetadataConflict", result.uploadMetadataConflict());
     }
     if (result.downloadUrl() != null) {
       response.put("downloadUrl", result.downloadUrl());
@@ -74,10 +74,10 @@ public class ExcelUploadRequestService {
     }
   }
 
-  private MetaData parseAndValidateMetaData(
-      String metaDataJson, Class<? extends MetaData> metaDataClass) {
-    if (metaDataJson == null || metaDataJson.isBlank()) {
-      throw new IllegalArgumentException("metaData 파트는 필수입니다.");
+  private Metadata parseAndValidateMetadata(
+      String metadataJson, Class<? extends Metadata> metadataClass) {
+    if (metadataJson == null || metadataJson.isBlank()) {
+      throw new IllegalArgumentException("metadata 파트는 필수입니다.");
     }
 
     try {
@@ -91,16 +91,16 @@ public class ExcelUploadRequestService {
           .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
           .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail);
 
-      MetaData metaData = strictMapper.readValue(metaDataJson, metaDataClass);
-      validateMetaData(metaData);
-      return metaData;
+      Metadata metadata = strictMapper.readValue(metadataJson, metadataClass);
+      validateMetadata(metadata);
+      return metadata;
     } catch (JsonProcessingException e) {
-      throw new IllegalArgumentException("metaData 형식이 올바르지 않습니다.");
+      throw new IllegalArgumentException("metadata 형식이 올바르지 않습니다.");
     }
   }
 
-  private void validateMetaData(MetaData metaData) {
-    var violations = validator.validate(metaData);
+  private void validateMetadata(Metadata metadata) {
+    var violations = validator.validate(metadata);
     if (!violations.isEmpty()) {
       ConstraintViolation<?> violation = violations.iterator().next();
       throw new IllegalArgumentException(violation.getMessage());

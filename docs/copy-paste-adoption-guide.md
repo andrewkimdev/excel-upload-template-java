@@ -35,7 +35,7 @@ Copy packages:
 - `com.foo.excel.validation`
 
 And copy:
-- `com.foo.excel.templates.TemplateTypes`
+- `com.foo.excel.templates.ImportTypes`
 
 ### Step B: One working template (required)
 
@@ -53,14 +53,14 @@ This gives the full pattern:
 ### Step C: Controller layer (choose one)
 
 API only:
-- `AAppcarItemUploadApiController`
+- `AAppcarItemImportApiController`
 - `ExcelFileController`
 - `ExcelApiExceptionHandler`
-- `ExcelUploadRequestService`
+- `ExcelImportRequestService`
 
 API + Thymeleaf pages:
-- add `AAppcarItemUploadPageController`
-- add `UploadIndexController`
+- add `AAppcarItemImportPageController`
+- add `ImportIndexController`
 - add `templates/*.html`, `static/style.css`
 - add `AAppcarItemMetaDataFormMapper`
 
@@ -79,7 +79,7 @@ API + Thymeleaf pages:
 ## 4. Required Wiring Notes (Easy to Miss)
 
 - Enable scheduling in your app (`@EnableScheduling`) if you copy `TempFileCleanupService` and want cleanup job execution.
-- `ExcelApiExceptionHandler` is scoped to `AAppcarItemUploadApiController`. If you replace that controller, update advice scope accordingly.
+- `ExcelApiExceptionHandler` is scoped to `AAppcarItemImportApiController`. If you replace that controller, update advice scope accordingly.
 - If you do not use Lombok in your target project, you must replace Lombok annotations with explicit Java code.
 
 ## 5. Properties to Carry
@@ -109,8 +109,8 @@ Multipart limits:
 ## 7. Evidence (Repository)
 
 - Dependency reality: `build.gradle`
-- Strict `metaData` parsing: `ExcelUploadRequestService`
+- Strict `metaData` parsing: `ExcelImportRequestService`
 - Upload security gates: `ExcelUploadFileService`, `SecureExcelUtils`, `ExcelImportOrchestrator`
 - Hidden internal errors in API responses: `ExcelApiExceptionHandler`
-- Cleanup scheduling requirement: `TempFileCleanupService`, `ExcelUploadApplication`
+- Cleanup scheduling requirement: `TempFileCleanupService`, `ExcelImportApplication`
 - Exception handler scope coupling: `ExcelApiExceptionHandler`

@@ -2,11 +2,11 @@ package com.foo.excel.service.contract;
 
 import com.foo.excel.annotation.ExcelSheet;
 
-public final class TemplateSheetMetadataResolver {
+public final class ExcelSheetSpecResolver {
 
-  private TemplateSheetMetadataResolver() {}
+  private ExcelSheetSpecResolver() {}
 
-  public static TemplateSheetMetadata resolve(Class<?> dtoClass) {
+  public static ExcelSheetSpec resolve(Class<?> dtoClass) {
     ExcelSheet annotation = dtoClass.getAnnotation(ExcelSheet.class);
     if (annotation == null) {
       throw new IllegalStateException(
@@ -36,7 +36,7 @@ public final class TemplateSheetMetadataResolver {
               .formatted(dtoClass.getName(), annotation.errorColumnName()));
     }
 
-    return new TemplateSheetMetadata(
+    return new ExcelSheetSpec(
         annotation.sheetIndex(),
         annotation.headerRow(),
         annotation.dataStartRow(),

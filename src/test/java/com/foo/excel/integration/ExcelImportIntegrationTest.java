@@ -13,13 +13,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import com.foo.excel.ExcelUploadApplication;
+import com.foo.excel.ExcelImportApplication;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquip;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.templates.TemplateTypes;
+import com.foo.excel.templates.ImportTypes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -47,14 +47,14 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-@SpringBootTest(classes = ExcelUploadApplication.class)
+@SpringBootTest(classes = ExcelImportApplication.class)
 @AutoConfigureMockMvc
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class ExcelImportIntegrationTest {
 
   private static final String API_UPLOAD_TARIFF =
-      "/api/excel/upload/" + TemplateTypes.AAPPCAR;
-  private static final String PAGE_UPLOAD_TARIFF = "/upload/" + TemplateTypes.AAPPCAR;
+      "/api/excel/upload/" + ImportTypes.AAPPCAR;
+  private static final String PAGE_UPLOAD_TARIFF = "/upload/" + ImportTypes.AAPPCAR;
 
   @Autowired private MockMvc mockMvc;
 
@@ -82,14 +82,14 @@ class ExcelImportIntegrationTest {
         .perform(
             multipart("/api/excel/upload/aappcar")
                 .file(file)
-                .file(requiredMetaDataPart()))
+                .file(requiredMetadataPart()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.rowsProcessed").value(2))
         .andExpect(jsonPath("$.message").value("데이터 업로드 완료"));
 
     assertThat(itemRepository.count()).isEqualTo(2);
-    Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredMetaDataEquipId());
+    Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredMetadataEquipId());
     assertThat(savedEquip).isPresent();
     assertThat(savedEquip.orElseThrow().getEquipMean()).isEqualTo("설비A");
     assertThat(savedEquip.orElseThrow().getHsno()).isEqualTo("8481802000");
@@ -113,7 +113,7 @@ class ExcelImportIntegrationTest {
             xlsxBytes);
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart("Y")))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart("Y")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.rowsCreated").value(2))
@@ -128,20 +128,20 @@ class ExcelImportIntegrationTest {
                         "tariff.xlsx",
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         xlsxBytes))
-                .file(requiredMetaDataPart()))
+                .file(requiredMetadataPart()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.rowsProcessed").value(0))
         .andExpect(jsonPath("$.message").value(containsString("승인된 장비")))
         .andExpect(jsonPath("$.downloadUrl").doesNotExist())
-        .andExpect(jsonPath("$.metadataConflict.type").value("METADATA_DUPLICATE_APPROVED_EQUIP"))
-        .andExpect(jsonPath("$.metadataConflict.fields[0].fieldName").value("companyId"))
-        .andExpect(jsonPath("$.metadataConflict.fields[0].value").value("COMPANY01"))
-        .andExpect(jsonPath("$.metadataConflict.fields[5].fieldName").value("equipCode"))
-        .andExpect(jsonPath("$.metadataConflict.fields[5].value").value("EQ-01"));
+        .andExpect(jsonPath("$.uploadMetadataConflict.type").value("METADATA_DUPLICATE_APPROVED_EQUIP"))
+        .andExpect(jsonPath("$.uploadMetadataConflict.fields[0].fieldName").value("companyId"))
+        .andExpect(jsonPath("$.uploadMetadataConflict.fields[0].value").value("COMPANY01"))
+        .andExpect(jsonPath("$.uploadMetadataConflict.fields[5].fieldName").value("equipCode"))
+        .andExpect(jsonPath("$.uploadMetadataConflict.fields[5].value").value("EQ-01"));
 
     assertThat(itemRepository.count()).isEqualTo(2);
-    Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredMetaDataEquipId());
+    Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredMetadataEquipId());
     assertThat(savedEquip).isPresent();
     assertThat(savedEquip.orElseThrow().getEquipMean()).isEqualTo("설비A");
     assertThat(savedEquip.orElseThrow().getApprovalYn()).isEqualTo("Y");
@@ -150,7 +150,7 @@ class ExcelImportIntegrationTest {
   @Test
   void upload_whenOnlyNonApprovedEquipExists_doesNotBlockMetadataPrecheck() throws Exception {
     equipRepository.save(
-        AAppcarEquip.builder().id(requiredMetaDataEquipId()).approvalYn("N").build());
+        AAppcarEquip.builder().id(requiredMetadataEquipId()).approvalYn("N").build());
 
     byte[] xlsxBytes = createValidAAppcarItemXlsx(2);
     MockMultipartFile file =
@@ -161,7 +161,7 @@ class ExcelImportIntegrationTest {
             xlsxBytes);
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(true))
         .andExpect(jsonPath("$.message").value("데이터 업로드 완료"));
@@ -178,7 +178,7 @@ class ExcelImportIntegrationTest {
             xlsxBytes);
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.errorRows").value(greaterThan(0)))
@@ -198,7 +198,7 @@ class ExcelImportIntegrationTest {
 
     MvcResult uploadResult =
         mockMvc
-            .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+            .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.downloadUrl").exists())
             .andReturn();
@@ -235,7 +235,7 @@ class ExcelImportIntegrationTest {
 
     MvcResult uploadResult =
         mockMvc
-            .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+            .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.downloadUrl").exists())
             .andReturn();
@@ -270,14 +270,14 @@ class ExcelImportIntegrationTest {
         new MockMultipartFile("file", "tariff.xls", "application/vnd.ms-excel", xlsBytes);
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.message").value(containsString(".xlsx")));
   }
 
   @Test
-  void upload_missingMetaData_rejected() throws Exception {
+  void upload_missingMetadata_rejected() throws Exception {
     byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
@@ -290,11 +290,11 @@ class ExcelImportIntegrationTest {
         .perform(multipart(API_UPLOAD_TARIFF).file(file))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
-        .andExpect(jsonPath("$.message", containsString("metaData")));
+        .andExpect(jsonPath("$.message", containsString("metadata")));
   }
 
   @Test
-  void upload_metaDataUnknownField_rejected() throws Exception {
+  void upload_metadataUnknownField_rejected() throws Exception {
     byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
@@ -302,10 +302,10 @@ class ExcelImportIntegrationTest {
             "tariff.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
-    MockMultipartFile invalidMetaData =
+    MockMultipartFile invalidMetadata =
         new MockMultipartFile(
-            "metaData",
-            "metaData",
+            "metadata",
+            "metadata",
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":\"2026\","
@@ -317,14 +317,14 @@ class ExcelImportIntegrationTest {
                 .getBytes());
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(invalidMetaData))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(invalidMetadata))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
-        .andExpect(jsonPath("$.message", containsString("metaData")));
+        .andExpect(jsonPath("$.message", containsString("metadata")));
   }
 
   @Test
-  void upload_metaDataScalarCoercion_rejected() throws Exception {
+  void upload_metadataScalarCoercion_rejected() throws Exception {
     byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
@@ -332,10 +332,10 @@ class ExcelImportIntegrationTest {
             "tariff.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
-    MockMultipartFile invalidMetaData =
+    MockMultipartFile invalidMetadata =
         new MockMultipartFile(
-            "metaData",
-            "metaData",
+            "metadata",
+            "metadata",
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":2026,"
@@ -346,14 +346,14 @@ class ExcelImportIntegrationTest {
                 .getBytes());
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(invalidMetaData))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(invalidMetadata))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
-        .andExpect(jsonPath("$.message", containsString("metaData")));
+        .andExpect(jsonPath("$.message", containsString("metadata")));
   }
 
   @Test
-  void upload_metaDataBooleanCoercion_rejected() throws Exception {
+  void upload_metadataBooleanCoercion_rejected() throws Exception {
     byte[] xlsxBytes = createValidAAppcarItemXlsx(1);
     MockMultipartFile file =
         new MockMultipartFile(
@@ -361,10 +361,10 @@ class ExcelImportIntegrationTest {
             "tariff.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
-    MockMultipartFile invalidMetaData =
+    MockMultipartFile invalidMetadata =
         new MockMultipartFile(
-            "metaData",
-            "metaData",
+            "metadata",
+            "metadata",
             MediaType.APPLICATION_JSON_VALUE,
             ("{"
                     + "\"comeYear\":\"2026\","
@@ -375,10 +375,10 @@ class ExcelImportIntegrationTest {
                 .getBytes());
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(invalidMetaData))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(invalidMetadata))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
-        .andExpect(jsonPath("$.message", containsString("metaData")));
+        .andExpect(jsonPath("$.message", containsString("metadata")));
   }
 
   @Test
@@ -393,14 +393,14 @@ class ExcelImportIntegrationTest {
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/unknown-type").file(file).file(requiredMetaDataPart()))
+            multipart("/api/excel/upload/unknown-type").file(file).file(requiredMetadataPart()))
         .andExpect(status().isNotFound());
   }
 
   @Test
   void removedTemplateDownloadRoute_returns404() throws Exception {
     mockMvc
-        .perform(get("/api/excel/template/" + TemplateTypes.AAPPCAR))
+        .perform(get("/api/excel/template/" + ImportTypes.AAPPCAR))
         .andExpect(status().isNotFound());
   }
 
@@ -458,7 +458,7 @@ class ExcelImportIntegrationTest {
               xlsxBytes);
 
       mockMvc
-          .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+          .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
           .andExpect(status().isBadRequest())
           .andExpect(jsonPath("$.success").value(false))
           .andExpect(jsonPath("$.message").value(containsString("최대 행 수")));
@@ -479,7 +479,7 @@ class ExcelImportIntegrationTest {
             largeBytes);
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
         .andExpect(status().isPayloadTooLarge())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.message").value(containsString("크기")));
@@ -510,7 +510,7 @@ class ExcelImportIntegrationTest {
             xlsxBytes);
 
     mockMvc
-        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetaDataPart()))
+        .perform(multipart(API_UPLOAD_TARIFF).file(file).file(requiredMetadataPart()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.message").value(containsString("헤더가 일치하지 않습니다")));
@@ -666,20 +666,20 @@ class ExcelImportIntegrationTest {
     return String.valueOf(response.get("downloadUrl"));
   }
 
-  private AAppcarEquipId requiredMetaDataEquipId() {
+  private AAppcarEquipId requiredMetadataEquipId() {
     return new AAppcarEquipId("COMPANY01", "CUSTOM01", "2026", 1, 1, "EQ-01");
   }
 
-  private MockMultipartFile requiredMetaDataPart() {
-    return requiredMetaDataPart(null);
+  private MockMultipartFile requiredMetadataPart() {
+    return requiredMetadataPart(null);
   }
 
-  private MockMultipartFile requiredMetaDataPart(String approvalYn) {
+  private MockMultipartFile requiredMetadataPart(String approvalYn) {
     String approvalField =
         approvalYn == null ? "" : ",\"approvalYn\":\"" + approvalYn + "\"";
     return new MockMultipartFile(
-        "metaData",
-        "metaData",
+        "metadata",
+        "metadata",
         MediaType.APPLICATION_JSON_VALUE,
         ("{"
                 + "\"comeYear\":\"2026\","

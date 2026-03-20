@@ -4,7 +4,7 @@
 
 ## 1. 검증 파이프라인 개요
 
-실행 진입점은 `ExcelUploadRequestService`이며, 전체 흐름은 아래 순서로 진행된다.
+실행 진입점은 `ExcelImportRequestService`이며, 전체 흐름은 아래 순서로 진행된다.
 
 1. 요청 레벨 검증
 2. 파일 저장/보안 검증
@@ -19,7 +19,7 @@
 ## 2. 요청 레벨 검증
 
 대상 클래스:
-- `ExcelUploadRequestService`
+- `ExcelImportRequestService`
 
 검증 내용:
 - 파일 크기 제한: `checkFileSize`

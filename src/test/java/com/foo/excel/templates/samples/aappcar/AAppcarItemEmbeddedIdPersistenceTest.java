@@ -2,9 +2,9 @@ package com.foo.excel.templates.samples.aappcar;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.foo.excel.ExcelUploadApplication;
+import com.foo.excel.ExcelImportApplication;
 import com.foo.excel.service.contract.PersistenceHandler.SaveResult;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -21,7 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 
-@SpringBootTest(classes = ExcelUploadApplication.class)
+@SpringBootTest(classes = ExcelImportApplication.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AAppcarItemEmbeddedIdPersistenceTest {
 
@@ -33,10 +33,10 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_sameItemId_createsThenUpdates_withFindByIdRoundTrip() {
-    AAppcarItemMetaData metaData = metaData();
+    AAppcarItemMetadata metadata = metadata();
 
     AAppcarItemDto first = dto("Item1", "Model-A");
-    SaveResult firstResult = service.saveAll(List.of(first), List.of(7), metaData);
+    SaveResult firstResult = service.saveAll(List.of(first), List.of(7), metadata);
 
     AAppcarItemId itemId =
         new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 7);
@@ -49,7 +49,7 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     assertThat(equipRepository.findById(equipId)).isPresent();
 
     AAppcarItemDto second = dto("Item1-Updated", "Model-B");
-    SaveResult secondResult = service.saveAll(List.of(second), List.of(7), metaData);
+    SaveResult secondResult = service.saveAll(List.of(second), List.of(7), metadata);
 
     assertThat(secondResult.created()).isZero();
     assertThat(secondResult.updated()).isEqualTo(1);
@@ -62,18 +62,18 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_sameEquipId_updatesEquipFields() {
-    AAppcarItemMetaData metaData = metaData();
+    AAppcarItemMetadata metadata = metadata();
     AAppcarEquipId equipId =
         new AAppcarEquipId("COMPANY01", "CUSTOM01", "2026", 1, 1, "EQ-01");
 
-    service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), metaData);
-    metaData.setEquipMean("설비B");
-    metaData.setSpec("규격B");
-    metaData.setHsno("999999999999");
-    metaData.setTaxRate(new BigDecimal("9.50"));
-    metaData.setApprovalYn("Y");
+    service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), metadata);
+    metadata.setEquipMean("설비B");
+    metadata.setSpec("규격B");
+    metadata.setHsno("999999999999");
+    metadata.setTaxRate(new BigDecimal("9.50"));
+    metadata.setApprovalYn("Y");
     service.saveAll(
-        List.of(dto("Item1", "Model-A"), dto("Item2", "Model-B")), List.of(7, 8), metaData);
+        List.of(dto("Item1", "Model-A"), dto("Item2", "Model-B")), List.of(7, 8), metadata);
 
     assertThat(equipRepository.findById(equipId))
         .get()
@@ -90,17 +90,17 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_mixedExistingAndNewRows_updatesAndInsertsInSingleBatch() {
-    AAppcarItemMetaData metaData = metaData();
+    AAppcarItemMetadata metadata = metadata();
     AAppcarItemId existingItemId =
         new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 7);
     AAppcarItemId newItemId =
         new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 8);
 
-    service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), metaData);
+    service.saveAll(List.of(dto("Item1", "Model-A")), List.of(7), metadata);
 
     SaveResult result =
         service.saveAll(
-            List.of(dto("Item1-Updated", "Model-B"), dto("Item2", "Model-C")), List.of(7, 8), metaData);
+            List.of(dto("Item1-Updated", "Model-B"), dto("Item2", "Model-C")), List.of(7, 8), metadata);
 
     assertThat(result.created()).isEqualTo(1);
     assertThat(result.updated()).isEqualTo(1);
@@ -114,19 +114,19 @@ class AAppcarItemEmbeddedIdPersistenceTest {
         .containsExactly("Item2", "Model-C");
   }
 
-  private AAppcarItemMetaData metaData() {
-    AAppcarItemMetaData metaData = new AAppcarItemMetaData();
-    metaData.setComeYear("2026");
-    metaData.setComeOrder("001");
-    metaData.setUploadSeq("1");
-    metaData.setEquipCode("EQ-01");
-    metaData.setEquipMean("설비A");
-    metaData.setHsno("8481802000");
-    metaData.setSpec("규격A");
-    metaData.setTaxRate(new BigDecimal("8.50"));
-    metaData.setCompanyId("COMPANY01");
-    metaData.setCustomId("CUSTOM01");
-    return metaData;
+  private AAppcarItemMetadata metadata() {
+    AAppcarItemMetadata metadata = new AAppcarItemMetadata();
+    metadata.setComeYear("2026");
+    metadata.setComeOrder("001");
+    metadata.setUploadSeq("1");
+    metadata.setEquipCode("EQ-01");
+    metadata.setEquipMean("설비A");
+    metadata.setHsno("8481802000");
+    metadata.setSpec("규격A");
+    metadata.setTaxRate(new BigDecimal("8.50"));
+    metadata.setCompanyId("COMPANY01");
+    metadata.setCustomId("CUSTOM01");
+    return metadata;
   }
 
   private AAppcarItemDto dto(String itemName, String modelName) {

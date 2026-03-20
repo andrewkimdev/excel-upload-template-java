@@ -19,7 +19,7 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 - Multipart parts:
   - `file` (`.xlsx` only; `.xls` rejected)
   - `metaData` (`application/json`)
-- Current runtime wiring uses explicit template routes (not a generic `{templateType}` catch-all).
+- Current runtime wiring uses explicit import routes (not a generic `{importType}` catch-all).
 - `metaData` is template-specific via `TemplateDefinition<T, M extends MetaData>.metaDataClass`
 - For current tariff template, required fields are:
   - `comeYear`, `comeOrder`, `uploadSeq`, `equipCode`
@@ -51,7 +51,7 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
 ## Current Architectural Shape
 
 - Core orchestration:
-  - Upload: `AAppcarItemUploadApiController` -> `ExcelUploadRequestService` -> `ExcelImportOrchestrator`
+  - Upload: `AAppcarItemImportApiController` -> `ExcelImportRequestService` -> `ExcelImportOrchestrator`
   - Download: `ExcelFileController` serves `/api/excel/download/{fileId}`
 - Template wiring:
   - `TemplateDefinition<T, M extends MetaData>`
@@ -59,7 +59,7 @@ This file is advisory. If it conflicts with runtime behavior or `README.md`, fol
   - optional `DatabaseUniquenessChecker<T, M extends MetaData>`
 - Current sample template:
   - `templates/samples/aappcar/*`
-  - `AAppcarItemTemplateConfig` wires `AAppcarItemDbUniquenessChecker` bean.
+  - `AAppcarItemImportConfig` wires the sample import definition bean.
 
 ## Guidance For New Template Work
 

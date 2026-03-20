@@ -7,8 +7,8 @@ import static org.assertj.core.api.Assertions.within;
 import com.foo.excel.annotation.ExcelSheet;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
-import com.foo.excel.service.contract.TemplateSheetMetadata;
-import com.foo.excel.service.contract.TemplateSheetMetadataResolver;
+import com.foo.excel.service.contract.ExcelSheetSpec;
+import com.foo.excel.service.contract.ExcelSheetSpecResolver;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -28,14 +28,14 @@ import org.junit.jupiter.api.io.TempDir;
 class ExcelParserServiceTest {
 
   private ExcelParserService parserService;
-  private TemplateSheetMetadata tariffSheetMetadata;
+  private ExcelSheetSpec tariffSheetSpec;
 
   @TempDir Path tempDir;
 
   @BeforeEach
   void setUp() {
     parserService = new ExcelParserService();
-    tariffSheetMetadata = TemplateSheetMetadataResolver.resolve(AAppcarItemDto.class);
+    tariffSheetSpec = ExcelSheetSpecResolver.resolve(AAppcarItemDto.class);
   }
 
   @Test
@@ -43,7 +43,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(3, false, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     assertThat(result.rows()).hasSize(3);
     assertThat(result.sourceRowNumbers()).hasSize(3);
@@ -54,7 +54,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(3, true, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     // 데이터 3행 뒤 푸터가 오므로 3행만 읽음
     assertThat(result.rows()).hasSize(3);
@@ -65,7 +65,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(3, false, true);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     // 데이터 3행 + 빈 행 1개 삽입 = 3행만 파싱
     assertThat(result.rows()).hasSize(3);
@@ -77,7 +77,7 @@ class ExcelParserServiceTest {
     Path file = createFileWithMergedCells();
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     assertThat(result.rows()).isNotEmpty();
     // 병합 셀 값은 F열에서 읽혀야 함
@@ -89,7 +89,7 @@ class ExcelParserServiceTest {
     Path file = copySampleFile("samples/tariff_exemption_sample_merged_cols.xlsx");
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     assertThat(result.rows()).hasSize(3);
     assertThat(result.rows().get(0).getProdQty()).isEqualTo(10);
@@ -101,7 +101,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(1, false, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     assertThat(result.rows().get(0).getGoodsDes()).isEqualTo("TestItem1");
   }
@@ -111,7 +111,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(1, false, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     assertThat(result.rows().get(0).getGoodsSeqNo()).isEqualTo(1);
   }
@@ -121,7 +121,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(1, false, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     assertThat(result.rows().get(0).getTaxRate()).isNotNull();
     assertThat(result.rows().get(0).getTaxRate().doubleValue()).isCloseTo(8.0, within(0.01));
@@ -130,10 +130,10 @@ class ExcelParserServiceTest {
   @Test
   void parse_headerMatchMode_exact_and_contains_and_startsWith() throws IOException {
     Path file = createFileWithAnnotatedHeaders();
-    TemplateSheetMetadata simpleSheetMetadata = TemplateSheetMetadataResolver.resolve(SimpleDto.class);
+    ExcelSheetSpec simpleSheetSpec = ExcelSheetSpecResolver.resolve(SimpleDto.class);
 
     ExcelParserService.ParseResult<SimpleDto> result =
-        parserService.parse(file, SimpleDto.class, simpleSheetMetadata);
+        parserService.parse(file, SimpleDto.class, simpleSheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getExactField()).isEqualTo("exactVal");
@@ -144,11 +144,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_headerWhitespaceIgnoredWhenConfigured() throws IOException {
     Path file = createFileWithWhitespaceSeparatedHeader();
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(WhitespaceEqualsDto.class);
+    ExcelSheetSpec sheetSpec =
+        ExcelSheetSpecResolver.resolve(WhitespaceEqualsDto.class);
 
     ExcelParserService.ParseResult<WhitespaceEqualsDto> result =
-        parserService.parse(file, WhitespaceEqualsDto.class, sheetMetadata);
+        parserService.parse(file, WhitespaceEqualsDto.class, sheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getValue()).isEqualTo("value");
@@ -157,10 +157,10 @@ class ExcelParserServiceTest {
   @Test
   void parse_headerWhitespaceNotIgnoredForExactByDefault() throws IOException {
     Path file = createFileWithWhitespaceSeparatedHeader();
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(WhitespaceExactDto.class);
+    ExcelSheetSpec sheetSpec =
+        ExcelSheetSpecResolver.resolve(WhitespaceExactDto.class);
 
-    assertThatThrownBy(() -> parserService.parse(file, WhitespaceExactDto.class, sheetMetadata))
+    assertThatThrownBy(() -> parserService.parse(file, WhitespaceExactDto.class, sheetSpec))
         .isInstanceOf(ColumnResolutionBatchException.class)
         .satisfies(
             ex -> {
@@ -174,7 +174,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(1, false, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec);
 
     // A열은 장식용이라 파서가 건너뛰며 어떤 필드도 매핑되지 않음
     // 컬럼 매핑에 A열(index 0)이 없는지 확인
@@ -184,11 +184,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_typeCoercion_boolean_Y_true_blank_preservesNull() throws IOException {
     Path file = createFileWithBooleanColumn();
-    TemplateSheetMetadata boolSheetMetadata =
-        TemplateSheetMetadataResolver.resolve(BooleanDto.class);
+    ExcelSheetSpec boolSheetSpec =
+        ExcelSheetSpecResolver.resolve(BooleanDto.class);
 
     ExcelParserService.ParseResult<BooleanDto> result =
-        parserService.parse(file, BooleanDto.class, boolSheetMetadata);
+        parserService.parse(file, BooleanDto.class, boolSheetSpec);
 
     assertThat(result.rows()).hasSize(2);
     assertThat(result.rows().get(0).getActive()).isTrue();
@@ -198,11 +198,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_blankCells_preserveDtoDefaultInitializers() throws IOException {
     Path file = createFileWithDefaultedFields("", "");
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(DefaultValueDto.class);
+    ExcelSheetSpec sheetSpec =
+        ExcelSheetSpecResolver.resolve(DefaultValueDto.class);
 
     ExcelParserService.ParseResult<DefaultValueDto> result =
-        parserService.parse(file, DefaultValueDto.class, sheetMetadata);
+        parserService.parse(file, DefaultValueDto.class, sheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getName()).isEqualTo("DEFAULT_NAME");
@@ -212,11 +212,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_missingCells_preserveDtoDefaultInitializers() throws IOException {
     Path file = createFileWithDefaultedFields(null, null);
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(DefaultValueDto.class);
+    ExcelSheetSpec sheetSpec =
+        ExcelSheetSpecResolver.resolve(DefaultValueDto.class);
 
     ExcelParserService.ParseResult<DefaultValueDto> result =
-        parserService.parse(file, DefaultValueDto.class, sheetMetadata);
+        parserService.parse(file, DefaultValueDto.class, sheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getName()).isEqualTo("DEFAULT_NAME");
@@ -226,11 +226,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_nonBlankCells_overrideDtoDefaultInitializers() throws IOException {
     Path file = createFileWithDefaultedFields("updated", "Y");
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(DefaultValueDto.class);
+    ExcelSheetSpec sheetSpec =
+        ExcelSheetSpecResolver.resolve(DefaultValueDto.class);
 
     ExcelParserService.ParseResult<DefaultValueDto> result =
-        parserService.parse(file, DefaultValueDto.class, sheetMetadata);
+        parserService.parse(file, DefaultValueDto.class, sheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getName()).isEqualTo("updated");
@@ -240,11 +240,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_typeCoercion_localDate() throws IOException {
     Path file = createFileWithDateColumn();
-    TemplateSheetMetadata dateSheetMetadata =
-        TemplateSheetMetadataResolver.resolve(DateDto.class);
+    ExcelSheetSpec dateSheetSpec =
+        ExcelSheetSpecResolver.resolve(DateDto.class);
 
     ExcelParserService.ParseResult<DateDto> result =
-        parserService.parse(file, DateDto.class, dateSheetMetadata);
+        parserService.parse(file, DateDto.class, dateSheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getDate()).isEqualTo(LocalDate.of(2024, 1, 15));
@@ -255,7 +255,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(20, false, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata, 5);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec, 5);
 
     // maxRows + 1 = 6행에서 중단되어야 함
     assertThat(result.rows()).hasSize(6);
@@ -266,7 +266,7 @@ class ExcelParserServiceTest {
     Path file = createAAppcarItemFile(3, false, false);
 
     ExcelParserService.ParseResult<AAppcarItemDto> result =
-        parserService.parse(file, AAppcarItemDto.class, tariffSheetMetadata, 100);
+        parserService.parse(file, AAppcarItemDto.class, tariffSheetSpec, 100);
 
     assertThat(result.rows()).hasSize(3);
   }
@@ -274,11 +274,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_parseErrors_reportedForInvalidTypes() throws IOException {
     Path file = createFileWithInvalidTypeData();
-    TemplateSheetMetadata integerSheetMetadata =
-        TemplateSheetMetadataResolver.resolve(IntegerDto.class);
+    ExcelSheetSpec integerSheetSpec =
+        ExcelSheetSpecResolver.resolve(IntegerDto.class);
 
     ExcelParserService.ParseResult<IntegerDto> result =
-        parserService.parse(file, IntegerDto.class, integerSheetMetadata);
+        parserService.parse(file, IntegerDto.class, integerSheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getCount()).isNull();
@@ -291,9 +291,9 @@ class ExcelParserServiceTest {
   @Test
   void parse_fixedColumn_headerMismatch_requiredColumn_throwsException() throws Exception {
     Path file = createFileWithWrongHeaders();
-    TemplateSheetMetadata sheetMetadata = TemplateSheetMetadataResolver.resolve(SimpleDto.class);
+    ExcelSheetSpec sheetSpec = ExcelSheetSpecResolver.resolve(SimpleDto.class);
 
-    assertThatThrownBy(() -> parserService.parse(file, SimpleDto.class, sheetMetadata))
+    assertThatThrownBy(() -> parserService.parse(file, SimpleDto.class, sheetSpec))
         .isInstanceOf(ColumnResolutionBatchException.class)
         .satisfies(
             ex -> {
@@ -306,11 +306,11 @@ class ExcelParserServiceTest {
   @Test
   void parse_fixedColumn_headerMismatch_optionalColumn_skipsField() throws Exception {
     Path file = createFileWithOptionalMismatch();
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(OptionalFieldDto.class);
+    ExcelSheetSpec sheetSpec =
+        ExcelSheetSpecResolver.resolve(OptionalFieldDto.class);
 
     ExcelParserService.ParseResult<OptionalFieldDto> result =
-        parserService.parse(file, OptionalFieldDto.class, sheetMetadata);
+        parserService.parse(file, OptionalFieldDto.class, sheetSpec);
 
     assertThat(result.rows()).hasSize(1);
     assertThat(result.rows().get(0).getName()).isEqualTo("TestName");
@@ -320,10 +320,10 @@ class ExcelParserServiceTest {
   @Test
   void parse_multipleHeaderMismatches_allReportedInBatch() throws Exception {
     Path file = createFileWithAllWrongHeaders();
-    TemplateSheetMetadata sheetMetadata =
-        TemplateSheetMetadataResolver.resolve(TwoRequiredDto.class);
+    ExcelSheetSpec sheetSpec =
+        ExcelSheetSpecResolver.resolve(TwoRequiredDto.class);
 
-    assertThatThrownBy(() -> parserService.parse(file, TwoRequiredDto.class, sheetMetadata))
+    assertThatThrownBy(() -> parserService.parse(file, TwoRequiredDto.class, sheetSpec))
         .isInstanceOf(ColumnResolutionBatchException.class)
         .satisfies(
             ex -> {

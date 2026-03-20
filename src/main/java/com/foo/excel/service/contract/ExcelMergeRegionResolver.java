@@ -10,20 +10,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class TemplateMergeMetadataResolver {
+public final class ExcelMergeRegionResolver {
 
-  private TemplateMergeMetadataResolver() {}
+  private ExcelMergeRegionResolver() {}
 
-  public static List<TemplateMergeRegion> resolve(Class<?> dtoClass) {
+  public static List<ExcelMergeRegion> resolve(Class<?> dtoClass) {
     Map<String, ColumnMetadata> columnsByField = collectColumns(dtoClass);
-    List<TemplateMergeRegion> regions = new ArrayList<>();
+    List<ExcelMergeRegion> regions = new ArrayList<>();
 
     for (ColumnMetadata column : columnsByField.values()) {
       if (column.annotation().columnSpan() > 1) {
         addRegion(
             regions,
-            new TemplateMergeRegion(
-                TemplateMergeScope.DATA, 0, 1, column.startColumnIndex(), column.annotation().columnSpan(), true),
+            new ExcelMergeRegion(
+                ExcelMergeScope.DATA, 0, 1, column.startColumnIndex(), column.annotation().columnSpan(), true),
             dtoClass);
       }
     }
@@ -68,7 +68,7 @@ public final class TemplateMergeMetadataResolver {
       ExcelHeaderGroup headerGroup,
       Map<String, ColumnMetadata> columnsByField,
       Map<String, String> groupMembership,
-      List<TemplateMergeRegion> regions) {
+      List<ExcelMergeRegion> regions) {
     String[] groupedFields = headerGroup.fields();
     if (groupedFields.length == 0) {
       throw new IllegalStateException(
@@ -114,8 +114,8 @@ public final class TemplateMergeMetadataResolver {
 
     addRegion(
         regions,
-        new TemplateMergeRegion(
-            TemplateMergeScope.HEADER, 0, 1, anchor.startColumnIndex(), totalColumnSpan, false),
+        new ExcelMergeRegion(
+            ExcelMergeScope.HEADER, 0, 1, anchor.startColumnIndex(), totalColumnSpan, false),
         dtoClass);
 
     int repeatedHeaderRows = headerRowCount - 1;
@@ -126,8 +126,8 @@ public final class TemplateMergeMetadataResolver {
       for (int rowOffset = 1; rowOffset <= repeatedHeaderRows; rowOffset++) {
         addRegion(
             regions,
-            new TemplateMergeRegion(
-                TemplateMergeScope.HEADER,
+            new ExcelMergeRegion(
+                ExcelMergeScope.HEADER,
                 rowOffset,
                 1,
                 column.startColumnIndex(),
@@ -159,12 +159,12 @@ public final class TemplateMergeMetadataResolver {
   }
 
   private static void addRegion(
-      List<TemplateMergeRegion> regions, TemplateMergeRegion candidate, Class<?> dtoClass) {
+      List<ExcelMergeRegion> regions, ExcelMergeRegion candidate, Class<?> dtoClass) {
     if (candidate.columnSpan() <= 1 && candidate.rowSpan() <= 1) {
       return;
     }
 
-    for (TemplateMergeRegion existing : regions) {
+    for (ExcelMergeRegion existing : regions) {
       if (sameRegion(existing, candidate)) {
         throw new IllegalStateException(
             "Duplicate inferred merge region for %s: %s"
@@ -181,7 +181,7 @@ public final class TemplateMergeMetadataResolver {
     regions.add(candidate);
   }
 
-  private static boolean sameRegion(TemplateMergeRegion left, TemplateMergeRegion right) {
+  private static boolean sameRegion(ExcelMergeRegion left, ExcelMergeRegion right) {
     return left.scope() == right.scope()
         && left.rowOffset() == right.rowOffset()
         && left.rowSpan() == right.rowSpan()
@@ -190,7 +190,7 @@ public final class TemplateMergeMetadataResolver {
         && left.repeatOnEveryDataRow() == right.repeatOnEveryDataRow();
   }
 
-  private static boolean overlaps(TemplateMergeRegion left, TemplateMergeRegion right) {
+  private static boolean overlaps(ExcelMergeRegion left, ExcelMergeRegion right) {
     if (left.scope() != right.scope()) {
       return false;
     }
@@ -214,7 +214,7 @@ public final class TemplateMergeMetadataResolver {
             right.startColumnIndex() + right.columnSpan() - 1);
   }
 
-  private static boolean dataRowsOverlap(TemplateMergeRegion left, TemplateMergeRegion right) {
+  private static boolean dataRowsOverlap(ExcelMergeRegion left, ExcelMergeRegion right) {
     if (left.repeatOnEveryDataRow() && right.repeatOnEveryDataRow()) {
       return true;
     }
@@ -231,7 +231,7 @@ public final class TemplateMergeMetadataResolver {
     return leftStart <= rightEnd && rightStart <= leftEnd;
   }
 
-  private static String describeRegion(TemplateMergeRegion region) {
+  private static String describeRegion(ExcelMergeRegion region) {
     return "%s[rowOffset=%d,rowSpan=%d,startColumnIndex=%d,columnSpan=%d,repeat=%s]"
         .formatted(
             region.scope(),

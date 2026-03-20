@@ -1,7 +1,7 @@
 package com.foo.excel.service.contract;
 
-public record TemplateMergeRegion(
-    TemplateMergeScope scope,
+public record ExcelMergeRegion(
+    ExcelMergeScope scope,
     int rowOffset,
     int rowSpan,
     int startColumnIndex,

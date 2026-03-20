@@ -1,8 +1,8 @@
 package com.foo.excel.templates.samples.aappcar.service;
 
 import com.foo.excel.service.contract.PersistenceHandler;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquip;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AAppcarItemService
-    implements PersistenceHandler<AAppcarItemDto, AAppcarItemMetaData> {
+    implements PersistenceHandler<AAppcarItemDto, AAppcarItemMetadata> {
 
   private static final int ITEM_BATCH_SIZE = 100;
   private static final int UPSERT_RETRY_LIMIT = 2;
@@ -36,8 +36,8 @@ public class AAppcarItemService
   public SaveResult saveAll(
       List<AAppcarItemDto> dtos,
       List<Integer> sourceRowNumbers,
-      AAppcarItemMetaData metaData) {
-    List<AAppcarItemId> itemIds = buildItemIds(sourceRowNumbers, metaData);
+      AAppcarItemMetadata metadata) {
+    List<AAppcarItemId> itemIds = buildItemIds(sourceRowNumbers, metadata);
     Map<AAppcarItemId, AAppcarItem> existingItems = findExistingItems(itemIds);
     List<AAppcarItem> entitiesToSave = new ArrayList<>(dtos.size());
     int created = 0;
@@ -46,24 +46,24 @@ public class AAppcarItemService
       AAppcarItemId itemId = itemIds.get(i);
       AAppcarItem entity = existingItems.get(itemId);
       if (entity == null) {
-        entity = buildEntityFromDto(dtos.get(i), metaData);
+        entity = buildEntityFromDto(dtos.get(i), metadata);
         entity.setId(itemId);
         created++;
       } else {
-        updateEntityFromDto(entity, dtos.get(i), metaData);
+        updateEntityFromDto(entity, dtos.get(i), metadata);
       }
       entitiesToSave.add(entity);
     }
 
     saveItemsInBatches(entitiesToSave);
 
-    upsertEquipWithRetry(metaData);
+    upsertEquipWithRetry(metadata);
 
     return new SaveResult(created, dtos.size() - created);
   }
 
-  private void upsertEquipWithRetry(AAppcarItemMetaData metaData) {
-    var equipId = keyFactory.buildEquipId(metaData);
+  private void upsertEquipWithRetry(AAppcarItemMetadata metadata) {
+    var equipId = keyFactory.buildEquipId(metadata);
     int attempt = 0;
     while (attempt <= UPSERT_RETRY_LIMIT) {
       attempt++;
@@ -72,13 +72,13 @@ public class AAppcarItemService
 
         if (existing.isPresent()) {
           AAppcarEquip entity = existing.get();
-          applyEquipFields(entity, metaData);
+          applyEquipFields(entity, metadata);
           equipRepository.save(entity);
           return;
         }
 
         AAppcarEquip newEntity = AAppcarEquip.builder().id(equipId).build();
-        applyEquipFields(newEntity, metaData);
+        applyEquipFields(newEntity, metadata);
         equipRepository.save(newEntity);
         return;
       } catch (DataIntegrityViolationException e) {
@@ -92,9 +92,9 @@ public class AAppcarItemService
   }
 
   private List<AAppcarItemId> buildItemIds(
-      List<Integer> sourceRowNumbers, AAppcarItemMetaData metaData) {
+      List<Integer> sourceRowNumbers, AAppcarItemMetadata metadata) {
     return sourceRowNumbers.stream()
-        .map(rowNumber -> keyFactory.buildItemId(metaData, rowNumber))
+        .map(rowNumber -> keyFactory.buildItemId(metadata, rowNumber))
         .toList();
   }
 
@@ -116,7 +116,7 @@ public class AAppcarItemService
   }
 
   private void updateEntityFromDto(
-      AAppcarItem entity, AAppcarItemDto dto, AAppcarItemMetaData metaData) {
+      AAppcarItem entity, AAppcarItemDto dto, AAppcarItemMetadata metadata) {
     entity.setGoodsDes(dto.getGoodsDes());
     entity.setSpec(dto.getSpec());
     entity.setModelDes(dto.getModelDes());
@@ -127,11 +127,11 @@ public class AAppcarItemService
     entity.setRepairQty(dto.getRepairQty());
     entity.setImportAmt(dto.getImportAmt());
     entity.setImportQty(dto.getImportQty());
-    entity.setApprovalYn(resolveApprovalYn(dto.getApprovalYn(), metaData));
+    entity.setApprovalYn(resolveApprovalYn(dto.getApprovalYn(), metadata));
   }
 
   private AAppcarItem buildEntityFromDto(
-      AAppcarItemDto dto, AAppcarItemMetaData metaData) {
+      AAppcarItemDto dto, AAppcarItemMetadata metadata) {
     AAppcarItem entity =
         AAppcarItem.builder()
             .goodsDes(dto.getGoodsDes())
@@ -144,24 +144,24 @@ public class AAppcarItemService
             .repairQty(dto.getRepairQty())
             .importAmt(dto.getImportAmt())
             .importQty(dto.getImportQty())
-            .approvalYn(resolveApprovalYn(dto.getApprovalYn(), metaData))
+            .approvalYn(resolveApprovalYn(dto.getApprovalYn(), metadata))
             .build();
     return entity;
   }
 
-  private void applyEquipFields(AAppcarEquip entity, AAppcarItemMetaData metaData) {
-    entity.setEquipMean(metaData.getEquipMean());
-    entity.setHsno(metaData.getHsno());
-    entity.setSpec(metaData.getSpec());
-    entity.setTaxRate(metaData.getTaxRate());
-    entity.setFilePath(metaData.getFilePath());
-    entity.setApprovalYn(metaData.getApprovedYn());
-    entity.setApprovalDate(metaData.isApprovalYnYes() ? LocalDate.now() : null);
+  private void applyEquipFields(AAppcarEquip entity, AAppcarItemMetadata metadata) {
+    entity.setEquipMean(metadata.getEquipMean());
+    entity.setHsno(metadata.getHsno());
+    entity.setSpec(metadata.getSpec());
+    entity.setTaxRate(metadata.getTaxRate());
+    entity.setFilePath(metadata.getFilePath());
+    entity.setApprovalYn(metadata.getApprovedYn());
+    entity.setApprovalDate(metadata.isApprovalYnYes() ? LocalDate.now() : null);
   }
 
-  private String resolveApprovalYn(String dtoApprovalYn, AAppcarItemMetaData metaData) {
+  private String resolveApprovalYn(String dtoApprovalYn, AAppcarItemMetadata metadata) {
     if (dtoApprovalYn == null || dtoApprovalYn.isBlank()) {
-      return metaData.getApprovedYn();
+      return metadata.getApprovedYn();
     }
     String normalized = dtoApprovalYn.trim();
     if (normalized.equalsIgnoreCase("Y")
@@ -179,6 +179,6 @@ public class AAppcarItemService
         || normalized.equalsIgnoreCase("FAIL")) {
       return "N";
     }
-    return metaData.getApprovedYn();
+    return metadata.getApprovedYn();
   }
 }

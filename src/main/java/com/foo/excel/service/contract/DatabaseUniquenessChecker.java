@@ -16,7 +16,7 @@ import java.util.List;
  *
  * <ul>
  *   <li>{@code T}: parsed Excel row DTO type
- *   <li>{@code M}: template-specific {@link MetaData} type supplied alongside the upload
+ *   <li>{@code M}: template-specific {@link Metadata} type supplied alongside the upload
  * </ul>
  *
  * <p>Implementations are free to use any subset of the provided inputs. Some templates may inspect
@@ -31,7 +31,7 @@ import java.util.List;
  * @param <T> parsed Excel row DTO type
  * @param <M> template-specific metadata type
  */
-public interface DatabaseUniquenessChecker<T, M extends MetaData> {
+public interface DatabaseUniquenessChecker<T, M extends Metadata> {
 
   /**
    * Checks the uploaded data set against existing persisted data and returns row-level errors for
@@ -43,7 +43,7 @@ public interface DatabaseUniquenessChecker<T, M extends MetaData> {
    *   <li>{@code rows} exposes the parsed DTO values for implementations that need row contents
    *   <li>{@code dtoClass} exposes the DTO type for implementations that need type-level metadata
    *   <li>{@code sourceRowNumbers} preserves original Excel row numbers for precise error reporting
-   *   <li>{@code metaData} carries upload-level fields entered outside the Excel file
+   *   <li>{@code metadata} carries upload-level fields entered outside the Excel file
    * </ul>
    *
    * <p>Not every implementation must use all four inputs. The contract keeps them available so the
@@ -52,9 +52,9 @@ public interface DatabaseUniquenessChecker<T, M extends MetaData> {
    * @param rows parsed DTO rows from the uploaded Excel file
    * @param dtoClass concrete DTO class for the parsed rows
    * @param sourceRowNumbers original Excel row numbers aligned with {@code rows}
-   * @param metaData template-specific upload metadata entered by the user
+   * @param metadata template-specific upload metadata entered by the user
    * @return row-level validation errors representing database conflicts; empty if no conflicts were
    *     found
    */
-  List<RowError> check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metaData);
+  List<RowError> check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metadata);
 }

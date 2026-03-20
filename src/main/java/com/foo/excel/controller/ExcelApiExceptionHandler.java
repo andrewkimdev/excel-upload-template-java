@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 @Slf4j
-@RestControllerAdvice(basePackageClasses = AAppcarItemUploadApiController.class)
+@RestControllerAdvice(basePackageClasses = AAppcarItemImportApiController.class)
 public class ExcelApiExceptionHandler {
 
   @ExceptionHandler(IllegalArgumentException.class)

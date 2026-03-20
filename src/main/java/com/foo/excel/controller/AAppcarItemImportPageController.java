@@ -1,10 +1,10 @@
 package com.foo.excel.controller;
 
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
-import com.foo.excel.service.pipeline.ExcelUploadRequestService;
-import com.foo.excel.templates.TemplateTypes;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
-import com.foo.excel.templates.samples.aappcar.mapper.AAppcarItemMetaDataFormMapper;
+import com.foo.excel.service.pipeline.ExcelImportRequestService;
+import com.foo.excel.templates.ImportTypes;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
+import com.foo.excel.templates.samples.aappcar.mapper.AAppcarItemMetadataFormMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -18,21 +18,21 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-public class AAppcarItemUploadPageController {
+public class AAppcarItemImportPageController {
 
   private static final String DEFAULT_COMPANY_ID = "COMPANY01";
   private static final String DEFAULT_CUSTOM_ID = "CUSTOM01";
 
-  private final ExcelUploadRequestService uploadRequestService;
-  private final AAppcarItemMetaDataFormMapper metaDataFormMapper;
+  private final ExcelImportRequestService importRequestService;
+  private final AAppcarItemMetadataFormMapper metadataFormMapper;
 
-  @GetMapping("/upload/" + TemplateTypes.AAPPCAR)
-  public String uploadForm() {
+  @GetMapping("/upload/" + ImportTypes.AAPPCAR)
+  public String importForm() {
     return "upload-aappcar";
   }
 
-  @PostMapping("/upload/" + TemplateTypes.AAPPCAR)
-  public String upload(
+  @PostMapping("/upload/" + ImportTypes.AAPPCAR)
+  public String importExcel(
       @RequestParam("comeYear") String comeYear,
       @RequestParam("comeOrder") String comeOrder,
       @RequestParam("uploadSeq") String uploadSeq,
@@ -47,8 +47,8 @@ public class AAppcarItemUploadPageController {
       @RequestParam("file") MultipartFile file,
       Model model) {
     try {
-      AAppcarItemMetaData metaData =
-          metaDataFormMapper.toMetaData(
+      AAppcarItemMetadata metadata =
+          metadataFormMapper.toMetadata(
               comeYear,
               comeOrder,
               uploadSeq,
@@ -60,10 +60,9 @@ public class AAppcarItemUploadPageController {
               filePath,
               approvalYn,
               approvalDate);
-      metaData.setCompanyId(DEFAULT_COMPANY_ID);
-      metaData.setCustomId(DEFAULT_CUSTOM_ID);
-      ImportResult result =
-          uploadRequestService.upload(file, TemplateTypes.AAPPCAR, metaData);
+      metadata.setCompanyId(DEFAULT_COMPANY_ID);
+      metadata.setCustomId(DEFAULT_CUSTOM_ID);
+      ImportResult result = importRequestService.upload(file, ImportTypes.AAPPCAR, metadata);
       model.addAttribute("result", result);
     } catch (IllegalArgumentException e) {
       log.warn("업로드 요청 오류: {}", e.getMessage());
@@ -79,7 +78,7 @@ public class AAppcarItemUploadPageController {
           "result",
           ImportResult.builder().success(false).message("업로드 파일 크기가 제한을 초과했습니다.").build());
     } catch (Exception e) {
-      log.error("업로드 처리 실패", e);
+      log.error("import 처리 실패", e);
       model.addAttribute(
           "result",
           ImportResult.builder()

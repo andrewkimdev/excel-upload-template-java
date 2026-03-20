@@ -1,8 +1,8 @@
 package com.foo.excel.templates.samples.aappcar.service;
 
 import com.foo.excel.service.contract.DatabaseUniquenessChecker;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
 import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
@@ -39,7 +39,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class AAppcarItemDbUniquenessChecker
-    implements DatabaseUniquenessChecker<AAppcarItemDto, AAppcarItemMetaData> {
+    implements DatabaseUniquenessChecker<AAppcarItemDto, AAppcarItemMetadata> {
 
   /** Column index for the row identifier field used in the generated validation error. */
   private static final int ID_COLUMN_INDEX = 1;
@@ -74,7 +74,7 @@ public class AAppcarItemDbUniquenessChecker
    * @param rows parsed DTO rows; unused for this template's current business key
    * @param dtoClass DTO class; unused for this template's current business key
    * @param sourceRowNumbers original Excel row numbers that become part of the item identity
-   * @param metaData upload-level metadata used to build equip and item IDs
+   * @param metadata upload-level metadata used to build equip and item IDs
    * @return row errors representing row-level item DB conflicts
    */
   @Override
@@ -82,7 +82,7 @@ public class AAppcarItemDbUniquenessChecker
       List<AAppcarItemDto> rows,
       Class<AAppcarItemDto> dtoClass,
       List<Integer> sourceRowNumbers,
-      AAppcarItemMetaData metaData) {
+      AAppcarItemMetadata metadata) {
     List<RowError> errors = new ArrayList<>();
 
     // No source rows means there is nothing row-addressable to report back to the user.
@@ -92,9 +92,9 @@ public class AAppcarItemDbUniquenessChecker
 
     // Item IDs are row-specific because the original Excel row number is part of the persisted ID.
     // We prefetch existing IDs once and then match in-memory for stable per-row error reporting.
-    Set<AAppcarItemId> existingItemIds = findExistingItemIds(sourceRowNumbers, metaData);
+    Set<AAppcarItemId> existingItemIds = findExistingItemIds(sourceRowNumbers, metadata);
     for (int rowNumber : sourceRowNumbers) {
-      AAppcarItemId itemId = keyFactory.buildItemId(metaData, rowNumber);
+      AAppcarItemId itemId = keyFactory.buildItemId(metadata, rowNumber);
       if (existingItemIds.contains(itemId)) {
         errors.add(buildRowError(rowNumber, ITEM_DUPLICATE_MESSAGE));
       }
@@ -110,9 +110,9 @@ public class AAppcarItemDbUniquenessChecker
    * the actual persisted item key for this template.
    */
   private Set<AAppcarItemId> findExistingItemIds(
-      List<Integer> sourceRowNumbers, AAppcarItemMetaData metaData) {
+      List<Integer> sourceRowNumbers, AAppcarItemMetadata metadata) {
     List<AAppcarItemId> itemIds =
-        sourceRowNumbers.stream().map(rowNumber -> keyFactory.buildItemId(metaData, rowNumber)).toList();
+        sourceRowNumbers.stream().map(rowNumber -> keyFactory.buildItemId(metadata, rowNumber)).toList();
     List<AAppcarItem> existingItems = itemRepository.findAllById(itemIds);
     Set<AAppcarItemId> existingIds = new HashSet<>();
     for (AAppcarItem existingItem : existingItems) {

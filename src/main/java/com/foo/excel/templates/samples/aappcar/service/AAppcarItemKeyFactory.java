@@ -1,6 +1,6 @@
 package com.foo.excel.templates.samples.aappcar.service;
 
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetaData;
+import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarItemId;
 import org.springframework.stereotype.Component;
@@ -8,24 +8,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class AAppcarItemKeyFactory {
 
-  public AAppcarItemId buildItemId(AAppcarItemMetaData metaData, int rowNumber) {
+  public AAppcarItemId buildItemId(AAppcarItemMetadata metadata, int rowNumber) {
     return new AAppcarItemId(
-        metaData.getCompanyId(),
-        metaData.getCustomId(),
-        metaData.getComeYear(),
-        metaData.getComeOrder(),
-        metaData.getUploadSeq(),
-        metaData.getEquipCode(),
+        metadata.getCompanyId(),
+        metadata.getCustomId(),
+        metadata.getComeYear(),
+        metadata.getComeOrder(),
+        metadata.getUploadSeq(),
+        metadata.getEquipCode(),
         rowNumber);
   }
 
-  public AAppcarEquipId buildEquipId(AAppcarItemMetaData metaData) {
+  public AAppcarEquipId buildEquipId(AAppcarItemMetadata metadata) {
     return new AAppcarEquipId(
-        metaData.getCompanyId(),
-        metaData.getCustomId(),
-        metaData.getComeYear(),
-        Integer.valueOf(metaData.getComeOrder()),
-        Integer.valueOf(metaData.getUploadSeq()),
-        metaData.getEquipCode());
+        metadata.getCompanyId(),
+        metadata.getCustomId(),
+        metadata.getComeYear(),
+        Integer.valueOf(metadata.getComeOrder()),
+        Integer.valueOf(metadata.getUploadSeq()),
+        metadata.getEquipCode());
   }
 }
