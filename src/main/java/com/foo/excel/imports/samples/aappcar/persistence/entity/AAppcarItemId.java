@@ -11,6 +11,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * `aappcar` 품목 엔티티의 복합 기본키를 표현한다.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

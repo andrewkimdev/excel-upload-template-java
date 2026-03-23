@@ -15,6 +15,12 @@ public class ExcelUploadFileService {
 
   private final ExcelImportProperties properties;
 
+  /**
+   * 임시 저장된 업로드 파일 경로와 정제된 파일명을 함께 보관한다.
+   *
+   * @param path 저장된 파일 경로
+   * @param sanitizedFilename 정제된 파일명
+   */
   public record StoredUpload(Path path, String sanitizedFilename) {}
 
   /** .xlsx 파일만 허용한다. */

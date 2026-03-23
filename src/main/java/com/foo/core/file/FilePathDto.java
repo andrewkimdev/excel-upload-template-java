@@ -1,6 +1,10 @@
 package com.foo.core.file;
+
 import lombok.Data;
 
+/**
+ * 파일 루트 경로, 상대 디렉터리, 파일명을 함께 보관하는 경로 DTO이다.
+ */
 @Data
 public class FilePathDto {
     private String rootPath;

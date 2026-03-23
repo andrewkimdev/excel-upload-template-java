@@ -12,6 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * `aappcar` 품목 업로드 결과를 저장하는 품목 엔티티이다.
+ */
 @Getter
 @Setter
 @Builder

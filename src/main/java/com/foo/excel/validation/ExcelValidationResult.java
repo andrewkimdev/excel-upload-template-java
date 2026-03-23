@@ -7,6 +7,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * 엑셀 검증 결과와 오류 요약 정보를 보관하는 POJO이다.
+ */
 @Data
 @Builder
 @NoArgsConstructor

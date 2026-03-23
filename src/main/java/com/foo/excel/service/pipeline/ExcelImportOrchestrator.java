@@ -36,6 +36,21 @@ public class ExcelImportOrchestrator {
   private final ExcelImportProperties properties;
   private final List<ExcelImportDefinition<?, ?>> importDefinitions;
 
+  /**
+   * 엑셀 업로드 처리 결과를 외부로 전달하기 위한 응답 모델이다.
+   *
+   * @param success 처리 성공 여부
+   * @param rowsProcessed 처리한 행 수
+   * @param rowsCreated 생성한 행 수
+   * @param rowsUpdated 수정한 행 수
+   * @param errorRows 오류가 발생한 행 수
+   * @param errorCount 전체 오류 개수
+   * @param errorFileId 오류 파일 식별자
+   * @param downloadUrl 오류 파일 다운로드 URL
+   * @param originalFilename 원본 파일명
+   * @param metadataConflict 메타데이터 충돌 정보
+   * @param message 사용자 메시지
+   */
   @Builder
   public record ImportResult(
       boolean success,

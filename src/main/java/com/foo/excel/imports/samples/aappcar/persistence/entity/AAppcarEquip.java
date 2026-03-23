@@ -13,6 +13,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * `aappcar` 업로드 단위의 설비 메타데이터를 저장하는 엔티티이다.
+ */
 @Getter
 @Setter
 @Builder

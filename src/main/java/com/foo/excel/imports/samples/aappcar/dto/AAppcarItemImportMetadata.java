@@ -12,6 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * `aappcar` 품목 업로드 요청에 함께 전달되는 메타데이터를 표현한다.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

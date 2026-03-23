@@ -8,6 +8,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+/**
+ * 엑셀 업로드 처리에 필요한 설정 값을 바인딩하는 프로퍼티 객체이다.
+ */
 @Data
 @Component
 @ConfigurationProperties(prefix = "excel.import")

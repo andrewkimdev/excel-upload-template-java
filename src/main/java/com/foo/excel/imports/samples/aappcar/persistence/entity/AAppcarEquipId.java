@@ -12,6 +12,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * `aappcar` 설비 엔티티의 복합 기본키를 표현한다.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,7 +35,7 @@ public class AAppcarEquipId implements Serializable {
   @NotNull
   @Column(name = "custom_id", nullable = false, length = 35)
   private String customId;
-  
+
   @Column(name = "come_year", nullable = false, length = 4)
   private String comeYear;
 
@@ -46,5 +49,4 @@ public class AAppcarEquipId implements Serializable {
 
   @Column(name = "equip_code", nullable = false, length = 50)
   private String equipCode;
-
 }

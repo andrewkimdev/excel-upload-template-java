@@ -43,12 +43,29 @@ public class ExcelParserService {
       ThreadLocal.withInitial(DataFormatter::new);
   private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
+  /**
+   * DTO 필드와 실제 엑셀 컬럼 사이의 해석 결과를 보관한다.
+   *
+   * @param field 매핑 대상 필드
+   * @param annotation 필드에 선언된 엑셀 컬럼 애너테이션
+   * @param resolvedColumnIndex 해석된 실제 컬럼 인덱스
+   * @param resolvedColumnRef 해석된 실제 컬럼 참조값
+   */
   public record ColumnMapping(
       Field field,
       ExcelColumn annotation,
       int resolvedColumnIndex,
       ExcelColumnRef resolvedColumnRef) {}
 
+  /**
+   * 엑셀 파싱 결과와 파싱 중 수집된 부가 정보를 함께 반환한다.
+   *
+   * @param rows 파싱된 행 데이터
+   * @param sourceRowNumbers 원본 엑셀 행 번호 목록
+   * @param columnMappings 해석된 컬럼 매핑 목록
+   * @param parseErrors 파싱 중 발생한 오류 목록
+   * @param <T> 행 DTO 타입
+   */
   public record ParseResult<T>(
       List<T> rows,
       List<Integer> sourceRowNumbers,

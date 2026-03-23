@@ -15,6 +15,9 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import lombok.Data;
 
+/**
+ * `aappcar` 품목 업로드 엑셀의 한 행을 표현하는 DTO이다.
+ */
 @Data
 @ExcelSheet(
     sheetIndex = 0,
