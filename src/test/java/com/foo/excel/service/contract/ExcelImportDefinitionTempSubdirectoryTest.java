@@ -2,9 +2,9 @@ package com.foo.excel.service.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.foo.excel.templates.samples.aappcar.config.AAppcarItemImportDefinition;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
+import com.foo.excel.imports.samples.aappcar.config.AAppcarItemImportDefinition;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
 import org.junit.jupiter.api.Test;
 
 class ExcelImportDefinitionTempSubdirectoryTest {

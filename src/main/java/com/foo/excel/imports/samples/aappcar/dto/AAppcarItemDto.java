@@ -1,0 +1,104 @@
+package com.foo.excel.imports.samples.aappcar.dto;
+
+import static com.foo.excel.annotation.HeaderMatchMode.STARTS_WITH;
+
+import com.foo.excel.annotation.ExcelColumn;
+import com.foo.excel.annotation.ExcelCompositeUnique;
+import com.foo.excel.annotation.ExcelHeaderGroup;
+import com.foo.excel.annotation.ExcelSheet;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import lombok.Data;
+
+@Data
+@ExcelSheet(
+    sheetIndex = 0,
+    headerRow = 4,
+    dataStartRow = 7,
+    footerMarker = "※",
+    errorColumnName = "_ERRORS")
+@ExcelCompositeUnique(
+    fields = {"goodsDes", "spec", "hsno"},
+    message = "물품명 + 규격 + HSK 조합이 중복됩니다")
+public class AAppcarItemDto {
+
+  // B열: 순번
+  @ExcelColumn(label = "순번", column = "B")
+  private Integer goodsSeqNo;
+
+  // C열: 물품명
+  @ExcelColumn(label = "물품명", column = "C")
+  @NotBlank(message = "물품명은 필수 입력 항목입니다")
+  @Size(max = 100, message = "물품명은 100자 이내로 입력하세요")
+  private String goodsDes;
+
+  // D열: 규격1)
+  @ExcelColumn(label = "규격", column = "D", matchMode = STARTS_WITH)
+  @Size(max = 100, message = "규격은 100자 이내로 입력하세요")
+  private String spec;
+
+  // E열: 모델명1)
+  @ExcelColumn(label = "모델명", column = "E", matchMode = STARTS_WITH)
+  @Size(max = 100, message = "모델명은 100자 이내로 입력하세요")
+  private String modelDes;
+
+  // F열: HSK No(F-G 병합, F에서 읽음)
+  @ExcelColumn(label = "HSK", column = "F", columnSpan = 2)
+  @Pattern(regexp = "^\\d{4}\\.\\d{2}-\\d{4}$", message = "HSK 형식이 올바르지 않습니다 (예: 8481.80-2000)")
+  private String hsno;
+
+  // H열: 관세율
+  @ExcelColumn(label = "관세율", column = "H")
+  @DecimalMin(value = "0", message = "관세율은 0 이상이어야 합니다")
+  @DecimalMax(value = "100", message = "관세율은 100 이하여야 합니다")
+  private BigDecimal taxRate;
+
+  // I열: 단가($)
+  @ExcelColumn(label = "단가", column = "I")
+  @DecimalMin(value = "0", message = "단가는 0 이상이어야 합니다")
+  private BigDecimal unitprice;
+
+  // J열: 소요량(제조용) - J-K 병합, J에서 읽음
+  @ExcelColumn(
+      label = "제조용",
+      column = "J",
+      columnSpan = 2,
+      ignoreHeaderWhitespace = true,
+      headerRowStart = 4,
+      headerRowCount = 3,
+      headerLabels = {"소요량", "제조용"})
+  @ExcelHeaderGroup(label = "소요량", fields = {"prodQty", "repairQty"})
+  @Min(value = 0, message = "제조용 소요량은 0 이상이어야 합니다")
+  private Integer prodQty;
+
+  // L열: 소요량(수리용) - L-M 병합, L에서 읽음
+  @ExcelColumn(
+      label = "수리용",
+      column = "L",
+      columnSpan = 2,
+      ignoreHeaderWhitespace = true,
+      headerRowStart = 4,
+      headerRowCount = 3,
+      headerLabels = {"소요량", "수리용"})
+  @Min(value = 0, message = "수리용 소요량은 0 이상이어야 합니다")
+  private Integer repairQty;
+
+  // N열: 연간수입예상금액($)
+  @ExcelColumn(label = "연간수입", column = "N")
+  @DecimalMin(value = "0", message = "연간수입 예상금액은 0 이상이어야 합니다")
+  private BigDecimal importAmt;
+
+  // O열: 심의결과 - O-P 병합, O에서 읽음(출력 필드, 선택)
+  @ExcelColumn(label = "심의결과", column = "O", columnSpan = 2, required = false)
+  private String approvalYn;
+
+  // Q열: 연간예상소요량
+  @ExcelColumn(label = "연간 예상소요량", column = "Q")
+  @Min(value = 0, message = "연간 예상소요량은 0 이상이어야 합니다")
+  private Integer importQty;
+}

@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.foo.excel.annotation.ExcelSheet;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
 import org.junit.jupiter.api.Test;
 
 class ExcelSheetSpecResolverTest {

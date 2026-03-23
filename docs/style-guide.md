@@ -31,7 +31,7 @@
 
 - Keep `README.md` architecture paths aligned with actual source tree.
 - Keep `HOW_TO_UNDERSTAND_THE_UPLOAD_PIPELINE.md` route/contract descriptions aligned with controller/runtime behavior.
-- Use `TemplateDefinition<T, M extends MetaData>` terminology and template-specific `metaDataClass`.
+- Use `ExcelImportDefinition<T, M extends MetaData>` terminology and import-specific `metaDataClass`.
 
 ## Language Policy
 

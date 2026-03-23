@@ -6,14 +6,14 @@ This document describes the upload pipeline as currently implemented.
 
 ```
 HTTP (REST/Thymeleaf)
-  -> AAppcarItemUploadApiController / AAppcarItemUploadPageController
+  -> AAppcarItemImportApiController / AAppcarItemImportPageController
     -> ExcelUploadRequestService
     -> ExcelImportOrchestrator
       -> ExcelUploadFileService (.xlsx-only gate)
       -> SecureExcelUtils.countRows (pre-check)
       -> ExcelParserService
       -> ExcelValidationService (+ WithinFileUniqueConstraintValidator)
-      -> optional DatabaseUniquenessChecker (template-dependent)
+      -> optional DatabaseUniquenessChecker (import-dependent)
       -> merge parse/validation/db errors
       -> PersistenceHandler.saveAll(...) OR ExcelErrorReportService.generateErrorReport(...)
 ```
@@ -47,7 +47,7 @@ Behavior:
 - `GET /upload/aappcar` -> `upload-aappcar`
 - `POST /upload/aappcar` -> `result`
 
-Form fields map to template-specific `MetaData` fields and file.
+Form fields map to import-specific `MetaData` fields and file.
 
 ### Download
 
@@ -62,10 +62,10 @@ Form fields map to template-specific `MetaData` fields and file.
 
 `ExcelUploadRequestService` checks file size against `excel.import.max-file-size-mb` before orchestrator call.
 
-### Step 1: template resolution (orchestrator)
+### Step 1: import definition resolution (orchestrator)
 
-`ExcelImportOrchestrator.findTemplate(templateType)` resolves from injected `List<TemplateDefinition<?, ?>>`.
-Unknown template -> `IllegalArgumentException`.
+`ExcelImportOrchestrator.findDefinition(importType)` resolves from injected `List<ExcelImportDefinition<?, ?>>`.
+Unknown import type -> `IllegalArgumentException`.
 
 ### Step 2: secure filename + `.xlsx`-only format gate
 
@@ -113,10 +113,10 @@ Orchestrator rejects if parsed row count is greater than `maxRows`.
 
 ### Step 6: optional DB uniqueness
 
-Orchestrator calls `template.checkDbUniqueness(...)`.
-If template has no checker (`null`), this returns empty errors.
+Orchestrator calls `importDefinition.checkDbUniqueness(...)`.
+If an import definition has no checker (`null`), this returns empty errors.
 
-Current tariff template wiring (`AAppcarItemTemplateConfig`) injects `AAppcarItemDbUniquenessChecker`, so DB uniqueness is active.
+Current tariff import wiring (`AAppcarItemImportConfig`) injects `AAppcarItemDbUniquenessChecker`, so DB uniqueness is active.
 
 ### Step 7: merge parse errors
 
@@ -160,8 +160,8 @@ Response includes `downloadUrl=/api/excel/download/{uuid}`.
 
 ## 5) Key classes map
 
-- API Controller: `src/main/java/com/foo/excel/controller/AAppcarItemUploadApiController.java`
-- Page Controller: `src/main/java/com/foo/excel/controller/AAppcarItemUploadPageController.java`
+- API Controller: `src/main/java/com/foo/excel/controller/AAppcarItemImportApiController.java`
+- Page Controller: `src/main/java/com/foo/excel/controller/AAppcarItemImportPageController.java`
 - Download Controller: `src/main/java/com/foo/excel/controller/ExcelFileController.java`
 - Orchestrator: `src/main/java/com/foo/excel/service/pipeline/ExcelImportOrchestrator.java`
 - Conversion: `src/main/java/com/foo/excel/service/file/ExcelUploadFileService.java`
@@ -170,7 +170,7 @@ Response includes `downloadUrl=/api/excel/download/{uuid}`.
 - Uniqueness validator: `src/main/java/com/foo/excel/validation/WithinFileUniqueConstraintValidator.java`
 - Error report: `src/main/java/com/foo/excel/service/pipeline/report/ExcelErrorReportService.java`
 - Security utilities: `src/main/java/com/foo/excel/util/SecureExcelUtils.java`
-- Template wiring example: `src/main/java/com/foo/excel/templates/samples/aappcar/config/AAppcarItemTemplateConfig.java`
+- Import wiring example: `src/main/java/com/foo/excel/imports/samples/aappcar/config/AAppcarItemImportConfig.java`
 
 ## 6) Configuration reference
 

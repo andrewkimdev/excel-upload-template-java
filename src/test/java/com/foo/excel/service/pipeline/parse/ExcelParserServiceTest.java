@@ -9,7 +9,7 @@ import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
 import com.foo.excel.service.contract.ExcelSheetSpec;
 import com.foo.excel.service.contract.ExcelSheetSpecResolver;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;

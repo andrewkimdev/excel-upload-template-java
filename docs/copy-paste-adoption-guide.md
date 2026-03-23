@@ -35,19 +35,19 @@ Copy packages:
 - `com.foo.excel.validation`
 
 And copy:
-- `com.foo.excel.templates.ImportTypes`
+- `com.foo.excel.imports.ImportTypes`
 
-### Step B: One working template (required)
+### Step B: One working import (required)
 
 Copy:
-- `com.foo.excel.templates.samples.aappcar`
+- `com.foo.excel.imports.samples.aappcar`
 
 This gives the full pattern:
 - row DTO (`@ExcelSheet` + `@ExcelColumn` + validation)
-- template `MetaData`
+- import `MetaData`
 - `PersistenceHandler<T, M extends MetaData>`
 - optional `DatabaseUniquenessChecker<T, M>`
-- `TemplateDefinition<T, M>` bean with `metaDataClass`
+- `ExcelImportDefinition<T, M>` bean with `metaDataClass`
 - upload-level summary entity/repository
 
 ### Step C: Controller layer (choose one)

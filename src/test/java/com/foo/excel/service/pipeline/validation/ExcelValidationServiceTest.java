@@ -2,7 +2,7 @@ package com.foo.excel.service.pipeline.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.validation.ExcelValidationResult;
 import com.foo.excel.validation.WithinFileUniqueConstraintValidator;
 import jakarta.validation.Validation;

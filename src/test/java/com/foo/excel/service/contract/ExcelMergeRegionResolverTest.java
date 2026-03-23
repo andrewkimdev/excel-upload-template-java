@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelHeaderGroup;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

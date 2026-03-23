@@ -116,7 +116,7 @@
   - `@ExcelUnique` 단일 필드 중복
   - `@ExcelCompositeUnique` 복합키 중복
 - 3차: DB 유일성(템플릿별 선택)
-  - `TemplateDefinition`에 checker가 있으면 실행
+  - `ExcelImportDefinition`에 checker가 있으면 실행
   - 없으면 빈 오류 목록 반환
 - 오류 병합:
   - 파싱 오류 + JSR-380 오류 + 파일내/DB 중복 오류를 같은 `ExcelValidationResult`로 합침
@@ -159,7 +159,7 @@
    - `saveAll(List<T>, List<Integer>, M)` 구현
 5. (선택) `DatabaseUniquenessChecker<T, M>`
    - `check(List<T>, Class<T>, List<Integer>, M)` 구현
-6. `TemplateDefinition<T, M>` 빈 등록
+6. `ExcelImportDefinition<T, M>` 빈 등록
    - `metaDataClass` 반드시 지정
 
 ## 9. 운영 시 주의사항

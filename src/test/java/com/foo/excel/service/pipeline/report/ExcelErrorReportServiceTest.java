@@ -8,7 +8,7 @@ import com.foo.excel.service.contract.ExcelMergeRegionResolver;
 import com.foo.excel.service.contract.ExcelSheetSpec;
 import com.foo.excel.service.contract.ExcelSheetSpecResolver;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.ExcelValidationResult;
@@ -435,7 +435,7 @@ class ExcelErrorReportServiceTest {
   }
 
   @Test
-  void errorReport_reconstructsTemplateHeaderMerges_whenSourceOmitsThem() throws IOException {
+  void errorReport_reconstructsImportHeaderMerges_whenSourceOmitsThem() throws IOException {
     Path originalFile = createAAppcarReportWorkbook(false);
 
     Path errorFile =
@@ -482,7 +482,7 @@ class ExcelErrorReportServiceTest {
   }
 
   @Test
-  void errorReport_appendsErrorsColumnOutsideTemplateDrivenMergedRegions() throws IOException {
+  void errorReport_appendsErrorsColumnOutsideImportDrivenMergedRegions() throws IOException {
     Path originalFile = createAAppcarReportWorkbook(false);
 
     Path errorFile =
@@ -507,7 +507,7 @@ class ExcelErrorReportServiceTest {
   }
 
   @Test
-  void errorReport_duplicateTemplateMergeApplication_doesNotThrow() throws IOException {
+  void errorReport_duplicateImportMergeApplication_doesNotThrow() throws IOException {
     Path originalFile = createAAppcarReportWorkbook(true);
 
     Path errorFile =
@@ -525,7 +525,7 @@ class ExcelErrorReportServiceTest {
   }
 
   @Test
-  void errorReport_highlightingAndMessagesRemainCorrect_afterTemplateMergeApplication()
+  void errorReport_highlightingAndMessagesRemainCorrect_afterImportMergeApplication()
       throws IOException {
     Path originalFile = createAAppcarReportWorkbook(false);
 

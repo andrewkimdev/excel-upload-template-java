@@ -25,7 +25,7 @@ The goal is to eliminate `ExcelImportConfig` and per-template config classes suc
    - No behavior should continue to depend on a separate AAppcar config class after this phase.
 
 3. Remove config plumbing from the runtime model.
-   - Remove the `config` field from `TemplateDefinition`.
+   - Remove the `config` field from `ExcelImportDefinition`.
    - Replace `template.getConfig()` usage in parser, orchestrator, and error-report code with resolved DTO metadata.
    - Normalize DTO metadata once per template rather than reflecting repeatedly in deep loops.
 
@@ -80,4 +80,4 @@ The goal is to eliminate `ExcelImportConfig` and per-template config classes suc
 
 - Phase 2 depends on Phase 1 and reuses its merge metadata model.
 - DTO-level metadata is the single source of truth for template structure after this phase.
-- `TemplateDefinition` still retains `dtoClass`, `metaDataClass`, persistence handler, upload precheck, and DB uniqueness checker; only config is removed.
+- `ExcelImportDefinition` still retains `dtoClass`, `metaDataClass`, persistence handler, upload precheck, and DB uniqueness checker; only config is removed.

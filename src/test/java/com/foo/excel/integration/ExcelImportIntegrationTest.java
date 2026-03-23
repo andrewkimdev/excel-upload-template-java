@@ -14,12 +14,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import com.foo.excel.ExcelImportApplication;
-import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquip;
-import com.foo.excel.templates.samples.aappcar.persistence.entity.AAppcarEquipId;
-import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarEquipRepository;
-import com.foo.excel.templates.samples.aappcar.persistence.repository.AAppcarItemRepository;
+import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquip;
+import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquipId;
+import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarEquipRepository;
+import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.templates.ImportTypes;
+import com.foo.excel.imports.ImportTypes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -186,7 +186,7 @@ class ExcelImportIntegrationTest {
   }
 
   @Test
-  void upload_invalidDataWithoutHeaderMerges_downloadedErrorReportRebuildsTemplateMerges()
+  void upload_invalidDataWithoutHeaderMerges_downloadedErrorReportRebuildsImportMerges()
       throws Exception {
     byte[] xlsxBytes = createInvalidAAppcarItemXlsxWithoutHeaderMerges();
     MockMultipartFile file =
@@ -398,14 +398,14 @@ class ExcelImportIntegrationTest {
   }
 
   @Test
-  void removedTemplateDownloadRoute_returns404() throws Exception {
+  void removedLegacyDownloadRoute_returns404() throws Exception {
     mockMvc
         .perform(get("/api/excel/template/" + ImportTypes.AAPPCAR))
         .andExpect(status().isNotFound());
   }
 
   @Test
-  void page_route_rendersTemplateSpecificForm() throws Exception {
+  void page_route_rendersImportSpecificForm() throws Exception {
     mockMvc
         .perform(get(PAGE_UPLOAD_TARIFF))
         .andExpect(status().isOk())
@@ -500,12 +500,12 @@ class ExcelImportIntegrationTest {
   }
 
   @Test
-  void upload_wrongTemplate_returnsColumnMismatchError() throws Exception {
-    byte[] xlsxBytes = createWrongTemplateAAppcarItemXlsx();
+  void upload_wrongImportLayout_returnsColumnMismatchError() throws Exception {
+    byte[] xlsxBytes = createWrongImportLayoutAAppcarItemXlsx();
     MockMultipartFile file =
         new MockMultipartFile(
             "file",
-            "wrong_template.xlsx",
+            "wrong_import_layout.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             xlsxBytes);
 
@@ -632,7 +632,7 @@ class ExcelImportIntegrationTest {
     }
   }
 
-  private byte[] createWrongTemplateAAppcarItemXlsx() throws IOException {
+  private byte[] createWrongImportLayoutAAppcarItemXlsx() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
 

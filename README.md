@@ -19,11 +19,11 @@ Open http://localhost:8080 to access the upload form.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/excel/upload/aappcar` | Upload and process an Excel file (tariff template) |
+| `POST` | `/api/excel/upload/aappcar` | Upload and process an Excel file (tariff import) |
 | `GET` | `/api/excel/download/{fileId}` | Download an error report |
-| `GET` | `/upload/aappcar` | Template-specific upload form (Thymeleaf) |
-| `POST` | `/upload/aappcar` | Template-specific form submission (Thymeleaf) |
-| `GET` | `/` | Template selector (Thymeleaf) |
+| `GET` | `/upload/aappcar` | Import-specific upload form (Thymeleaf) |
+| `POST` | `/upload/aappcar` | Import-specific form submission (Thymeleaf) |
+| `GET` | `/` | Import selector (Thymeleaf) |
 
 ### Upload Request Contract (REST)
 
@@ -166,7 +166,7 @@ src/main/java/com/foo/excel/
 │   │   └── AAppcarItemImportDefinition.java   # AAppcar-specific temp subdirectory resolution
 │   ├── dto/
 │   │   ├── AAppcarItemDto.java                # DTO with @ExcelSheet + @ExcelColumn + JSR-380 annotations
-│   │   └── AAppcarItemMetadata.java         # Tariff template-specific metadata DTO
+│   │   └── AAppcarItemMetadata.java         # Tariff import-specific metadata DTO
 │   ├── mapper/
 │   │   └── AAppcarItemMetadataFormMapper.java # Thymeleaf form -> AAppcarItemMetadata mapper
 │   ├── persistence/

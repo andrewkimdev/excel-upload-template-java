@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelCompositeUnique;
 import com.foo.excel.annotation.ExcelUnique;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.Data;

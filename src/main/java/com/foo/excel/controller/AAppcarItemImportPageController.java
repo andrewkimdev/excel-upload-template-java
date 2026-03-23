@@ -2,9 +2,9 @@ package com.foo.excel.controller;
 
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import com.foo.excel.service.pipeline.ExcelImportRequestService;
-import com.foo.excel.templates.ImportTypes;
-import com.foo.excel.templates.samples.aappcar.dto.AAppcarItemMetadata;
-import com.foo.excel.templates.samples.aappcar.mapper.AAppcarItemMetadataFormMapper;
+import com.foo.excel.imports.ImportTypes;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
+import com.foo.excel.imports.samples.aappcar.mapper.AAppcarItemMetadataFormMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;

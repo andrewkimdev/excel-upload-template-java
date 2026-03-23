@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import com.foo.excel.service.pipeline.ExcelImportRequestService;
-import com.foo.excel.templates.ImportTypes;
+import com.foo.excel.imports.ImportTypes;
 import java.io.IOException;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;

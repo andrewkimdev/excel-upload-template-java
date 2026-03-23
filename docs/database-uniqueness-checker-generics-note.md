@@ -7,13 +7,13 @@ We keep the database uniqueness contract row-oriented as `DatabaseUniquenessChec
 At the same time, we standardized the metadata generic name across the template contract layer from `C` to `M`:
 
 - `PersistenceHandler<T, M extends MetaData>`
-- `TemplateDefinition<T, M extends MetaData>`
+- `ExcelImportDefinition<T, M extends MetaData>`
 - `DatabaseUniquenessChecker<T, M extends MetaData>`
 
 This made the contracts read more clearly:
 
 - `T` means the parsed Excel row DTO type
-- `M` means the template-specific `MetaData` type
+- `M` means the import-specific `MetaData` type
 
 ## What Changed
 
@@ -37,7 +37,7 @@ public interface DatabaseUniquenessChecker<T, M extends MetaData> {
 
 Related implementation changes:
 
-- `TemplateDefinition.checkDbUniqueness(...)` keeps parsed rows in its signature
+- `ExcelImportDefinition.checkDbUniqueness(...)` keeps parsed rows in its signature
 - `ExcelImportOrchestrator` continues passing parsed rows into DB uniqueness checking
 - `AAppcarItemDbUniquenessChecker` remains a metadata-driven special case inside a row-oriented contract
 - tests and documentation were updated to match the new contract
@@ -60,7 +60,7 @@ The rename from `C` to `M` was still kept because `M` is a clearer generic name 
 ## Design Rule Going Forward
 
 - Keep `T` on `DatabaseUniquenessChecker` to preserve the reader-facing row-oriented design of the abstraction
-- Keep `T` where row DTO typing is actually used: parsing, validation, persistence, and `TemplateDefinition`
-- Use `M` for template-specific metadata types
+- Keep `T` where row DTO typing is actually used: parsing, validation, persistence, and `ExcelImportDefinition`
+- Use `M` for import-specific metadata types
 - Allow individual checker implementations to ignore row DTO values when business logic is driven by upload-level metadata
 - Revisit the contract only if future template patterns show that another abstraction shape is clearly better across multiple implementations

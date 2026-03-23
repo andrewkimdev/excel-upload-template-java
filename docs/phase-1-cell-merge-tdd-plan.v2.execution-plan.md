@@ -19,8 +19,8 @@ Keep the readable v2 merge-contract direction, but avoid combining it with the b
 Implement the merge-model transition first.
 
 - Keep the existing error-report merge application pipeline:
-  - `TemplateDefinition` caches template merge metadata
-  - `ExcelImportOrchestrator` passes template merge metadata into the error report service
+  - `ExcelImportDefinition` caches import merge metadata
+  - `ExcelImportOrchestrator` passes import merge metadata into the error report service
   - `ExcelErrorReportService` copies source merges, applies template merges, skips duplicate source/template reapplication, skips illegal overlap at report-generation time, and keeps `_ERRORS` outside merged regions
 - Replace low-level merge annotations with the v2 contract:
   - move simple horizontal span ownership into `ExcelColumn.columnSpan`

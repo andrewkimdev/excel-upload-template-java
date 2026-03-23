@@ -195,7 +195,7 @@ public class ExcelErrorReportService {
 
           // 7. 데이터 시트에 안내문 추가(마지막 행 아래 2행)
           if (isDataSheet) {
-            applyTemplateMerges(
+            applyImportMerges(
                 tgtSheet, sheetSpec, validationResult, errorColIndex, excelMergeRegions);
 
             int disclaimerRowIdx = lastRowNum + 2;
@@ -318,7 +318,7 @@ public class ExcelErrorReportService {
     return errorFilePath;
   }
 
-  private void applyTemplateMerges(
+  private void applyImportMerges(
       Sheet sheet,
       ExcelSheetSpec sheetSpec,
       ExcelValidationResult validationResult,
