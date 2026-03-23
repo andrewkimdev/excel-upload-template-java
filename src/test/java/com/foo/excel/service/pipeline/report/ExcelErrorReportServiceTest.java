@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
@@ -291,6 +292,29 @@ class ExcelErrorReportServiceTest {
   }
 
   @Test
+  void errorReport_declaredSecondSheetNumber_marksOnlySecondSheetAsDataSheet() throws IOException {
+    Path originalFile = createMultiSheetWorkbookWithSecondDataSheet();
+    ExcelValidationResult validationResult = createValidationResult();
+    ExcelSheetSpec sheetSpec = ExcelSheetSpecResolver.resolve(SecondSheetDto.class);
+    List<ExcelParserService.ColumnMapping> mappings = Collections.emptyList();
+
+    Path errorFile =
+        errorReportService.generateErrorReport(
+            originalFile, validationResult, mappings, sheetSpec, "second-sheet.xlsx");
+
+    try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
+      assertThat(findCellValue(wb.getSheetAt(0), "_ERRORS")).isFalse();
+      assertThat(findCellValue(wb.getSheetAt(1), "_ERRORS")).isTrue();
+      assertThat(findCellValue(wb.getSheetAt(2), "_ERRORS")).isFalse();
+
+      Row dataRow = wb.getSheetAt(1).getRow(1);
+      Cell errorCell = dataRow.getCell(1);
+      assertThat(errorCell.getCellStyle().getFillForegroundColor())
+          .isEqualTo(IndexedColors.ROSE.getIndex());
+    }
+  }
+
+  @Test
   void errorReport_preservesColumnWidths() throws IOException {
     Path originalFile = createStyledXlsx();
     ExcelValidationResult validationResult = createValidationResult();
@@ -554,6 +578,9 @@ class ExcelErrorReportServiceTest {
   @ExcelSheet
   static class TestSheetDto {}
 
+  @ExcelSheet(sheetIndex = 2)
+  static class SecondSheetDto {}
+
   private Path createSimpleXlsx() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Sheet1");
@@ -645,6 +672,44 @@ class ExcelErrorReportServiceTest {
       }
       return file;
     }
+  }
+
+  private Path createMultiSheetWorkbookWithSecondDataSheet() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet introSheet = wb.createSheet("Intro");
+      introSheet.createRow(0).createCell(0).setCellValue("Intro");
+
+      Sheet dataSheet = wb.createSheet("Data");
+      Row headerRow = dataSheet.createRow(0);
+      headerRow.createCell(0).setCellValue("No");
+      headerRow.createCell(1).setCellValue("Name");
+      headerRow.createCell(2).setCellValue("Value");
+      Row dataRow = dataSheet.createRow(1);
+      dataRow.createCell(0).setCellValue(1);
+      dataRow.createCell(1).setCellValue("SecondSheetName");
+      dataRow.createCell(2).setCellValue("abc");
+
+      Sheet tailSheet = wb.createSheet("Tail");
+      tailSheet.createRow(0).createCell(0).setCellValue("Tail");
+
+      Path file = tempDir.resolve("multi-sheet-second-data.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private boolean findCellValue(Sheet sheet, String expectedValue) {
+    for (Row row : sheet) {
+      for (Cell cell : row) {
+        if (cell.getCellType() == CellType.STRING
+            && expectedValue.equals(cell.getStringCellValue())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private ExcelValidationResult createValidationResult() {

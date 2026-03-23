@@ -130,7 +130,8 @@ public class ExcelImportOrchestrator {
 
       // 2b. 빠른 행 수 사전 점검(경량 SAX, 대용량 파일의 전체 파싱 회피)
       long preCountStageStartedAt = System.nanoTime();
-      int roughRowCount = SecureExcelUtils.countRows(xlsxFile, sheetSpec.sheetIndex());
+      // ExcelSheetSpec already stores the resolver-converted 0-based sheet index.
+      int roughRowCount = SecureExcelUtils.countRows(xlsxFile, sheetSpec.resolvedSheetIndex());
       int preCountThreshold =
           properties.getMaxRows()
               + (sheetSpec.dataStartRow() - 1)

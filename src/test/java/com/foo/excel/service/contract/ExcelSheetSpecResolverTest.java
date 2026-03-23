@@ -13,7 +13,7 @@ class ExcelSheetSpecResolverTest {
   void resolve_aAppcarSheetSpecFromDtoAnnotation() {
     ExcelSheetSpec spec = ExcelSheetSpecResolver.resolve(AAppcarItemRow.class);
 
-    assertThat(spec.sheetIndex()).isEqualTo(0);
+    assertThat(spec.resolvedSheetIndex()).isEqualTo(0);
     assertThat(spec.headerRow()).isEqualTo(4);
     assertThat(spec.dataStartRow()).isEqualTo(7);
     assertThat(spec.footerMarker()).isEqualTo("※");
@@ -25,11 +25,18 @@ class ExcelSheetSpecResolverTest {
     ExcelSheetSpec spec =
         ExcelSheetSpecResolver.resolve(DefaultAnnotatedDto.class);
 
-    assertThat(spec.sheetIndex()).isEqualTo(0);
+    assertThat(spec.resolvedSheetIndex()).isEqualTo(0);
     assertThat(spec.headerRow()).isEqualTo(1);
     assertThat(spec.dataStartRow()).isEqualTo(2);
     assertThat(spec.footerMarker()).isEqualTo("※");
     assertThat(spec.errorColumnName()).isEqualTo("_ERRORS");
+  }
+
+  @Test
+  void resolve_convertsDeclaredSecondSheetNumberToZeroBasedIndex() {
+    ExcelSheetSpec spec = ExcelSheetSpecResolver.resolve(SecondSheetDto.class);
+
+    assertThat(spec.resolvedSheetIndex()).isEqualTo(1);
   }
 
   @Test
@@ -39,8 +46,22 @@ class ExcelSheetSpecResolverTest {
         .hasMessageContaining("@ExcelSheet");
   }
 
+  @Test
+  void resolve_failsWhenDeclaredSheetNumberIsLessThanOne() {
+    assertThatThrownBy(() -> ExcelSheetSpecResolver.resolve(InvalidSheetNumberDto.class))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("sheetIndex")
+        .hasMessageContaining(">= 1");
+  }
+
   @ExcelSheet
   static class DefaultAnnotatedDto {}
+
+  @ExcelSheet(sheetIndex = 2)
+  static class SecondSheetDto {}
+
+  @ExcelSheet(sheetIndex = 0)
+  static class InvalidSheetNumberDto {}
 
   static class MissingAnnotationDto {}
 }

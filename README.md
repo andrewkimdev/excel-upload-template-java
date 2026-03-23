@@ -240,7 +240,7 @@ See `application.properties` for a detailed security checklist and configuration
    - For horizontally owned cells such as `F:G` or `O:P`, set `columnSpan` on the owning field
    - For shared grouped headers such as `소요량`, place `@ExcelHeaderGroup` on the leftmost field and list the grouped fields in left-to-right order
    - Grouped-header metadata is validated strictly; duplicate membership, non-adjacent fields, reversed order, and inferred merge overlaps fail fast during template metadata resolution
-2. **Sheet Contract** -- Add `@ExcelSheet` on the DTO to define sheet index, header row, data start row, footer marker, and error column name
+2. **Sheet Contract** -- Add `@ExcelSheet` on the DTO to define the 1-based sheet number, header row, data start row, footer marker, and error column name
 3. **ImportMetadata** -- 템플릿별 DTO를 만들고 `ImportMetadata`를 구현한다 (strict JSON + Bean Validation 대상)
    - `assignFilePath(String filePath)`를 구현해 서버가 저장한 업로드 경로를 받을 수 있어야 한다
 4. **Persistence** -- Implement `PersistenceHandler<T, M>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metadata)` to save parsed rows merged with common fields

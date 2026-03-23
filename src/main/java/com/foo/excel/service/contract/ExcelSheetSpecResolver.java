@@ -13,6 +13,8 @@ public final class ExcelSheetSpecResolver {
           "DTO '%s' must declare @ExcelSheet metadata".formatted(rowClass.getName()));
     }
 
+    int declaredSheetNumber = annotation.sheetIndex();
+
     if (annotation.headerRow() < 1) {
       throw new IllegalStateException(
           "Invalid headerRow for DTO '%s': %d".formatted(rowClass.getName(), annotation.headerRow()));
@@ -22,9 +24,10 @@ public final class ExcelSheetSpecResolver {
           "Invalid dataStartRow for DTO '%s': %d"
               .formatted(rowClass.getName(), annotation.dataStartRow()));
     }
-    if (annotation.sheetIndex() < 0) {
+    if (declaredSheetNumber < 1) {
       throw new IllegalStateException(
-          "Invalid sheetIndex for DTO '%s': %d".formatted(rowClass.getName(), annotation.sheetIndex()));
+          "Invalid sheetIndex for DTO '%s': %d (declared sheet number must be >= 1)"
+              .formatted(rowClass.getName(), declaredSheetNumber));
     }
     if (annotation.footerMarker() == null) {
       throw new IllegalStateException(
@@ -36,8 +39,11 @@ public final class ExcelSheetSpecResolver {
               .formatted(rowClass.getName(), annotation.errorColumnName()));
     }
 
+    // Annotation contract is 1-based; resolved runtime/POI access remains 0-based.
+    int resolvedSheetIndex = declaredSheetNumber - 1;
+
     return new ExcelSheetSpec(
-        annotation.sheetIndex(),
+        resolvedSheetIndex,
         annotation.headerRow(),
         annotation.dataStartRow(),
         annotation.footerMarker(),

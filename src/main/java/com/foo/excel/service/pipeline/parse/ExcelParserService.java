@@ -98,14 +98,15 @@ public class ExcelParserService {
 
     int headerRowNum = sheetSpec.headerRow() - 1; // 0-based로 변환
     int dataStartRowNum = sheetSpec.dataStartRow() - 1;
-    int sheetIndex = sheetSpec.sheetIndex();
+    int resolvedSheetIndex = sheetSpec.resolvedSheetIndex();
     String footerMarker = sheetSpec.footerMarker();
 
     // 보안: XXE 및 Zip Bomb 공격 방지를 위해 SecureExcelUtils 사용.
     // 설정된 제한과 보호 내용은 SecureExcelUtils를 참고.
     try {
       try (Workbook workbook = SecureExcelUtils.createWorkbook(xlsxFile)) {
-        Sheet sheet = workbook.getSheetAt(sheetIndex);
+        // ExcelSheetSpec already stores the resolver-converted 0-based sheet index.
+        Sheet sheet = workbook.getSheetAt(resolvedSheetIndex);
         Row headerRow = sheet.getRow(headerRowNum);
 
         if (headerRow == null) {

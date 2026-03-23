@@ -9,7 +9,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ExcelSheet {
 
-  int sheetIndex() default 0;
+  /** 선언 시트 번호(1부터 시작). 1이면 첫 번째 시트이다. */
+  int sheetIndex() default 1;
 
   int headerRow() default 1;
 

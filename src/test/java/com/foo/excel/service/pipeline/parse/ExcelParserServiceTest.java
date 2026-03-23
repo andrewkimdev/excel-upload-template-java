@@ -286,6 +286,18 @@ class ExcelParserServiceTest {
     assertThat(result.parseErrors().get(0).getCellErrors().get(0).message()).contains("Integer");
   }
 
+  @Test
+  void parse_declaredSecondSheetNumber_readsSecondWorkbookSheet() throws IOException {
+    Path file = createWorkbookWithTargetDataOnSecondSheet();
+    ExcelSheetSpec sheetSpec = ExcelSheetSpecResolver.resolve(SecondSheetSimpleDto.class);
+
+    ExcelParserService.ParseResult<SecondSheetSimpleDto> result =
+        parserService.parse(file, SecondSheetSimpleDto.class, sheetSpec);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.rows().get(0).getName()).isEqualTo("second-sheet-value");
+  }
+
   // ===== 헤더 검증 테스트 =====
 
   @Test
@@ -417,6 +429,13 @@ class ExcelParserServiceTest {
     private String value;
   }
 
+  @Data
+  @ExcelSheet(sheetIndex = 2)
+  public static class SecondSheetSimpleDto {
+    @ExcelColumn(label = "Name", column = "B")
+    private String name;
+  }
+
   // ===== 파일 생성 헬퍼 =====
 
   private Path createAAppcarItemFile(int dataRows, boolean addFooter, boolean addBlankRow)
@@ -491,6 +510,30 @@ class ExcelParserServiceTest {
       sheet.addMergedRegion(new CellRangeAddress(6, 6, 5, 6));
 
       Path file = tempDir.resolve("merged_test.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private Path createWorkbookWithTargetDataOnSecondSheet() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet decoySheet = wb.createSheet("Decoy");
+      Row decoyHeader = decoySheet.createRow(0);
+      decoyHeader.createCell(0).setCellValue("No");
+      decoyHeader.createCell(1).setCellValue("WRONG_HEADER");
+      Row decoyData = decoySheet.createRow(1);
+      decoyData.createCell(1).setCellValue("wrong-sheet-value");
+
+      Sheet targetSheet = wb.createSheet("Target");
+      Row targetHeader = targetSheet.createRow(0);
+      targetHeader.createCell(0).setCellValue("No");
+      targetHeader.createCell(1).setCellValue("Name");
+      Row targetData = targetSheet.createRow(1);
+      targetData.createCell(1).setCellValue("second-sheet-value");
+
+      Path file = tempDir.resolve("second-sheet-parse.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
         wb.write(os);
       }

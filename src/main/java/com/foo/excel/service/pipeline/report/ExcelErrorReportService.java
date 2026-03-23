@@ -102,7 +102,7 @@ public class ExcelErrorReportService {
           errorsByRow.put(rowError.getRowNumber(), rowError);
         }
 
-        int dataSheetIndex = sheetSpec.sheetIndex();
+        int dataSheetIndex = sheetSpec.resolvedSheetIndex();
         int headerRowIdx = sheetSpec.headerRow() - 1;
         var errorStyleCache = new HashMap<Integer, CellStyle>();
 
@@ -236,7 +236,8 @@ public class ExcelErrorReportService {
     try (Workbook sourceWb = SecureExcelUtils.createWorkbook(originalXlsx);
         XSSFWorkbook targetXssf = new XSSFWorkbook();
         SXSSFWorkbook sxssfWb = new SXSSFWorkbook(targetXssf, 100)) {
-      Sheet sourceSheet = sourceWb.getSheetAt(sheetSpec.sheetIndex());
+      // ExcelSheetSpec already stores the resolver-converted 0-based sheet index.
+      Sheet sourceSheet = sourceWb.getSheetAt(sheetSpec.resolvedSheetIndex());
       SXSSFSheet summarySheet = sxssfWb.createSheet("오류요약");
       DataFormatter formatter = new DataFormatter();
 
