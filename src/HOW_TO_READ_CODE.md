@@ -47,7 +47,7 @@ These files show the full import flow end-to-end.
 
 ## 5) Read the sample import implementation
 
-- `src/main/java/com/foo/excel/templates/samples/aappcar/dto/AAppcarItemRow.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/dto/AAppcarItemImportRow.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/config/AAppcarItemImportConfig.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/service/AAppcarItemPersistenceService.java`
 - `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/entity/AAppcarItem.java`

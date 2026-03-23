@@ -4,14 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.foo.excel.annotation.ExcelSheet;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import org.junit.jupiter.api.Test;
 
 class ExcelSheetSpecResolverTest {
 
   @Test
   void resolve_aAppcarSheetSpecFromDtoAnnotation() {
-    ExcelSheetSpec spec = ExcelSheetSpecResolver.resolve(AAppcarItemRow.class);
+    ExcelSheetSpec spec = ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class);
 
     assertThat(spec.resolvedSheetIndex()).isEqualTo(0);
     assertThat(spec.headerRow()).isEqualTo(4);

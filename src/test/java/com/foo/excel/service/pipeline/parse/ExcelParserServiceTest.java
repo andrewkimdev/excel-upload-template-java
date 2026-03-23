@@ -9,7 +9,7 @@ import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.HeaderMatchMode;
 import com.foo.excel.service.contract.ExcelSheetSpec;
 import com.foo.excel.service.contract.ExcelSheetSpecResolver;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -35,15 +35,15 @@ class ExcelParserServiceTest {
   @BeforeEach
   void setUp() {
     parserService = new ExcelParserService();
-    tariffSheetSpec = ExcelSheetSpecResolver.resolve(AAppcarItemRow.class);
+    tariffSheetSpec = ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class);
   }
 
   @Test
   void parse_correctNumberOfRows() throws IOException {
     Path file = createAAppcarItemFile(3, false, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     assertThat(result.rows()).hasSize(3);
     assertThat(result.sourceRowNumbers()).hasSize(3);
@@ -53,8 +53,8 @@ class ExcelParserServiceTest {
   void parse_footerMarker_stopsReading() throws IOException {
     Path file = createAAppcarItemFile(3, true, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     // 데이터 3행 뒤 푸터가 오므로 3행만 읽음
     assertThat(result.rows()).hasSize(3);
@@ -64,8 +64,8 @@ class ExcelParserServiceTest {
   void parse_blankRows_skipped() throws IOException {
     Path file = createAAppcarItemFile(3, false, true);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     // 데이터 3행 + 빈 행 1개 삽입 = 3행만 파싱
     assertThat(result.rows()).hasSize(3);
@@ -76,8 +76,8 @@ class ExcelParserServiceTest {
     // 병합 셀 F-G(HSK No 컬럼)가 있는 파일 생성
     Path file = createFileWithMergedCells();
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     assertThat(result.rows()).isNotEmpty();
     // 병합 셀 값은 F열에서 읽혀야 함
@@ -88,8 +88,8 @@ class ExcelParserServiceTest {
   void parse_multiRowMergedHeaders_realSample() throws IOException {
     Path file = copySampleFile("samples/tariff_exemption_sample_merged_cols.xlsx");
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     assertThat(result.rows()).hasSize(3);
     assertThat(result.rows().get(0).getProdQty()).isEqualTo(10);
@@ -100,8 +100,8 @@ class ExcelParserServiceTest {
   void parse_typeCoercion_string_trimmed() throws IOException {
     Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     assertThat(result.rows().get(0).getGoodsDes()).isEqualTo("TestItem1");
   }
@@ -110,8 +110,8 @@ class ExcelParserServiceTest {
   void parse_typeCoercion_integer() throws IOException {
     Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     assertThat(result.rows().get(0).getGoodsSeqNo()).isEqualTo(1);
   }
@@ -120,8 +120,8 @@ class ExcelParserServiceTest {
   void parse_typeCoercion_bigDecimal() throws IOException {
     Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     assertThat(result.rows().get(0).getTaxRate()).isNotNull();
     assertThat(result.rows().get(0).getTaxRate().doubleValue()).isCloseTo(8.0, within(0.01));
@@ -173,8 +173,8 @@ class ExcelParserServiceTest {
   void parse_columnA_skipped() throws IOException {
     Path file = createAAppcarItemFile(1, false, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
     // A열은 장식용이라 파서가 건너뛰며 어떤 필드도 매핑되지 않음
     // 컬럼 매핑에 A열(index 0)이 없는지 확인
@@ -254,8 +254,8 @@ class ExcelParserServiceTest {
   void parse_maxRows_stopsEarly() throws IOException {
     Path file = createAAppcarItemFile(20, false, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec, 5);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec, 5);
 
     // maxRows + 1 = 6행에서 중단되어야 함
     assertThat(result.rows()).hasSize(6);
@@ -265,8 +265,8 @@ class ExcelParserServiceTest {
   void parse_maxRows_noEffectWhenUnderLimit() throws IOException {
     Path file = createAAppcarItemFile(3, false, false);
 
-    ExcelParserService.ParseResult<AAppcarItemRow> result =
-        parserService.parse(file, AAppcarItemRow.class, tariffSheetSpec, 100);
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec, 100);
 
     assertThat(result.rows()).hasSize(3);
   }

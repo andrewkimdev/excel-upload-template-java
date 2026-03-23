@@ -8,7 +8,7 @@ import com.foo.excel.service.contract.ExcelMergeRegionResolver;
 import com.foo.excel.service.contract.ExcelSheetSpec;
 import com.foo.excel.service.contract.ExcelSheetSpecResolver;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.ExcelValidationResult;
@@ -445,9 +445,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemImportRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -467,9 +467,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemImportRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -491,9 +491,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemImportRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -514,9 +514,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemImportRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -539,9 +539,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemImportRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       assertThat(wb.getSheetAt(0).getNumMergedRegions()).isGreaterThan(0);
@@ -558,9 +558,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemImportRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemImportRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);

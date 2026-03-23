@@ -1,7 +1,7 @@
 package com.foo.excel.imports.samples.aappcar.service;
 
 import com.foo.excel.service.contract.DatabaseUniquenessChecker;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItemId;
@@ -39,7 +39,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class AAppcarItemDatabaseUniquenessChecker
-    implements DatabaseUniquenessChecker<AAppcarItemRow, AAppcarItemImportMetadata> {
+    implements DatabaseUniquenessChecker<AAppcarItemImportRow, AAppcarItemImportMetadata> {
 
   /** Column index for the row identifier field used in the generated validation error. */
   private static final int ID_COLUMN_INDEX = 1;
@@ -79,8 +79,8 @@ public class AAppcarItemDatabaseUniquenessChecker
    */
   @Override
   public List<RowError> check(
-      List<AAppcarItemRow> rows,
-      Class<AAppcarItemRow> rowClass,
+      List<AAppcarItemImportRow> rows,
+      Class<AAppcarItemImportRow> rowClass,
       List<Integer> sourceRowNumbers,
       AAppcarItemImportMetadata metadata) {
     List<RowError> errors = new ArrayList<>();

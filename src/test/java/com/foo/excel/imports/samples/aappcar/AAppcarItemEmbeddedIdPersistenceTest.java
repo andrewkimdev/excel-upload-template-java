@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.foo.excel.ExcelImportApplication;
 import com.foo.excel.service.contract.PersistenceHandler.SaveResult;
 import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquip;
@@ -35,7 +35,7 @@ class AAppcarItemEmbeddedIdPersistenceTest {
   void saveAll_sameItemId_createsThenUpdates_withFindByIdRoundTrip() {
     AAppcarItemImportMetadata metadata = metadata();
 
-    AAppcarItemRow first = dto("Item1", "Model-A");
+    AAppcarItemImportRow first = dto("Item1", "Model-A");
     SaveResult firstResult = service.saveAll(List.of(first), List.of(7), metadata);
 
     AAppcarItemId itemId =
@@ -48,7 +48,7 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     assertThat(itemRepository.findById(itemId)).isPresent();
     assertThat(equipRepository.findById(equipId)).isPresent();
 
-    AAppcarItemRow second = dto("Item1-Updated", "Model-B");
+    AAppcarItemImportRow second = dto("Item1-Updated", "Model-B");
     SaveResult secondResult = service.saveAll(List.of(second), List.of(7), metadata);
 
     assertThat(secondResult.created()).isZero();
@@ -129,8 +129,8 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     return metadata;
   }
 
-  private AAppcarItemRow dto(String itemName, String modelName) {
-    AAppcarItemRow dto = new AAppcarItemRow();
+  private AAppcarItemImportRow dto(String itemName, String modelName) {
+    AAppcarItemImportRow dto = new AAppcarItemImportRow();
     dto.setGoodsSeqNo(1);
     dto.setGoodsDes(itemName);
     dto.setSpec("Spec");

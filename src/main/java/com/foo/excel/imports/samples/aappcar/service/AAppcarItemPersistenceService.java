@@ -1,7 +1,7 @@
 package com.foo.excel.imports.samples.aappcar.service;
 
 import com.foo.excel.service.contract.PersistenceHandler;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquip;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AAppcarItemPersistenceService
-    implements PersistenceHandler<AAppcarItemRow, AAppcarItemImportMetadata> {
+    implements PersistenceHandler<AAppcarItemImportRow, AAppcarItemImportMetadata> {
 
   private static final int ITEM_BATCH_SIZE = 100;
   private static final int UPSERT_RETRY_LIMIT = 2;
@@ -34,7 +34,7 @@ public class AAppcarItemPersistenceService
   @Override
   @Transactional
   public SaveResult saveAll(
-      List<AAppcarItemRow> rows,
+      List<AAppcarItemImportRow> rows,
       List<Integer> sourceRowNumbers,
       AAppcarItemImportMetadata metadata) {
     List<AAppcarItemId> itemIds = buildItemIds(sourceRowNumbers, metadata);
@@ -116,7 +116,7 @@ public class AAppcarItemPersistenceService
   }
 
   private void updateEntityFromRow(
-      AAppcarItem entity, AAppcarItemRow row, AAppcarItemImportMetadata metadata) {
+      AAppcarItem entity, AAppcarItemImportRow row, AAppcarItemImportMetadata metadata) {
     entity.setGoodsDes(row.getGoodsDes());
     entity.setSpec(row.getSpec());
     entity.setModelDes(row.getModelDes());
@@ -131,7 +131,7 @@ public class AAppcarItemPersistenceService
   }
 
   private AAppcarItem buildEntityFromRow(
-      AAppcarItemRow row, AAppcarItemImportMetadata metadata) {
+      AAppcarItemImportRow row, AAppcarItemImportMetadata metadata) {
     AAppcarItem entity =
         AAppcarItem.builder()
             .goodsDes(row.getGoodsDes())

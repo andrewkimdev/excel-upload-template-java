@@ -5,19 +5,19 @@ import com.foo.excel.service.contract.ExcelImportDefinition;
 import com.foo.excel.service.contract.ImportPrecheck;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.imports.ImportTypeNames;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
 
 public class AAppcarItemImportDefinition
-    extends ExcelImportDefinition<AAppcarItemRow, AAppcarItemImportMetadata> {
+    extends ExcelImportDefinition<AAppcarItemImportRow, AAppcarItemImportMetadata> {
 
   public AAppcarItemImportDefinition(
-      PersistenceHandler<AAppcarItemRow, AAppcarItemImportMetadata> persistenceHandler,
+      PersistenceHandler<AAppcarItemImportRow, AAppcarItemImportMetadata> persistenceHandler,
       ImportPrecheck<AAppcarItemImportMetadata> importPrecheck,
-      DatabaseUniquenessChecker<AAppcarItemRow, AAppcarItemImportMetadata> dbUniquenessChecker) {
+      DatabaseUniquenessChecker<AAppcarItemImportRow, AAppcarItemImportMetadata> dbUniquenessChecker) {
     super(
         ImportTypeNames.AAPPCAR,
-        AAppcarItemRow.class,
+        AAppcarItemImportRow.class,
         AAppcarItemImportMetadata.class,
         persistenceHandler,
         importPrecheck,

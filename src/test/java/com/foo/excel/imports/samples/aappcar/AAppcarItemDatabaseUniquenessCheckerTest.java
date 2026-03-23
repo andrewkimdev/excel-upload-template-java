@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportRow;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarItemRepository;
@@ -37,8 +37,8 @@ class AAppcarItemDatabaseUniquenessCheckerTest {
 
     List<RowError> result =
         checker.check(
-            List.of(new AAppcarItemRow()),
-            AAppcarItemRow.class,
+            List.of(new AAppcarItemImportRow()),
+            AAppcarItemImportRow.class,
             List.of(7),
             createMetadata("2026", "1", "1", "EQ-01"));
 
@@ -55,8 +55,8 @@ class AAppcarItemDatabaseUniquenessCheckerTest {
 
     List<RowError> result =
         checker.check(
-            List.of(new AAppcarItemRow(), new AAppcarItemRow()),
-            AAppcarItemRow.class,
+            List.of(new AAppcarItemImportRow(), new AAppcarItemImportRow()),
+            AAppcarItemImportRow.class,
             List.of(7, 8),
             createMetadata("2026", "1", "1", "EQ-01"));
 
