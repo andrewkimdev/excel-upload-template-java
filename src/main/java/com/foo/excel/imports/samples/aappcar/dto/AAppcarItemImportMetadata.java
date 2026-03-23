@@ -1,7 +1,7 @@
 package com.foo.excel.imports.samples.aappcar.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.foo.excel.service.contract.Metadata;
+import com.foo.excel.service.contract.ImportMetadata;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AAppcarItemMetadata implements Metadata {
+public class AAppcarItemImportMetadata implements ImportMetadata {
 
   private static final String DEFAULT_APPROVED_YN = "N";
 
@@ -60,7 +60,7 @@ public class AAppcarItemMetadata implements Metadata {
   private String customId;
 
   @JsonIgnore
-  public String getApprovedYn() {
+  public String normalizedApprovalYn() {
     if (approvalYn == null || approvalYn.isBlank()) {
       return DEFAULT_APPROVED_YN;
     }
@@ -69,7 +69,7 @@ public class AAppcarItemMetadata implements Metadata {
 
   @JsonIgnore
   public boolean isApprovalYnYes() {
-    String normalized = getApprovedYn();
+    String normalized = normalizedApprovalYn();
     return "Y".equals(normalized);
   }
 

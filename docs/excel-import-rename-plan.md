@@ -15,7 +15,7 @@
 | `ExcelUploadRequestService` | `ExcelImportRequestService` |
 | `ExcelDefinition` | `ExcelImportDefinition` |
 | `templateType` | `importType` |
-| `TemplateTypes` | `ImportTypes` |
+| `TemplateTypes` | `ImportTypeNames` |
 | `UploadPrecheck` | `ImportPrecheck` |
 | `UploadPrecheckFailure` | `ImportPrecheckFailure` |
 | `AAppcarItemTemplateConfig` | `AAppcarItemImportConfig` |

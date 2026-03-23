@@ -27,10 +27,10 @@
         <div th:if="${!result.success}" class="alert alert-error">
             <h2>오류 발생</h2>
             <p th:text="${result.message}"></p>
-            <div th:if="${result.uploadMetadataConflict}">
-                <p th:text="${result.uploadMetadataConflict.description}"></p>
+            <div th:if="${result.metadataConflict}">
+                <p th:text="${result.metadataConflict.description}"></p>
                 <ul>
-                    <li th:each="field : ${result.uploadMetadataConflict.fields}">
+                    <li th:each="field : ${result.metadataConflict.fields}">
                         <span th:text="${field.label}"></span>: <span th:text="${field.value}"></span>
                     </li>
                 </ul>

@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.foo.excel.service.contract.ImportPrecheckFailure;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.imports.samples.aappcar.service.AAppcarItemKeyFactory;
 import com.foo.excel.imports.samples.aappcar.service.AAppcarItemImportPrecheck;
@@ -37,8 +37,8 @@ class AAppcarItemImportPrecheckTest {
 
     assertThat(result).isPresent();
     assertThat(result.orElseThrow().message()).contains("승인된 장비");
-    assertThat(result.orElseThrow().uploadMetadataConflict()).isNotNull();
-    assertThat(result.orElseThrow().uploadMetadataConflict().fields())
+    assertThat(result.orElseThrow().metadataConflict()).isNotNull();
+    assertThat(result.orElseThrow().metadataConflict().fields())
         .extracting(field -> field.fieldName() + "=" + field.value())
         .contains(
             "companyId=COMPANY01",
@@ -58,8 +58,8 @@ class AAppcarItemImportPrecheckTest {
     assertThat(result).isEmpty();
   }
 
-  private AAppcarItemMetadata createMetadata() {
-    AAppcarItemMetadata metadata = new AAppcarItemMetadata();
+  private AAppcarItemImportMetadata createMetadata() {
+    AAppcarItemImportMetadata metadata = new AAppcarItemImportMetadata();
     metadata.setComeYear("2026");
     metadata.setComeOrder("1");
     metadata.setUploadSeq("1");

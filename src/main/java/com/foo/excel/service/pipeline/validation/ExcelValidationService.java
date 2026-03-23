@@ -27,7 +27,7 @@ public class ExcelValidationService {
   private final WithinFileUniqueConstraintValidator withinFileUniqueConstraintValidator;
 
   public <T> ExcelValidationResult validate(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, int maxErrorRows) {
+      List<T> rows, Class<T> rowClass, List<Integer> sourceRowNumbers, int maxErrorRows) {
     List<RowError> allErrors = new ArrayList<>();
     boolean truncated = false;
 
@@ -42,7 +42,7 @@ public class ExcelValidationService {
 
         for (ConstraintViolation<T> violation : violations) {
           String fieldName = violation.getPropertyPath().toString();
-          CellError cellError = mapViolationToCellError(fieldName, violation, dtoClass);
+          CellError cellError = mapViolationToCellError(fieldName, violation, rowClass);
           cellErrors.add(cellError);
         }
 
@@ -58,7 +58,7 @@ public class ExcelValidationService {
       // 2차: 파일 내 유일성 검증
       List<RowError> uniqueErrors =
           withinFileUniqueConstraintValidator.checkWithinFileUniqueness(
-              rows, dtoClass, sourceRowNumbers, remainingErrorRowBudget(maxErrorRows, allErrors.size()));
+              rows, rowClass, sourceRowNumbers, remainingErrorRowBudget(maxErrorRows, allErrors.size()));
       mergeErrors(allErrors, uniqueErrors);
       if (hasReachedErrorLimit(allErrors.size(), maxErrorRows) && !uniqueErrors.isEmpty()) {
         truncated = true;
@@ -91,9 +91,9 @@ public class ExcelValidationService {
   }
 
   private <T> CellError mapViolationToCellError(
-      String fieldName, ConstraintViolation<T> violation, Class<T> dtoClass) {
+      String fieldName, ConstraintViolation<T> violation, Class<T> rowClass) {
 
-    ExcelColumn excelColumn = findExcelColumn(fieldName, dtoClass);
+    ExcelColumn excelColumn = findExcelColumn(fieldName, rowClass);
 
     int columnIndex = -1;
     ExcelColumnRef columnRef = ExcelColumnRef.unknown();
@@ -122,8 +122,8 @@ public class ExcelValidationService {
         .build();
   }
 
-  private ExcelColumn findExcelColumn(String fieldName, Class<?> dtoClass) {
-    Class<?> current = dtoClass;
+  private ExcelColumn findExcelColumn(String fieldName, Class<?> rowClass) {
+    Class<?> current = rowClass;
     while (current != null && current != Object.class) {
       try {
         Field field = current.getDeclaredField(fieldName);

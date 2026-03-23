@@ -10,7 +10,7 @@ import java.util.Optional;
  *
  * @param <M> import-specific metadata type
  */
-public interface ImportPrecheck<M extends Metadata> {
+public interface ImportPrecheck<M extends ImportMetadata> {
 
   /**
    * Returns a structured user-facing Korean failure when the import should be blocked before

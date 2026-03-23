@@ -41,7 +41,7 @@
 - [ColumnResolutionException.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/service/pipeline/parse/ColumnResolutionException.java)
 - [ExcelValidationService.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/service/pipeline/validation/ExcelValidationService.java)
 - [WithinFileUniqueConstraintValidator.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/validation/WithinFileUniqueConstraintValidator.java)
-- [AAppcarItemDbUniquenessChecker.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/templates/samples/aappcar/service/AAppcarItemDbUniquenessChecker.java)
+- [AAppcarItemDatabaseUniquenessChecker.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/templates/samples/aappcar/service/AAppcarItemDatabaseUniquenessChecker.java)
 
 메시지를 만드는 쪽도 같이 정리했다.
 

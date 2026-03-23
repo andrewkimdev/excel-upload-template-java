@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.foo.excel.service.pipeline.ExcelImportRequestService;
-import com.foo.excel.imports.ImportTypes;
+import com.foo.excel.imports.ImportTypeNames;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -36,7 +36,7 @@ class ExcelApiExceptionHandlerTest {
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/" + ImportTypes.AAPPCAR)
+            multipart("/api/excel/upload/" + ImportTypeNames.AAPPCAR)
                 .file(filePart())
                 .file(metadataPart()))
         .andExpect(status().isInternalServerError())
@@ -53,7 +53,7 @@ class ExcelApiExceptionHandlerTest {
 
     mockMvc
         .perform(
-            multipart("/api/excel/upload/" + ImportTypes.AAPPCAR)
+            multipart("/api/excel/upload/" + ImportTypeNames.AAPPCAR)
                 .file(filePart())
                 .file(metadataPart()))
         .andExpect(status().isPayloadTooLarge())

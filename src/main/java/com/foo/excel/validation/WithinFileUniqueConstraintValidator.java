@@ -40,26 +40,26 @@ public class WithinFileUniqueConstraintValidator {
    * 잘못되어 있으면 즉시 예외를 발생시켜 잘못된 설정을 조기에 드러낸다.
    *
    * @param rows 업로드 파일에서 파싱된 DTO 행 목록
-   * @param dtoClass 검증 대상 DTO 타입
+   * @param rowClass 검증 대상 DTO 타입
    * @param sourceRowNumbers DTO 목록과 같은 인덱스를 갖는 원본 Excel 행 번호 목록
    * @param <T> 검증 대상 DTO 타입
    * @return 누적된 행별 오류 목록
    */
   public <T> List<RowError> checkWithinFileUniqueness(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers) {
-    return checkWithinFileUniqueness(rows, dtoClass, sourceRowNumbers, Integer.MAX_VALUE);
+      List<T> rows, Class<T> rowClass, List<Integer> sourceRowNumbers) {
+    return checkWithinFileUniqueness(rows, rowClass, sourceRowNumbers, Integer.MAX_VALUE);
   }
 
   public <T> List<RowError> checkWithinFileUniqueness(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, int maxErrorRows) {
+      List<T> rows, Class<T> rowClass, List<Integer> sourceRowNumbers, int maxErrorRows) {
     // 여러 셀 오류를 행 번호 기준으로 모았다가 마지막에 RowError 목록으로 변환한다.
     RowErrorAccumulator errors = new RowErrorAccumulator();
 
     // @ExcelUnique(checkWithinFile = true) 대상 필드를 먼저 검사한다.
-    checkSingleFieldUniqueness(rows, dtoClass, sourceRowNumbers, errors, maxErrorRows);
+    checkSingleFieldUniqueness(rows, rowClass, sourceRowNumbers, errors, maxErrorRows);
     // 클래스 레벨의 @ExcelCompositeUnique 선언도 이어서 검사한다.
     if (!hasReachedErrorLimit(errors, maxErrorRows)) {
-      checkCompositeUniqueness(rows, dtoClass, sourceRowNumbers, errors, maxErrorRows);
+      checkCompositeUniqueness(rows, rowClass, sourceRowNumbers, errors, maxErrorRows);
     }
 
     return errors.toList();
@@ -72,20 +72,20 @@ public class WithinFileUniqueConstraintValidator {
    * 이미 등장한 값을 다시 만나면 현재 행에 중복 오류를 추가한다.
    *
    * @param rows 업로드 행 DTO 목록
-   * @param dtoClass DTO 클래스
+   * @param rowClass DTO 클래스
    * @param sourceRowNumbers 원본 Excel 행 번호 목록
    * @param errors 오류 누적기
    * @param <T> DTO 타입
    */
   private <T> void checkSingleFieldUniqueness(
       List<T> rows,
-      Class<T> dtoClass,
+      Class<T> rowClass,
       List<Integer> sourceRowNumbers,
       RowErrorAccumulator errors,
       int maxErrorRows) {
 
     // DTO에 선언된 모든 필드를 훑으면서 파일 내부 중복 검사 대상인지 확인한다.
-    for (Field field : dtoClass.getDeclaredFields()) {
+    for (Field field : rowClass.getDeclaredFields()) {
       ExcelUnique uniqueAnnotation = field.getAnnotation(ExcelUnique.class);
       if (uniqueAnnotation == null || !uniqueAnnotation.checkWithinFile()) {
         // 파일 내부 중복 검사를 요구하지 않는 필드는 건너뛴다.
@@ -153,21 +153,21 @@ public class WithinFileUniqueConstraintValidator {
    * <p>복합 유니크 선언이 DTO 구조와 맞지 않으면 이는 개발자 설정 오류이므로 즉시 예외를 발생시킨다.
    *
    * @param rows 업로드 행 DTO 목록
-   * @param dtoClass DTO 클래스
+   * @param rowClass DTO 클래스
    * @param sourceRowNumbers 원본 Excel 행 번호 목록
    * @param errors 오류 누적기
    * @param <T> DTO 타입
    */
   private <T> void checkCompositeUniqueness(
       List<T> rows,
-      Class<T> dtoClass,
+      Class<T> rowClass,
       List<Integer> sourceRowNumbers,
       RowErrorAccumulator errors,
       int maxErrorRows) {
 
     // repeatable annotation을 고려하여 클래스 레벨의 모든 복합 유니크 선언을 가져온다.
     ExcelCompositeUnique[] compositeAnnotations =
-        dtoClass.getAnnotationsByType(ExcelCompositeUnique.class);
+        rowClass.getAnnotationsByType(ExcelCompositeUnique.class);
     if (compositeAnnotations.length == 0) {
       // 복합 유니크 선언이 없다면 추가 작업이 없다.
       return;
@@ -175,7 +175,7 @@ public class WithinFileUniqueConstraintValidator {
 
     for (ExcelCompositeUnique composite : compositeAnnotations) {
       // 복합 유니크 선언은 런타임 전에 올바르게 작성되어 있어야 하므로 엄격하게 해석한다.
-      List<Field> fields = resolveCompositeFieldsOrThrow(dtoClass, composite);
+      List<Field> fields = resolveCompositeFieldsOrThrow(rowClass, composite);
 
       // 키는 복합 필드 값 목록, 값은 그 조합이 처음 등장한 원본 행 번호이다.
       Map<List<Object>, Integer> seenKeys = new HashMap<>();
@@ -233,19 +233,19 @@ public class WithinFileUniqueConstraintValidator {
    * <p>선언된 필드가 DTO에 존재하지 않으면 복합 유니크 검증 자체가 성립하지 않으므로 즉시 예외를 던진다.
    * 이 오류는 사용자 데이터 문제가 아니라 개발자 설정 문제를 의미한다.
    *
-   * @param dtoClass 검증 대상 DTO 클래스
+   * @param rowClass 검증 대상 DTO 클래스
    * @param composite 복합 유니크 애너테이션
    * @return 정상 해석된 필드 목록
    * @throws IllegalStateException 애너테이션이 존재하지 않는 DTO 필드를 참조할 때
    */
   private List<Field> resolveCompositeFieldsOrThrow(
-      Class<?> dtoClass, ExcelCompositeUnique composite) {
+      Class<?> rowClass, ExcelCompositeUnique composite) {
     List<Field> fields = new ArrayList<>();
 
     for (String fieldName : composite.fields()) {
-      Field field = findField(dtoClass, fieldName);
+      Field field = findField(rowClass, fieldName);
       if (field == null) {
-        throw invalidCompositeConfiguration(dtoClass, composite, fieldName);
+        throw invalidCompositeConfiguration(rowClass, composite, fieldName);
       }
 
       field.setAccessible(true);
@@ -256,7 +256,7 @@ public class WithinFileUniqueConstraintValidator {
       throw new IllegalStateException(
           String.format(
               "복합 유니크 검증 필드가 비어 있습니다. DTO=%s, 선언 필드=%s",
-              dtoClass.getName(), List.of(composite.fields())));
+              rowClass.getName(), List.of(composite.fields())));
     }
 
     return fields;
@@ -265,12 +265,12 @@ public class WithinFileUniqueConstraintValidator {
   /**
    * DTO 클래스와 상위 클래스 체인을 따라가며 필드를 찾는다.
    *
-   * @param dtoClass 시작 클래스
+   * @param rowClass 시작 클래스
    * @param fieldName 찾을 필드명
    * @return 찾은 필드, 없으면 {@code null}
    */
-  private Field findField(Class<?> dtoClass, String fieldName) {
-    Class<?> current = dtoClass;
+  private Field findField(Class<?> rowClass, String fieldName) {
+    Class<?> current = rowClass;
     while (current != null && current != Object.class) {
       try {
         return current.getDeclaredField(fieldName);
@@ -284,17 +284,17 @@ public class WithinFileUniqueConstraintValidator {
   /**
    * 잘못 선언된 복합 유니크 설정에 대한 예외를 생성한다.
    *
-   * @param dtoClass 검증 대상 DTO 클래스
+   * @param rowClass 검증 대상 DTO 클래스
    * @param composite 복합 유니크 애너테이션
    * @param missingFieldName DTO에 존재하지 않는 필드명
    * @return 복합 유니크 설정 오류 예외
    */
   private IllegalStateException invalidCompositeConfiguration(
-      Class<?> dtoClass, ExcelCompositeUnique composite, String missingFieldName) {
+      Class<?> rowClass, ExcelCompositeUnique composite, String missingFieldName) {
     return new IllegalStateException(
         String.format(
             "복합 유니크 검증 설정이 올바르지 않습니다. DTO=%s, 누락 필드=%s, 선언 필드=%s",
-            dtoClass.getName(), missingFieldName, List.of(composite.fields())));
+            rowClass.getName(), missingFieldName, List.of(composite.fields())));
   }
 
   /**

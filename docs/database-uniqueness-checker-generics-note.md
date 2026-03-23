@@ -22,7 +22,7 @@ Before:
 ```java
 public interface DatabaseUniquenessChecker<T, C extends MetaData> {
   List<RowError> check(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, C metaData);
+      List<T> rows, Class<T> rowClass, List<Integer> sourceRowNumbers, C metaData);
 }
 ```
 
@@ -31,7 +31,7 @@ After:
 ```java
 public interface DatabaseUniquenessChecker<T, M extends MetaData> {
   List<RowError> check(
-      List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metaData);
+      List<T> rows, Class<T> rowClass, List<Integer> sourceRowNumbers, M metaData);
 }
 ```
 
@@ -39,14 +39,14 @@ Related implementation changes:
 
 - `ExcelImportDefinition.checkDbUniqueness(...)` keeps parsed rows in its signature
 - `ExcelImportOrchestrator` continues passing parsed rows into DB uniqueness checking
-- `AAppcarItemDbUniquenessChecker` remains a metadata-driven special case inside a row-oriented contract
+- `AAppcarItemDatabaseUniquenessChecker` remains a metadata-driven special case inside a row-oriented contract
 - tests and documentation were updated to match the new contract
 
 ## Why We Did It
 
 From a code reader's perspective, a type named `DatabaseUniquenessChecker` naturally suggests row-oriented duplicate checking against persisted data. Keeping `T` in the contract preserves that expectation.
 
-The only implementation, `AAppcarItemDbUniquenessChecker`, derives uniqueness from:
+The only implementation, `AAppcarItemDatabaseUniquenessChecker`, derives uniqueness from:
 
 - upload-level metadata entered by the user (`metaData`)
 - Excel source row numbers used as part of the persisted ID (`sourceRowNumbers`)

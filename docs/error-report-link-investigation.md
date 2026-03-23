@@ -28,7 +28,7 @@ In this repo, the Thymeleaf result page only shows the link when `result.errorFi
 
 ## Important Clue
 
-In this repo, `goodsSeqNo` is not annotated for within-file uniqueness in [AAppcarItemDto.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/templates/samples/aappcar/dto/AAppcarItemDto.java#L24). So a duplicate `goodsSeqNo` by itself should not be the canonical trigger here. If your copied project reports errors for that exact case, then the copied code is already behaviorally different from this baseline. That makes a straight diff against these files even more useful.
+In this repo, `goodsSeqNo` is not annotated for within-file uniqueness in [AAppcarItemRow.java](/workspaces/excel-upload-template-java/src/main/java/com/foo/excel/templates/samples/aappcar/dto/AAppcarItemRow.java#L24). So a duplicate `goodsSeqNo` by itself should not be the canonical trigger here. If your copied project reports errors for that exact case, then the copied code is already behaviorally different from this baseline. That makes a straight diff against these files even more useful.
 
 ## Fastest Investigation In The Other Project
 

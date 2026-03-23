@@ -7,10 +7,10 @@ import java.util.Optional;
 import lombok.Getter;
 
 @Getter
-public class ExcelImportDefinition<T, M extends Metadata> {
+public class ExcelImportDefinition<T, M extends ImportMetadata> {
 
   private final String importType;
-  private final Class<T> dtoClass;
+  private final Class<T> rowClass;
   private final Class<M> metadataClass;
   private final ExcelSheetSpec sheetSpec;
   private final List<ExcelMergeRegion> mergeRegions;
@@ -20,16 +20,16 @@ public class ExcelImportDefinition<T, M extends Metadata> {
 
   public ExcelImportDefinition(
       String importType,
-      Class<T> dtoClass,
+      Class<T> rowClass,
       Class<M> metadataClass,
       PersistenceHandler<T, M> persistenceHandler,
       ImportPrecheck<M> importPrecheck,
       DatabaseUniquenessChecker<T, M> dbUniquenessChecker) {
     this.importType = importType;
-    this.dtoClass = dtoClass;
+    this.rowClass = rowClass;
     this.metadataClass = metadataClass;
-    this.sheetSpec = ExcelSheetSpecResolver.resolve(dtoClass);
-    this.mergeRegions = ExcelMergeRegionResolver.resolve(dtoClass);
+    this.sheetSpec = ExcelSheetSpecResolver.resolve(rowClass);
+    this.mergeRegions = ExcelMergeRegionResolver.resolve(rowClass);
     this.persistenceHandler = persistenceHandler;
     this.importPrecheck = importPrecheck;
     this.dbUniquenessChecker = dbUniquenessChecker;
@@ -47,7 +47,7 @@ public class ExcelImportDefinition<T, M extends Metadata> {
     if (dbUniquenessChecker == null) {
       return Collections.emptyList();
     }
-    return dbUniquenessChecker.check(rows, dtoClass, sourceRowNumbers, metadata);
+    return dbUniquenessChecker.check(rows, rowClass, sourceRowNumbers, metadata);
   }
 
   public String resolveTempSubdirectory(M metadata) {

@@ -4,12 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarItemRepository;
-import com.foo.excel.imports.samples.aappcar.service.AAppcarItemDbUniquenessChecker;
+import com.foo.excel.imports.samples.aappcar.service.AAppcarItemDatabaseUniquenessChecker;
 import com.foo.excel.imports.samples.aappcar.service.AAppcarItemKeyFactory;
 import com.foo.excel.validation.RowError;
 import java.util.List;
@@ -20,15 +20,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class AAppcarItemDbUniquenessCheckerTest {
+class AAppcarItemDatabaseUniquenessCheckerTest {
 
   @Mock private AAppcarItemRepository itemRepository;
 
-  private AAppcarItemDbUniquenessChecker checker;
+  private AAppcarItemDatabaseUniquenessChecker checker;
 
   @BeforeEach
   void setUp() {
-    checker = new AAppcarItemDbUniquenessChecker(itemRepository, new AAppcarItemKeyFactory());
+    checker = new AAppcarItemDatabaseUniquenessChecker(itemRepository, new AAppcarItemKeyFactory());
   }
 
   @Test
@@ -37,8 +37,8 @@ class AAppcarItemDbUniquenessCheckerTest {
 
     List<RowError> result =
         checker.check(
-            List.of(new AAppcarItemDto()),
-            AAppcarItemDto.class,
+            List.of(new AAppcarItemRow()),
+            AAppcarItemRow.class,
             List.of(7),
             createMetadata("2026", "1", "1", "EQ-01"));
 
@@ -55,8 +55,8 @@ class AAppcarItemDbUniquenessCheckerTest {
 
     List<RowError> result =
         checker.check(
-            List.of(new AAppcarItemDto(), new AAppcarItemDto()),
-            AAppcarItemDto.class,
+            List.of(new AAppcarItemRow(), new AAppcarItemRow()),
+            AAppcarItemRow.class,
             List.of(7, 8),
             createMetadata("2026", "1", "1", "EQ-01"));
 
@@ -68,9 +68,9 @@ class AAppcarItemDbUniquenessCheckerTest {
         .contains("품목 테이블에 이미 존재하는 ID");
   }
 
-  private AAppcarItemMetadata createMetadata(
+  private AAppcarItemImportMetadata createMetadata(
       String comeYear, String comeOrder, String uploadSeq, String equipCode) {
-    AAppcarItemMetadata metadata = new AAppcarItemMetadata();
+    AAppcarItemImportMetadata metadata = new AAppcarItemImportMetadata();
     metadata.setComeYear(comeYear);
     metadata.setComeOrder(comeOrder);
     metadata.setUploadSeq(uploadSeq);

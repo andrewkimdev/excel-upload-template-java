@@ -1,14 +1,14 @@
 package com.foo.excel.imports.samples.aappcar.mapper;
 
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AAppcarItemMetadataFormMapper {
+public class AAppcarItemImportMetadataFormMapper {
 
-  public AAppcarItemMetadata toMetadata(
+  public AAppcarItemImportMetadata toMetadata(
       String comeYear,
       String comeOrder,
       String uploadSeq,
@@ -20,7 +20,7 @@ public class AAppcarItemMetadataFormMapper {
       String filePath,
       String approvalYn,
       String approvalDate) {
-    AAppcarItemMetadata metadata = new AAppcarItemMetadata();
+    AAppcarItemImportMetadata metadata = new AAppcarItemImportMetadata();
     metadata.setComeYear(comeYear);
     metadata.setComeOrder(comeOrder);
     metadata.setUploadSeq(uploadSeq);

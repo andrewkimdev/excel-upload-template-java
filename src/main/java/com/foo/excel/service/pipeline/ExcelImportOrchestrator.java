@@ -3,7 +3,7 @@ package com.foo.excel.service.pipeline;
 import com.foo.excel.config.ExcelImportProperties;
 import com.foo.excel.service.contract.ExcelImportDefinition;
 import com.foo.excel.service.contract.ExcelSheetSpec;
-import com.foo.excel.service.contract.Metadata;
+import com.foo.excel.service.contract.ImportMetadata;
 import com.foo.excel.service.contract.MetadataConflict;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.file.ExcelUploadFileService;
@@ -47,16 +47,16 @@ public class ExcelImportOrchestrator {
       String errorFileId,
       String downloadUrl,
       String originalFilename,
-      MetadataConflict uploadMetadataConflict,
+      MetadataConflict metadataConflict,
       String message) {}
 
-  public ImportResult processImport(MultipartFile file, String importType, Metadata metadata)
+  public ImportResult processImport(MultipartFile file, String importType, ImportMetadata metadata)
       throws IOException {
     ExcelImportDefinition<?, ?> importDefinition = findDefinition(importType);
     return doProcess(importDefinition, file, metadata);
   }
 
-  public Class<? extends Metadata> getMetadataClass(String importType) {
+  public Class<? extends ImportMetadata> getMetadataClass(String importType) {
     return findDefinition(importType).getMetadataClass();
   }
 
@@ -68,8 +68,8 @@ public class ExcelImportOrchestrator {
   }
 
   @SuppressWarnings("unchecked")
-  private <T, M extends Metadata> ImportResult doProcess(
-      ExcelImportDefinition<?, ?> rawDefinition, MultipartFile file, Metadata metadata)
+  private <T, M extends ImportMetadata> ImportResult doProcess(
+      ExcelImportDefinition<?, ?> rawDefinition, MultipartFile file, ImportMetadata metadata)
       throws IOException {
     long requestStartedAt = System.nanoTime();
     ExcelImportDefinition<T, M> importDefinition = (ExcelImportDefinition<T, M>) rawDefinition;
@@ -108,7 +108,7 @@ public class ExcelImportOrchestrator {
             .rowsProcessed(0)
             .errorRows(0)
             .errorCount(0)
-            .uploadMetadataConflict(failure.uploadMetadataConflict())
+            .metadataConflict(failure.metadataConflict())
             .message(failure.message())
             .build();
       }
@@ -149,7 +149,7 @@ public class ExcelImportOrchestrator {
       ExcelParserService.ParseResult<T> parseResult =
           parserService.parse(
               xlsxFile,
-              importDefinition.getDtoClass(),
+              importDefinition.getRowClass(),
               sheetSpec,
               properties.getMaxRows(),
               maxErrorRows);
@@ -204,7 +204,7 @@ public class ExcelImportOrchestrator {
       ExcelValidationResult validationResult =
           validationService.validate(
               parseResult.rows(),
-              importDefinition.getDtoClass(),
+              importDefinition.getRowClass(),
               parseResult.sourceRowNumbers(),
               remainingErrorRowBudget(maxErrorRows, 0));
       long validationStageElapsedMs = elapsedMillis(validationStageStartedAt);
@@ -296,7 +296,7 @@ public class ExcelImportOrchestrator {
     }
   }
 
-  private <M extends Metadata> String resolveTempSubdirectory(
+  private <M extends ImportMetadata> String resolveTempSubdirectory(
       ExcelImportDefinition<?, M> importDefinition, M metadata) {
     String tempSubdirectory = importDefinition.resolveTempSubdirectory(metadata);
     return tempSubdirectory == null ? null : sanitizeTempSubdirectory(tempSubdirectory);

@@ -8,7 +8,7 @@ import com.foo.excel.service.contract.ExcelMergeRegionResolver;
 import com.foo.excel.service.contract.ExcelSheetSpec;
 import com.foo.excel.service.contract.ExcelSheetSpecResolver;
 import com.foo.excel.service.pipeline.parse.ExcelParserService;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
 import com.foo.excel.validation.CellError;
 import com.foo.excel.validation.ExcelColumnRef;
 import com.foo.excel.validation.ExcelValidationResult;
@@ -421,9 +421,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemDto.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemDto.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -443,9 +443,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemDto.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemDto.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -467,9 +467,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemDto.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemDto.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -490,9 +490,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemDto.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemDto.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);
@@ -515,9 +515,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemDto.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemDto.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       assertThat(wb.getSheetAt(0).getNumMergedRegions()).isGreaterThan(0);
@@ -534,9 +534,9 @@ class ExcelErrorReportServiceTest {
             originalFile,
             createAAppcarValidationResult(),
             Collections.emptyList(),
-            ExcelSheetSpecResolver.resolve(AAppcarItemDto.class),
+            ExcelSheetSpecResolver.resolve(AAppcarItemRow.class),
             "aappcar-source.xlsx",
-            ExcelMergeRegionResolver.resolve(AAppcarItemDto.class));
+            ExcelMergeRegionResolver.resolve(AAppcarItemRow.class));
 
     try (Workbook wb = WorkbookFactory.create(errorFile.toFile())) {
       Sheet sheet = wb.getSheetAt(0);

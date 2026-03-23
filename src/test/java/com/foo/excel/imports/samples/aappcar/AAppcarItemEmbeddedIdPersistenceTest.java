@@ -4,15 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.foo.excel.ExcelImportApplication;
 import com.foo.excel.service.contract.PersistenceHandler.SaveResult;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItemId;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquip;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarEquipRepository;
-import com.foo.excel.imports.samples.aappcar.service.AAppcarItemService;
+import com.foo.excel.imports.samples.aappcar.service.AAppcarItemPersistenceService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,7 +25,7 @@ import org.springframework.test.annotation.DirtiesContext;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AAppcarItemEmbeddedIdPersistenceTest {
 
-  @Autowired private AAppcarItemService service;
+  @Autowired private AAppcarItemPersistenceService service;
 
   @Autowired private AAppcarItemRepository itemRepository;
 
@@ -33,9 +33,9 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_sameItemId_createsThenUpdates_withFindByIdRoundTrip() {
-    AAppcarItemMetadata metadata = metadata();
+    AAppcarItemImportMetadata metadata = metadata();
 
-    AAppcarItemDto first = dto("Item1", "Model-A");
+    AAppcarItemRow first = dto("Item1", "Model-A");
     SaveResult firstResult = service.saveAll(List.of(first), List.of(7), metadata);
 
     AAppcarItemId itemId =
@@ -48,7 +48,7 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     assertThat(itemRepository.findById(itemId)).isPresent();
     assertThat(equipRepository.findById(equipId)).isPresent();
 
-    AAppcarItemDto second = dto("Item1-Updated", "Model-B");
+    AAppcarItemRow second = dto("Item1-Updated", "Model-B");
     SaveResult secondResult = service.saveAll(List.of(second), List.of(7), metadata);
 
     assertThat(secondResult.created()).isZero();
@@ -62,7 +62,7 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_sameEquipId_updatesEquipFields() {
-    AAppcarItemMetadata metadata = metadata();
+    AAppcarItemImportMetadata metadata = metadata();
     AAppcarEquipId equipId =
         new AAppcarEquipId("COMPANY01", "CUSTOM01", "2026", 1, 1, "EQ-01");
 
@@ -90,7 +90,7 @@ class AAppcarItemEmbeddedIdPersistenceTest {
 
   @Test
   void saveAll_mixedExistingAndNewRows_updatesAndInsertsInSingleBatch() {
-    AAppcarItemMetadata metadata = metadata();
+    AAppcarItemImportMetadata metadata = metadata();
     AAppcarItemId existingItemId =
         new AAppcarItemId("COMPANY01", "CUSTOM01", "2026", "001", "1", "EQ-01", 7);
     AAppcarItemId newItemId =
@@ -114,8 +114,8 @@ class AAppcarItemEmbeddedIdPersistenceTest {
         .containsExactly("Item2", "Model-C");
   }
 
-  private AAppcarItemMetadata metadata() {
-    AAppcarItemMetadata metadata = new AAppcarItemMetadata();
+  private AAppcarItemImportMetadata metadata() {
+    AAppcarItemImportMetadata metadata = new AAppcarItemImportMetadata();
     metadata.setComeYear("2026");
     metadata.setComeOrder("001");
     metadata.setUploadSeq("1");
@@ -129,8 +129,8 @@ class AAppcarItemEmbeddedIdPersistenceTest {
     return metadata;
   }
 
-  private AAppcarItemDto dto(String itemName, String modelName) {
-    AAppcarItemDto dto = new AAppcarItemDto();
+  private AAppcarItemRow dto(String itemName, String modelName) {
+    AAppcarItemRow dto = new AAppcarItemRow();
     dto.setGoodsSeqNo(1);
     dto.setGoodsDes(itemName);
     dto.setSpec("Spec");

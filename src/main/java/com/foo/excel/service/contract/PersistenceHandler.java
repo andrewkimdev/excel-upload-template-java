@@ -2,7 +2,7 @@ package com.foo.excel.service.contract;
 
 import java.util.List;
 
-public interface PersistenceHandler<T, M extends Metadata> {
+public interface PersistenceHandler<T, M extends ImportMetadata> {
 
   SaveResult saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metadata);
 

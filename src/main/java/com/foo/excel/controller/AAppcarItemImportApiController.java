@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import com.foo.excel.service.pipeline.ExcelImportRequestService;
-import com.foo.excel.imports.ImportTypes;
+import com.foo.excel.imports.ImportTypeNames;
 import java.io.IOException;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -24,14 +24,14 @@ public class AAppcarItemImportApiController {
   private final ExcelImportRequestService importRequestService;
   private final ObjectMapper objectMapper;
 
-  @PostMapping("/api/excel/upload/" + ImportTypes.AAPPCAR)
+  @PostMapping("/api/excel/upload/" + ImportTypeNames.AAPPCAR)
   public ResponseEntity<Map<String, Object>> importExcel(
       @RequestPart("file") MultipartFile file,
       @RequestPart(value = "metadata", required = false) String metadataJson)
       throws IOException {
     String enrichedMetadataJson = withDefaultCompanyAndCustom(metadataJson);
     ImportResult result =
-        importRequestService.upload(file, ImportTypes.AAPPCAR, enrichedMetadataJson);
+        importRequestService.upload(file, ImportTypeNames.AAPPCAR, enrichedMetadataJson);
     Map<String, Object> response = importRequestService.toApiResponse(result);
     if (result.success()) {
       return ResponseEntity.ok(response);

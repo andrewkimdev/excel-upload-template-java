@@ -116,7 +116,7 @@ Orchestrator rejects if parsed row count is greater than `maxRows`.
 Orchestrator calls `importDefinition.checkDbUniqueness(...)`.
 If an import definition has no checker (`null`), this returns empty errors.
 
-Current tariff import wiring (`AAppcarItemImportConfig`) injects `AAppcarItemDbUniquenessChecker`, so DB uniqueness is active.
+Current tariff import wiring (`AAppcarItemImportConfig`) injects `AAppcarItemDatabaseUniquenessChecker`, so DB uniqueness is active.
 
 ### Step 7: merge parse errors
 
@@ -127,7 +127,7 @@ Orchestrator merges parser conversion errors into `ExcelValidationResult`.
 If valid, orchestrator calls:
 - `PersistenceHandler.saveAll(List<T> rows, List<Integer> sourceRowNumbers, C metaData)`
 
-Current tariff implementation (`AAppcarItemService`):
+Current tariff implementation (`AAppcarItemPersistenceService`):
 - upserts detail rows by `(comeYear, comeOrder, uploadSeq, equipCode, rowNumber)`
 - upserts upload aggregate row by `(companyId, customId, comeYear, comeOrder, uploadSeq, equipCode)`
 - applies audit defaults (`createdBy`, `approvedYn`, `createdAt`)

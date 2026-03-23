@@ -8,10 +8,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.foo.excel.ExcelImportApplication;
 import com.foo.excel.service.contract.ExcelImportDefinition;
-import com.foo.excel.service.contract.Metadata;
+import com.foo.excel.service.contract.ImportMetadata;
 import com.foo.excel.service.contract.PersistenceHandler;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator;
-import com.foo.excel.imports.ImportTypes;
+import com.foo.excel.imports.ImportTypeNames;
 import java.lang.reflect.Modifier;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItem;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarEquipRepository;
@@ -41,7 +41,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class TariffImportPlanContractTest {
 
   private static final String API_UPLOAD_TARIFF =
-      "/api/excel/upload/" + ImportTypes.AAPPCAR;
+      "/api/excel/upload/" + ImportTypeNames.AAPPCAR;
 
   @Autowired private MockMvc mockMvc;
 
@@ -117,7 +117,7 @@ class TariffImportPlanContractTest {
             .anyMatch(
                 method ->
                     method.getParameterCount() == 3
-                        && method.getParameterTypes()[2].equals(Metadata.class));
+                        && method.getParameterTypes()[2].equals(ImportMetadata.class));
 
     assertTrue(
         hasNewSignature,
@@ -135,7 +135,7 @@ class TariffImportPlanContractTest {
                     method.getParameterCount() == 3
                         && List.class.isAssignableFrom(method.getParameterTypes()[0])
                         && List.class.isAssignableFrom(method.getParameterTypes()[1])
-                        && Metadata.class.isAssignableFrom(method.getParameterTypes()[2]));
+                        && ImportMetadata.class.isAssignableFrom(method.getParameterTypes()[2]));
 
     assertTrue(
         hasNewSaveAllSignature,
@@ -156,7 +156,7 @@ class TariffImportPlanContractTest {
 
   @Test
   void metadataContract_requiresAssignFilePath() throws Exception {
-    Method method = Metadata.class.getDeclaredMethod("assignFilePath", String.class);
+    Method method = ImportMetadata.class.getDeclaredMethod("assignFilePath", String.class);
 
     assertTrue(
         method.getReturnType().equals(Void.TYPE)
@@ -168,7 +168,7 @@ class TariffImportPlanContractTest {
   @Test
   void excelImportDefinitionContract_supportsTempSubdirectoryResolution() throws Exception {
     Method method =
-        ExcelImportDefinition.class.getDeclaredMethod("resolveTempSubdirectory", Metadata.class);
+        ExcelImportDefinition.class.getDeclaredMethod("resolveTempSubdirectory", ImportMetadata.class);
 
     assertTrue(
         method.getReturnType().equals(String.class),

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelHeaderGroup;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +13,7 @@ class ExcelMergeRegionResolverTest {
 
   @Test
   void resolve_aAppcarExpandsReadableFieldMetadataIntoExpectedMergeRegions() {
-    List<ExcelMergeRegion> regions = ExcelMergeRegionResolver.resolve(AAppcarItemDto.class);
+    List<ExcelMergeRegion> regions = ExcelMergeRegionResolver.resolve(AAppcarItemRow.class);
 
     assertThat(regions)
         .contains(

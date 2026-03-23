@@ -1,8 +1,8 @@
 package com.foo.excel.imports;
 
-public final class ImportTypes {
+public final class ImportTypeNames {
 
   public static final String AAPPCAR = "aappcar";
 
-  private ImportTypes() {}
+  private ImportTypeNames() {}
 }

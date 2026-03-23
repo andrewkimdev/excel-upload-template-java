@@ -60,20 +60,20 @@ public class ExcelParserService {
   private record CellRef(int rowIndex, int columnIndex) {}
 
   public <T> ParseResult<T> parse(
-      Path xlsxFile, Class<T> dtoClass, ExcelSheetSpec sheetSpec)
+      Path xlsxFile, Class<T> rowClass, ExcelSheetSpec sheetSpec)
       throws IOException {
-    return parse(xlsxFile, dtoClass, sheetSpec, Integer.MAX_VALUE, Integer.MAX_VALUE);
+    return parse(xlsxFile, rowClass, sheetSpec, Integer.MAX_VALUE, Integer.MAX_VALUE);
   }
 
   public <T> ParseResult<T> parse(
-      Path xlsxFile, Class<T> dtoClass, ExcelSheetSpec sheetSpec, int maxRows)
+      Path xlsxFile, Class<T> rowClass, ExcelSheetSpec sheetSpec, int maxRows)
       throws IOException {
-    return parse(xlsxFile, dtoClass, sheetSpec, maxRows, Integer.MAX_VALUE);
+    return parse(xlsxFile, rowClass, sheetSpec, maxRows, Integer.MAX_VALUE);
   }
 
   public <T> ParseResult<T> parse(
       Path xlsxFile,
-      Class<T> dtoClass,
+      Class<T> rowClass,
       ExcelSheetSpec sheetSpec,
       int maxRows,
       int maxErrorRows)
@@ -97,13 +97,13 @@ public class ExcelParserService {
 
         Map<CellRef, CellRef> mergedCellLookup = buildMergedCellLookup(sheet);
         Map<Cell, String> formattedCellCache = new IdentityHashMap<>();
-        List<ColumnMapping> columnMappings = resolveColumnMappings(dtoClass, sheet, sheetSpec);
+        List<ColumnMapping> columnMappings = resolveColumnMappings(rowClass, sheet, sheetSpec);
         List<RowError> parseErrors = new ArrayList<>();
         List<Integer> sourceRowNumbers = new ArrayList<>();
         List<T> rows =
             parseDataRows(
                 sheet,
-                dtoClass,
+                rowClass,
                 columnMappings,
                 dataStartRowNum,
                 footerMarker,
@@ -122,11 +122,11 @@ public class ExcelParserService {
   }
 
   private <T> List<ColumnMapping> resolveColumnMappings(
-      Class<T> dtoClass, Sheet sheet, ExcelSheetSpec sheetSpec) {
+      Class<T> rowClass, Sheet sheet, ExcelSheetSpec sheetSpec) {
     List<ColumnMapping> mappings = new ArrayList<>();
     List<ColumnResolutionException> errors = new ArrayList<>();
 
-    for (Field field : getAllFields(dtoClass)) {
+    for (Field field : getAllFields(rowClass)) {
       ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
       if (annotation == null) {
         continue;
@@ -296,7 +296,7 @@ public class ExcelParserService {
 
   private <T> List<T> parseDataRows(
       Sheet sheet,
-      Class<T> dtoClass,
+      Class<T> rowClass,
       List<ColumnMapping> columnMappings,
       int dataStartRowNum,
       String footerMarker,
@@ -329,7 +329,7 @@ public class ExcelParserService {
 
       T dto;
       try {
-        dto = dtoClass.getDeclaredConstructor().newInstance();
+        dto = rowClass.getDeclaredConstructor().newInstance();
       } catch (Exception e) {
         throw new RuntimeException("Cannot instantiate DTO", e);
       }

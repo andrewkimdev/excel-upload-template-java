@@ -19,7 +19,7 @@ import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarEquipRepository;
 import com.foo.excel.imports.samples.aappcar.persistence.repository.AAppcarItemRepository;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.imports.ImportTypes;
+import com.foo.excel.imports.ImportTypeNames;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -53,8 +53,8 @@ import org.springframework.test.web.servlet.MvcResult;
 class ExcelImportIntegrationTest {
 
   private static final String API_UPLOAD_TARIFF =
-      "/api/excel/upload/" + ImportTypes.AAPPCAR;
-  private static final String PAGE_UPLOAD_TARIFF = "/upload/" + ImportTypes.AAPPCAR;
+      "/api/excel/upload/" + ImportTypeNames.AAPPCAR;
+  private static final String PAGE_UPLOAD_TARIFF = "/upload/" + ImportTypeNames.AAPPCAR;
 
   @Autowired private MockMvc mockMvc;
 
@@ -134,11 +134,11 @@ class ExcelImportIntegrationTest {
         .andExpect(jsonPath("$.rowsProcessed").value(0))
         .andExpect(jsonPath("$.message").value(containsString("승인된 장비")))
         .andExpect(jsonPath("$.downloadUrl").doesNotExist())
-        .andExpect(jsonPath("$.uploadMetadataConflict.type").value("METADATA_DUPLICATE_APPROVED_EQUIP"))
-        .andExpect(jsonPath("$.uploadMetadataConflict.fields[0].fieldName").value("companyId"))
-        .andExpect(jsonPath("$.uploadMetadataConflict.fields[0].value").value("COMPANY01"))
-        .andExpect(jsonPath("$.uploadMetadataConflict.fields[5].fieldName").value("equipCode"))
-        .andExpect(jsonPath("$.uploadMetadataConflict.fields[5].value").value("EQ-01"));
+        .andExpect(jsonPath("$.metadataConflict.type").value("METADATA_DUPLICATE_APPROVED_EQUIP"))
+        .andExpect(jsonPath("$.metadataConflict.fields[0].fieldName").value("companyId"))
+        .andExpect(jsonPath("$.metadataConflict.fields[0].value").value("COMPANY01"))
+        .andExpect(jsonPath("$.metadataConflict.fields[5].fieldName").value("equipCode"))
+        .andExpect(jsonPath("$.metadataConflict.fields[5].value").value("EQ-01"));
 
     assertThat(itemRepository.count()).isEqualTo(2);
     Optional<AAppcarEquip> savedEquip = equipRepository.findById(requiredMetadataEquipId());
@@ -400,7 +400,7 @@ class ExcelImportIntegrationTest {
   @Test
   void removedLegacyDownloadRoute_returns404() throws Exception {
     mockMvc
-        .perform(get("/api/excel/template/" + ImportTypes.AAPPCAR))
+        .perform(get("/api/excel/template/" + ImportTypeNames.AAPPCAR))
         .andExpect(status().isNotFound());
   }
 

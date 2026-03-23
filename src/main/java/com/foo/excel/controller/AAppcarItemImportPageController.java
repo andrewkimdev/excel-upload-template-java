@@ -2,9 +2,9 @@ package com.foo.excel.controller;
 
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import com.foo.excel.service.pipeline.ExcelImportRequestService;
-import com.foo.excel.imports.ImportTypes;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
-import com.foo.excel.imports.samples.aappcar.mapper.AAppcarItemMetadataFormMapper;
+import com.foo.excel.imports.ImportTypeNames;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
+import com.foo.excel.imports.samples.aappcar.mapper.AAppcarItemImportMetadataFormMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -24,14 +24,14 @@ public class AAppcarItemImportPageController {
   private static final String DEFAULT_CUSTOM_ID = "CUSTOM01";
 
   private final ExcelImportRequestService importRequestService;
-  private final AAppcarItemMetadataFormMapper metadataFormMapper;
+  private final AAppcarItemImportMetadataFormMapper metadataFormMapper;
 
-  @GetMapping("/upload/" + ImportTypes.AAPPCAR)
+  @GetMapping("/upload/" + ImportTypeNames.AAPPCAR)
   public String importForm() {
     return "upload-aappcar";
   }
 
-  @PostMapping("/upload/" + ImportTypes.AAPPCAR)
+  @PostMapping("/upload/" + ImportTypeNames.AAPPCAR)
   public String importExcel(
       @RequestParam("comeYear") String comeYear,
       @RequestParam("comeOrder") String comeOrder,
@@ -47,7 +47,7 @@ public class AAppcarItemImportPageController {
       @RequestParam("file") MultipartFile file,
       Model model) {
     try {
-      AAppcarItemMetadata metadata =
+      AAppcarItemImportMetadata metadata =
           metadataFormMapper.toMetadata(
               comeYear,
               comeOrder,
@@ -62,7 +62,7 @@ public class AAppcarItemImportPageController {
               approvalDate);
       metadata.setCompanyId(DEFAULT_COMPANY_ID);
       metadata.setCustomId(DEFAULT_CUSTOM_ID);
-      ImportResult result = importRequestService.upload(file, ImportTypes.AAPPCAR, metadata);
+      ImportResult result = importRequestService.upload(file, ImportTypeNames.AAPPCAR, metadata);
       model.addAttribute("result", result);
     } catch (IllegalArgumentException e) {
       log.warn("업로드 요청 오류: {}", e.getMessage());

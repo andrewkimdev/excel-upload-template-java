@@ -6,34 +6,34 @@ public final class ExcelSheetSpecResolver {
 
   private ExcelSheetSpecResolver() {}
 
-  public static ExcelSheetSpec resolve(Class<?> dtoClass) {
-    ExcelSheet annotation = dtoClass.getAnnotation(ExcelSheet.class);
+  public static ExcelSheetSpec resolve(Class<?> rowClass) {
+    ExcelSheet annotation = rowClass.getAnnotation(ExcelSheet.class);
     if (annotation == null) {
       throw new IllegalStateException(
-          "DTO '%s' must declare @ExcelSheet metadata".formatted(dtoClass.getName()));
+          "DTO '%s' must declare @ExcelSheet metadata".formatted(rowClass.getName()));
     }
 
     if (annotation.headerRow() < 1) {
       throw new IllegalStateException(
-          "Invalid headerRow for DTO '%s': %d".formatted(dtoClass.getName(), annotation.headerRow()));
+          "Invalid headerRow for DTO '%s': %d".formatted(rowClass.getName(), annotation.headerRow()));
     }
     if (annotation.dataStartRow() < 1) {
       throw new IllegalStateException(
           "Invalid dataStartRow for DTO '%s': %d"
-              .formatted(dtoClass.getName(), annotation.dataStartRow()));
+              .formatted(rowClass.getName(), annotation.dataStartRow()));
     }
     if (annotation.sheetIndex() < 0) {
       throw new IllegalStateException(
-          "Invalid sheetIndex for DTO '%s': %d".formatted(dtoClass.getName(), annotation.sheetIndex()));
+          "Invalid sheetIndex for DTO '%s': %d".formatted(rowClass.getName(), annotation.sheetIndex()));
     }
     if (annotation.footerMarker() == null) {
       throw new IllegalStateException(
-          "Invalid footerMarker for DTO '%s': null".formatted(dtoClass.getName()));
+          "Invalid footerMarker for DTO '%s': null".formatted(rowClass.getName()));
     }
     if (annotation.errorColumnName() == null || annotation.errorColumnName().isBlank()) {
       throw new IllegalStateException(
           "Invalid errorColumnName for DTO '%s': %s"
-              .formatted(dtoClass.getName(), annotation.errorColumnName()));
+              .formatted(rowClass.getName(), annotation.errorColumnName()));
     }
 
     return new ExcelSheetSpec(

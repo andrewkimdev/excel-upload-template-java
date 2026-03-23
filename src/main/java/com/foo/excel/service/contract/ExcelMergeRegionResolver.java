@@ -14,8 +14,8 @@ public final class ExcelMergeRegionResolver {
 
   private ExcelMergeRegionResolver() {}
 
-  public static List<ExcelMergeRegion> resolve(Class<?> dtoClass) {
-    Map<String, ColumnMetadata> columnsByField = collectColumns(dtoClass);
+  public static List<ExcelMergeRegion> resolve(Class<?> rowClass) {
+    Map<String, ColumnMetadata> columnsByField = collectColumns(rowClass);
     List<ExcelMergeRegion> regions = new ArrayList<>();
 
     for (ColumnMetadata column : columnsByField.values()) {
@@ -24,7 +24,7 @@ public final class ExcelMergeRegionResolver {
             regions,
             new ExcelMergeRegion(
                 ExcelMergeScope.DATA, 0, 1, column.startColumnIndex(), column.annotation().columnSpan(), true),
-            dtoClass);
+            rowClass);
       }
     }
 
@@ -34,15 +34,15 @@ public final class ExcelMergeRegionResolver {
       if (headerGroup == null) {
         continue;
       }
-      resolveHeaderGroup(dtoClass, anchor, headerGroup, columnsByField, groupMembership, regions);
+      resolveHeaderGroup(rowClass, anchor, headerGroup, columnsByField, groupMembership, regions);
     }
 
     return regions;
   }
 
-  private static Map<String, ColumnMetadata> collectColumns(Class<?> dtoClass) {
+  private static Map<String, ColumnMetadata> collectColumns(Class<?> rowClass) {
     Map<String, ColumnMetadata> columnsByField = new LinkedHashMap<>();
-    for (Field field : dtoClass.getDeclaredFields()) {
+    for (Field field : rowClass.getDeclaredFields()) {
       ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
       if (annotation == null) {
         continue;
@@ -63,7 +63,7 @@ public final class ExcelMergeRegionResolver {
   }
 
   private static void resolveHeaderGroup(
-      Class<?> dtoClass,
+      Class<?> rowClass,
       ColumnMetadata anchor,
       ExcelHeaderGroup headerGroup,
       Map<String, ColumnMetadata> columnsByField,
@@ -116,7 +116,7 @@ public final class ExcelMergeRegionResolver {
         regions,
         new ExcelMergeRegion(
             ExcelMergeScope.HEADER, 0, 1, anchor.startColumnIndex(), totalColumnSpan, false),
-        dtoClass);
+        rowClass);
 
     int repeatedHeaderRows = headerRowCount - 1;
     for (ColumnMetadata column : groupedColumns) {
@@ -133,7 +133,7 @@ public final class ExcelMergeRegionResolver {
                 column.startColumnIndex(),
                 column.annotation().columnSpan(),
                 false),
-            dtoClass);
+            rowClass);
       }
     }
   }
@@ -159,7 +159,7 @@ public final class ExcelMergeRegionResolver {
   }
 
   private static void addRegion(
-      List<ExcelMergeRegion> regions, ExcelMergeRegion candidate, Class<?> dtoClass) {
+      List<ExcelMergeRegion> regions, ExcelMergeRegion candidate, Class<?> rowClass) {
     if (candidate.columnSpan() <= 1 && candidate.rowSpan() <= 1) {
       return;
     }
@@ -168,13 +168,13 @@ public final class ExcelMergeRegionResolver {
       if (sameRegion(existing, candidate)) {
         throw new IllegalStateException(
             "Duplicate inferred merge region for %s: %s"
-                .formatted(dtoClass.getSimpleName(), describeRegion(candidate)));
+                .formatted(rowClass.getSimpleName(), describeRegion(candidate)));
       }
       if (overlaps(existing, candidate)) {
         throw new IllegalStateException(
             "Overlapping inferred merge regions for %s: %s vs %s"
                 .formatted(
-                    dtoClass.getSimpleName(), describeRegion(existing), describeRegion(candidate)));
+                    rowClass.getSimpleName(), describeRegion(existing), describeRegion(candidate)));
       }
     }
 

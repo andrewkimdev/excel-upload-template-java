@@ -1,10 +1,10 @@
-# Phase 2 TDD Plan: Remove `ExcelImportConfig` and Move Remaining Template Metadata to DTOs
+# Phase 2 TDD Plan: Remove `ExcelImportConfig` and Move Remaining Template ImportMetadata to DTOs
 
 This phase starts only after Phase 1 is complete and green. Its job is to remove the separate config abstraction and consolidate the remaining sheet-level metadata onto DTO-owned metadata, reusing the merge metadata model introduced in Phase 1.
 
 ## Summary
 
-The goal is to eliminate `ExcelImportConfig` and per-template config classes such as `AAppcarItemImportConfig`. After this phase, a template’s Excel contract should be defined by DTO metadata plus existing field-level annotations in `AAppcarItemDto`.
+The goal is to eliminate `ExcelImportConfig` and per-template config classes such as `AAppcarItemImportConfig`. After this phase, a template’s Excel contract should be defined by DTO metadata plus existing field-level annotations in `AAppcarItemRow`.
 
 ## Implementation Changes
 
@@ -18,7 +18,7 @@ The goal is to eliminate `ExcelImportConfig` and per-template config classes suc
    - Reuse the Phase 1 DTO-centered merge metadata model rather than replacing it.
 
 2. Annotate AAppcar DTO with the full template contract.
-   - `AAppcarItemDto` becomes the home for:
+   - `AAppcarItemRow` becomes the home for:
      - sheet-level metadata
      - merge metadata
      - existing field-level `@ExcelColumn` mapping and validation
@@ -80,4 +80,4 @@ The goal is to eliminate `ExcelImportConfig` and per-template config classes suc
 
 - Phase 2 depends on Phase 1 and reuses its merge metadata model.
 - DTO-level metadata is the single source of truth for template structure after this phase.
-- `ExcelImportDefinition` still retains `dtoClass`, `metaDataClass`, persistence handler, upload precheck, and DB uniqueness checker; only config is removed.
+- `ExcelImportDefinition` still retains `rowClass`, `metaDataClass`, persistence handler, upload precheck, and DB uniqueness checker; only config is removed.

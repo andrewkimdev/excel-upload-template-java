@@ -52,7 +52,7 @@ Open http://localhost:8080 to access the upload form.
   - `companyId`: currently forced to `COMPANY01` on server-side controller
   - `customId`: currently forced to `CUSTOM01` on server-side controller
   - `filePath`: assigned by the upload pipeline to the stored temp path + filename before persistence
-- Shared `Metadata` contract:
+- Shared `ImportMetadata` contract:
   - `assignFilePath(String filePath)` accepts the server-assigned stored upload path
 - Import-level temp storage contract:
   - definitions may override `ExcelImportDefinition.resolveTempSubdirectory(metadata)` when uploads should be partitioned under a temp subdirectory
@@ -116,7 +116,7 @@ Open http://localhost:8080 to access the upload form.
   "errorRows": 0,
   "errorCount": 0,
   "message": "입력한 메타데이터 조합과 일치하는 승인된 장비가 이미 존재합니다.",
-  "uploadMetadataConflict": {
+  "metadataConflict": {
     "type": "METADATA_DUPLICATE_APPROVED_EQUIP",
     "description": "아래 메타데이터 값 조합에 대해 이미 승인된 장비가 존재합니다. 엑셀 파일이 아니라 메타데이터 값을 수정하세요.",
     "fields": [
@@ -142,7 +142,7 @@ src/main/java/com/foo/excel/
 ├── controller/          # Thin split controllers (REST + Thymeleaf) + shared download endpoint
 ├── service/
 │   ├── contract/
-│   │   ├── Metadata.java                        # Shared metadata contract (server-assigned file path)
+│   │   ├── ImportMetadata.java                  # Shared metadata contract (server-assigned file path)
 │   │   ├── ExcelImportDefinition.java          # Type-safe bundle: DTO + metadata + cached sheet spec + handlers
 │   │   ├── PersistenceHandler.java                # Strategy interface for saving parsed rows with typed metadata
 │   │   └── DatabaseUniquenessChecker.java         # Strategy interface for DB-level duplicate checks
@@ -165,10 +165,10 @@ src/main/java/com/foo/excel/
 │   │   ├── AAppcarItemImportConfig.java       # Wires the ExcelImportDefinition bean
 │   │   └── AAppcarItemImportDefinition.java   # AAppcar-specific temp subdirectory resolution
 │   ├── dto/
-│   │   ├── AAppcarItemDto.java                # DTO with @ExcelSheet + @ExcelColumn + JSR-380 annotations
-│   │   └── AAppcarItemMetadata.java         # Tariff import-specific metadata DTO
+│   │   ├── AAppcarItemRow.java                # DTO with @ExcelSheet + @ExcelColumn + JSR-380 annotations
+│   │   └── AAppcarItemImportMetadata.java         # Tariff import-specific metadata DTO
 │   ├── mapper/
-│   │   └── AAppcarItemMetadataFormMapper.java # Thymeleaf form -> AAppcarItemMetadata mapper
+│   │   └── AAppcarItemImportMetadataFormMapper.java # Thymeleaf form -> AAppcarItemImportMetadata mapper
 │   ├── persistence/
 │   │   ├── entity/
 │   │   │   ├── AAppcarItemId.java             # Item composite PK (@Embeddable)
@@ -179,8 +179,8 @@ src/main/java/com/foo/excel/
 │   │       ├── AAppcarItemRepository.java     # Spring Data JPA repository
 │   │       └── AAppcarEquipRepository.java # Equip repository
 │   └── service/
-│       ├── AAppcarItemService.java            # Implements PersistenceHandler
-│       └── AAppcarItemDbUniquenessChecker.java# Optional DatabaseUniquenessChecker implementation
+│       ├── AAppcarItemPersistenceService.java            # Implements PersistenceHandler
+│       └── AAppcarItemDatabaseUniquenessChecker.java# Optional DatabaseUniquenessChecker implementation
 ├── util/
 │   ├── ExcelColumnUtil.java                       # Column letter/index conversion
 │   ├── SecureExcelUtils.java                      # Security utilities (XXE, zip bomb, path traversal protection)
@@ -241,13 +241,13 @@ See `application.properties` for a detailed security checklist and configuration
    - For shared grouped headers such as `소요량`, place `@ExcelHeaderGroup` on the leftmost field and list the grouped fields in left-to-right order
    - Grouped-header metadata is validated strictly; duplicate membership, non-adjacent fields, reversed order, and inferred merge overlaps fail fast during template metadata resolution
 2. **Sheet Contract** -- Add `@ExcelSheet` on the DTO to define sheet index, header row, data start row, footer marker, and error column name
-3. **Metadata** -- 템플릿별 DTO를 만들고 `Metadata`를 구현한다 (strict JSON + Bean Validation 대상)
+3. **ImportMetadata** -- 템플릿별 DTO를 만들고 `ImportMetadata`를 구현한다 (strict JSON + Bean Validation 대상)
    - `assignFilePath(String filePath)`를 구현해 서버가 저장한 업로드 경로를 받을 수 있어야 한다
 4. **Persistence** -- Implement `PersistenceHandler<T, M>` with `saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metadata)` to save parsed rows merged with common fields
-5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, M>` with `check(List<T> rows, Class<T> dtoClass, List<Integer> sourceRowNumbers, M metadata)` if duplicates should be checked against existing data
+5. **DB uniqueness** _(optional)_ -- Implement `DatabaseUniquenessChecker<T, M>` with `check(List<T> rows, Class<T> rowClass, List<Integer> sourceRowNumbers, M metadata)` if duplicates should be checked against existing data
 6. **Wire** -- Create a `@Configuration` class that produces an `ExcelImportDefinition<T, M>` `@Bean` with `metadataClass` (and checker bean if enabled); override `resolveTempSubdirectory(metadata)` only when the import needs temp-path partitioning, returning `null` when no subdirectory should be used
 
-See the `AAppcarItem*` classes for a complete example (`AAppcarItemDto`, `AAppcarItemService`, `AAppcarItemDbUniquenessChecker`, `AAppcarItemImportConfig`).
+See the `AAppcarItem*` classes for a complete example (`AAppcarItemRow`, `AAppcarItemPersistenceService`, `AAppcarItemDatabaseUniquenessChecker`, `AAppcarItemImportConfig`).
 
 ### Merged Header Example
 
@@ -310,6 +310,6 @@ Tests cover all layers:
 | `WithinFileUniqueConstraintValidatorTest` | Component | Single-field and composite uniqueness, null handling, invalid `@ExcelCompositeUnique` declaration fail-fast behavior |
 | `ExcelErrorReportServiceTest` | Component | `_ERRORS` column, red styling, format preservation, multi-sheet copy, disclaimer footer, `.meta` file, valid output |
 | `ExcelImportIntegrationTest` | Integration | Full upload/download flow via MockMvc, route removal 404 checks, Thymeleaf split routes, strict `metadata`, `.xlsx` success path, `.xls` rejection, exact `413` oversize handling |
-| `TariffImportPlanContractTest` | Contract/Plan | Import domain contract checks for `Metadata`/`ExcelImportDefinition<T, M>` signature and tariff persistence mapping |
+| `TariffImportPlanContractTest` | Contract/Plan | Import domain contract checks for `ImportMetadata`/`ExcelImportDefinition<T, M>` signature and tariff persistence mapping |
 | `AAppcarItemEmbeddedIdMappingTest` | Template Unit | Item/Equip embedded ID 매핑 및 엔티티 구성 검증 |
 | `AAppcarItemEmbeddedIdPersistenceTest` | Template Integration | Embedded ID 기반 upsert/요약 집계 persistence 동작 검증 |

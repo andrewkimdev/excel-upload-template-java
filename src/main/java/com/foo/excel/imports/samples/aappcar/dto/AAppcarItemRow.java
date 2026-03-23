@@ -25,7 +25,7 @@ import lombok.Data;
 @ExcelCompositeUnique(
     fields = {"goodsDes", "spec", "hsno"},
     message = "물품명 + 규격 + HSK 조합이 중복됩니다")
-public class AAppcarItemDto {
+public class AAppcarItemRow {
 
   // B열: 순번
   @ExcelColumn(label = "순번", column = "B")

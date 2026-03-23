@@ -15,7 +15,7 @@ The goal is to make `ExcelErrorReportService` generate error report workbooks th
      - row span for header merges
      - column span for both header and data merges
      - whether a data merge repeats on every data row
-   - The metadata should be attached to or derived from `AAppcarItemDto`, not invented only in config.
+   - The metadata should be attached to or derived from `AAppcarItemRow`, not invented only in config.
 
 2. Keep existing `ExcelImportConfig` for non-merge sheet settings in this phase.
    - `AAppcarItemImportConfig` continues to provide `headerRow`, `dataStartRow`, and `footerMarker`.

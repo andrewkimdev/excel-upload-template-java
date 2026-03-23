@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.foo.excel.annotation.ExcelColumn;
 import com.foo.excel.annotation.ExcelCompositeUnique;
 import com.foo.excel.annotation.ExcelUnique;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.Data;
@@ -96,12 +96,12 @@ class WithinFileUniqueConstraintValidatorTest {
 
   @Test
   void compositeUnique_duplicateCombination_detected() {
-    AAppcarItemDto dto1 = createDto("Item1", "Spec1", "8481.80-2000");
-    AAppcarItemDto dto2 = createDto("Item1", "Spec1", "8481.80-2000"); // 같은 조합
+    AAppcarItemRow dto1 = createDto("Item1", "Spec1", "8481.80-2000");
+    AAppcarItemRow dto2 = createDto("Item1", "Spec1", "8481.80-2000"); // 같은 조합
 
     List<RowError> errors =
         validator.checkWithinFileUniqueness(
-            List.of(dto1, dto2), AAppcarItemDto.class, List.of(7, 8));
+            List.of(dto1, dto2), AAppcarItemRow.class, List.of(7, 8));
 
     assertThat(errors).isNotEmpty();
     assertThat(errors.get(0).getCellErrors().get(0).message()).contains("물품명 + 규격 + HSK 조합이 중복됩니다");
@@ -109,24 +109,24 @@ class WithinFileUniqueConstraintValidatorTest {
 
   @Test
   void compositeUnique_differentCombination_noErrors() {
-    AAppcarItemDto dto1 = createDto("Item1", "Spec1", "8481.80-2000");
-    AAppcarItemDto dto2 = createDto("Item2", "Spec1", "8481.80-2000"); // goodsDes가 다름
+    AAppcarItemRow dto1 = createDto("Item1", "Spec1", "8481.80-2000");
+    AAppcarItemRow dto2 = createDto("Item2", "Spec1", "8481.80-2000"); // goodsDes가 다름
 
     List<RowError> errors =
         validator.checkWithinFileUniqueness(
-            List.of(dto1, dto2), AAppcarItemDto.class, List.of(7, 8));
+            List.of(dto1, dto2), AAppcarItemRow.class, List.of(7, 8));
 
     assertThat(errors).isEmpty();
   }
 
   @Test
   void compositeUnique_nullFieldInComposite_noFalsePositive() {
-    AAppcarItemDto dto1 = createDto("Item1", null, "8481.80-2000");
-    AAppcarItemDto dto2 = createDto("Item1", null, "8481.80-2000"); // null 포함 동일
+    AAppcarItemRow dto1 = createDto("Item1", null, "8481.80-2000");
+    AAppcarItemRow dto2 = createDto("Item1", null, "8481.80-2000"); // null 포함 동일
 
     List<RowError> errors =
         validator.checkWithinFileUniqueness(
-            List.of(dto1, dto2), AAppcarItemDto.class, List.of(7, 8));
+            List.of(dto1, dto2), AAppcarItemRow.class, List.of(7, 8));
 
     // spec이 null이면 복합 키는 [Item1, null, 8481.80-2000]
     // 이 키가 일치하므로 중복으로 올바르게 감지된다
@@ -179,8 +179,8 @@ class WithinFileUniqueConstraintValidatorTest {
 
   // ===== 헬퍼 =====
 
-  private AAppcarItemDto createDto(String goodsDes, String spec, String hsno) {
-    AAppcarItemDto dto = new AAppcarItemDto();
+  private AAppcarItemRow createDto(String goodsDes, String spec, String hsno) {
+    AAppcarItemRow dto = new AAppcarItemRow();
     dto.setGoodsDes(goodsDes);
     dto.setSpec(spec);
     dto.setHsno(hsno);

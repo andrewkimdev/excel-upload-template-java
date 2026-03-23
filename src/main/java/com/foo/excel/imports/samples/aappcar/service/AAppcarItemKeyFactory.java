@@ -1,6 +1,6 @@
 package com.foo.excel.imports.samples.aappcar.service;
 
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarEquipId;
 import com.foo.excel.imports.samples.aappcar.persistence.entity.AAppcarItemId;
 import org.springframework.stereotype.Component;
@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AAppcarItemKeyFactory {
 
-  public AAppcarItemId buildItemId(AAppcarItemMetadata metadata, int rowNumber) {
+  public AAppcarItemId buildItemId(AAppcarItemImportMetadata metadata, int rowNumber) {
     return new AAppcarItemId(
         metadata.getCompanyId(),
         metadata.getCustomId(),
@@ -19,7 +19,7 @@ public class AAppcarItemKeyFactory {
         rowNumber);
   }
 
-  public AAppcarEquipId buildEquipId(AAppcarItemMetadata metadata) {
+  public AAppcarEquipId buildEquipId(AAppcarItemImportMetadata metadata) {
     return new AAppcarEquipId(
         metadata.getCompanyId(),
         metadata.getCustomId(),

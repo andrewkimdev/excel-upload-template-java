@@ -70,7 +70,7 @@ Evidence:
 Counterexamples checked and intentionally left unchanged:
 
 - `ExcelErrorReportService` already uses `HashMap<Integer, RowError>` and `HashSet<Integer>` for `O(1)` lookup
-- `AAppcarItemDbUniquenessChecker` uses `Set.contains(...)`, not repeated row grouping
+- `AAppcarItemDatabaseUniquenessChecker` uses `Set.contains(...)`, not repeated row grouping
 - `ExcelParserService` emits parse errors per row during a single row pass and does not repeatedly regroup rows
 
 Because the issue was concentrated in one concept, the chosen fix was:

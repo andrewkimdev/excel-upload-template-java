@@ -4,28 +4,28 @@ import com.foo.excel.service.contract.DatabaseUniquenessChecker;
 import com.foo.excel.service.contract.ExcelImportDefinition;
 import com.foo.excel.service.contract.ImportPrecheck;
 import com.foo.excel.service.contract.PersistenceHandler;
-import com.foo.excel.imports.ImportTypes;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemDto;
-import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemMetadata;
+import com.foo.excel.imports.ImportTypeNames;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemRow;
+import com.foo.excel.imports.samples.aappcar.dto.AAppcarItemImportMetadata;
 
 public class AAppcarItemImportDefinition
-    extends ExcelImportDefinition<AAppcarItemDto, AAppcarItemMetadata> {
+    extends ExcelImportDefinition<AAppcarItemRow, AAppcarItemImportMetadata> {
 
   public AAppcarItemImportDefinition(
-      PersistenceHandler<AAppcarItemDto, AAppcarItemMetadata> persistenceHandler,
-      ImportPrecheck<AAppcarItemMetadata> importPrecheck,
-      DatabaseUniquenessChecker<AAppcarItemDto, AAppcarItemMetadata> dbUniquenessChecker) {
+      PersistenceHandler<AAppcarItemRow, AAppcarItemImportMetadata> persistenceHandler,
+      ImportPrecheck<AAppcarItemImportMetadata> importPrecheck,
+      DatabaseUniquenessChecker<AAppcarItemRow, AAppcarItemImportMetadata> dbUniquenessChecker) {
     super(
-        ImportTypes.AAPPCAR,
-        AAppcarItemDto.class,
-        AAppcarItemMetadata.class,
+        ImportTypeNames.AAPPCAR,
+        AAppcarItemRow.class,
+        AAppcarItemImportMetadata.class,
         persistenceHandler,
         importPrecheck,
         dbUniquenessChecker);
   }
 
   @Override
-  public String resolveTempSubdirectory(AAppcarItemMetadata metadata) {
+  public String resolveTempSubdirectory(AAppcarItemImportMetadata metadata) {
     return metadata.getCustomId();
   }
 }

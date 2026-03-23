@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.type.LogicalType;
 import com.foo.excel.config.ExcelImportProperties;
-import com.foo.excel.service.contract.Metadata;
+import com.foo.excel.service.contract.ImportMetadata;
 import com.foo.excel.service.pipeline.ExcelImportOrchestrator.ImportResult;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -32,12 +32,12 @@ public class ExcelImportRequestService {
   public ImportResult upload(MultipartFile file, String importType, String metadataJson)
       throws IOException {
     checkFileSize(file);
-    Class<? extends Metadata> metadataClass = orchestrator.getMetadataClass(importType);
-    Metadata metadata = parseAndValidateMetadata(metadataJson, metadataClass);
+    Class<? extends ImportMetadata> metadataClass = orchestrator.getMetadataClass(importType);
+    ImportMetadata metadata = parseAndValidateMetadata(metadataJson, metadataClass);
     return orchestrator.processImport(file, importType, metadata);
   }
 
-  public ImportResult upload(MultipartFile file, String importType, Metadata metadata)
+  public ImportResult upload(MultipartFile file, String importType, ImportMetadata metadata)
       throws IOException {
     checkFileSize(file);
     validateMetadata(metadata);
@@ -58,8 +58,8 @@ public class ExcelImportRequestService {
 
     response.put("errorRows", result.errorRows());
     response.put("errorCount", result.errorCount());
-    if (result.uploadMetadataConflict() != null) {
-      response.put("uploadMetadataConflict", result.uploadMetadataConflict());
+    if (result.metadataConflict() != null) {
+      response.put("metadataConflict", result.metadataConflict());
     }
     if (result.downloadUrl() != null) {
       response.put("downloadUrl", result.downloadUrl());
@@ -74,8 +74,8 @@ public class ExcelImportRequestService {
     }
   }
 
-  private Metadata parseAndValidateMetadata(
-      String metadataJson, Class<? extends Metadata> metadataClass) {
+  private ImportMetadata parseAndValidateMetadata(
+      String metadataJson, Class<? extends ImportMetadata> metadataClass) {
     if (metadataJson == null || metadataJson.isBlank()) {
       throw new IllegalArgumentException("metadata 파트는 필수입니다.");
     }
@@ -91,7 +91,7 @@ public class ExcelImportRequestService {
           .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
           .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail);
 
-      Metadata metadata = strictMapper.readValue(metadataJson, metadataClass);
+      ImportMetadata metadata = strictMapper.readValue(metadataJson, metadataClass);
       validateMetadata(metadata);
       return metadata;
     } catch (JsonProcessingException e) {
@@ -99,7 +99,7 @@ public class ExcelImportRequestService {
     }
   }
 
-  private void validateMetadata(Metadata metadata) {
+  private void validateMetadata(ImportMetadata metadata) {
     var violations = validator.validate(metadata);
     if (!violations.isEmpty()) {
       ConstraintViolation<?> violation = violations.iterator().next();

@@ -35,7 +35,7 @@ Copy packages:
 - `com.foo.excel.validation`
 
 And copy:
-- `com.foo.excel.imports.ImportTypes`
+- `com.foo.excel.imports.ImportTypeNames`
 
 ### Step B: One working import (required)
 
