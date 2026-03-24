@@ -1,10 +1,11 @@
 package com.foo.excel.service.contract;
 
 import com.foo.excel.annotation.ExcelSheet;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExcelSheetSpecResolver {
-
-  private ExcelSheetSpecResolver() {}
 
   public static ExcelSheetSpec resolve(Class<?> rowClass) {
     ExcelSheet annotation = rowClass.getAnnotation(ExcelSheet.class);

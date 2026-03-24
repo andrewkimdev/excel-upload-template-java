@@ -2,6 +2,8 @@ package com.foo.excel.util;
 
 import java.util.HashMap;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DateUtil;
@@ -15,11 +17,8 @@ import org.apache.poi.ss.util.CellRangeAddress;
  * POI 워크북 인스턴스 간 워크북 내용(스타일, 셀 값, 시트 메타데이터)을 복사하는 무상태 유틸리티
  * 오류 리포트 생성에 사용된다.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class WorkbookCopyUtils {
-
-  private WorkbookCopyUtils() {
-    // 유틸리티 클래스
-  }
 
   /**
    * 원본 워크북 스타일 인덱스를 대상 워크북의 복제 스타일로 매핑하는 맵을 만든다.

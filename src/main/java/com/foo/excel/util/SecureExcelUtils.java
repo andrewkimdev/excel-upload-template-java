@@ -9,6 +9,8 @@ import java.util.Iterator;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.openxml4j.opc.PackageAccess;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -21,6 +23,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  *
  * <p>XXE(XML External Entity) 공격과 Zip Bomb 공격을 방어한다.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SecureExcelUtils {
 
   // 단일 레코드 최대 바이트 수(100MB)
@@ -34,10 +37,6 @@ public final class SecureExcelUtils {
 
   // XLSX 매직 바이트(ZIP 형식: PK)
   private static final byte[] XLSX_MAGIC = {0x50, 0x4B, 0x03, 0x04};
-
-  private SecureExcelUtils() {
-    // 유틸리티 클래스
-  }
 
   /** Apache POI 전역 보안 제한을 초기화한다. */
   public static void initializePoiSecurity() {

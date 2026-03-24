@@ -9,10 +9,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExcelMergeRegionResolver {
-
-  private ExcelMergeRegionResolver() {}
 
   public static List<ExcelMergeRegion> resolve(Class<?> rowClass) {
     Map<String, ColumnMetadata> columnsByField = collectColumns(rowClass);

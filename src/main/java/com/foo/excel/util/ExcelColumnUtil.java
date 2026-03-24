@@ -1,8 +1,10 @@
 package com.foo.excel.util;
 
-public final class ExcelColumnUtil {
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
-  private ExcelColumnUtil() {}
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class ExcelColumnUtil {
 
   /** Excel 컬럼 문자를 0-based 인덱스로 변환한다. A=0, B=1, ..., Z=25, AA=26, AB=27, ... */
   public static int letterToIndex(String column) {
