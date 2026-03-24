@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 @RequiredArgsConstructor
 public class ExcelFileController {
 
+  private static final MediaType EXCEL_XLSX_MEDIA_TYPE =
+      MediaType.parseMediaType(
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
   private static final Pattern UUID_PATTERN =
       Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
 
@@ -46,9 +50,7 @@ public class ExcelFileController {
     Resource resource = new FileSystemResource(errorFile);
 
     return ResponseEntity.ok()
-        .contentType(
-            MediaType.parseMediaType(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .contentType(EXCEL_XLSX_MEDIA_TYPE)
         .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
         .body(resource);
   }
