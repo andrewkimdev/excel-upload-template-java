@@ -219,7 +219,12 @@ public class ExcelErrorReportService {
         }
 
         // 8. 임시 디렉터리에 저장
-        Path errorFilePath = writeErrorWorkbook(sxssfWb, originalFilename);
+        Path errorFilePath;
+        try {
+          errorFilePath = writeErrorWorkbook(sxssfWb, originalFilename);
+        } finally {
+          disposeStreamingWorkbook(sxssfWb);
+        }
         log.info("Error report generated: {}", errorFilePath);
         return errorFilePath;
       }
@@ -295,7 +300,12 @@ public class ExcelErrorReportService {
             .setCellValue(SecureExcelUtils.sanitizeForExcelCell(rowError.getFormattedMessage()));
       }
 
-      Path errorFilePath = writeErrorWorkbook(sxssfWb, originalFilename);
+      Path errorFilePath;
+      try {
+        errorFilePath = writeErrorWorkbook(sxssfWb, originalFilename);
+      } finally {
+        disposeStreamingWorkbook(sxssfWb);
+      }
       log.info("Compact error report generated: {}", errorFilePath);
       return errorFilePath;
     }
@@ -317,6 +327,11 @@ public class ExcelErrorReportService {
     }
 
     return errorFilePath;
+  }
+
+  @SuppressWarnings("deprecation")
+  private void disposeStreamingWorkbook(SXSSFWorkbook workbook) {
+    workbook.dispose();
   }
 
   private void applyImportMerges(
