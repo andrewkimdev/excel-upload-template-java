@@ -206,6 +206,7 @@ Important properties from `application.properties`:
 
 Representative test coverage:
 
+- `AAppcarAutomatedE2eIntegrationTest`
 - `ExcelImportIntegrationTest`
 - `ExcelApiExceptionHandlerTest`
 - `ExcelUploadFileServiceTest`
