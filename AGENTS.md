@@ -10,7 +10,7 @@ When documents conflict, use this order:
 
 1. Runtime behavior in code under `src/main/java`
 2. `README.md`
-3. `CLAUDE.md` (advisory, not canonical)
+3. `src/HOW_TO_READ_CODE.md` (maintainer reading guide, not canonical)
 
 ## Verified Baseline
 
@@ -32,20 +32,20 @@ When documents conflict, use this order:
 - Keep user-facing messages and externally returned errors in Korean.
 - Internal technical logs may remain English where currently implemented.
 - Use Thymeleaf escaping (`th:text`) for user content.
-- Keep REST `metaData` contract strict:
+- Keep REST `metadata` contract strict:
   - reject unknown JSON fields (`FAIL_ON_UNKNOWN_PROPERTIES`)
   - disable scalar coercion for textual fields (`ALLOW_COERCION_OF_SCALARS` off + textual coercion fail)
 - Keep template docs aligned with current `aappcar` runtime contract:
-  - required metaData includes equip metadata (`equipMean`, `hsno`, `spec`, `taxRate`)
-  - optional metaData includes `filePath`, `approvalYn`, `approvalDate`
+  - required `metadata` includes equip metadata (`equipMean`, `hsno`, `spec`, `taxRate`)
+  - optional `metadata` includes `filePath`, `approvalYn`, `approvalDate`
   - `AAppcarEquip` in this repo no longer carries `createdAt`/`createdBy`
-- Add new Excel templates under `com.foo.excel.templates...` using the existing pattern:
+- Add new Excel templates under `com.foo.excel.imports...` using the existing pattern:
   - DTO (`@ExcelColumn` + validation)
   - `ExcelImportConfig`
-  - template-specific `MetaData` DTO + bean validation
-  - `PersistenceHandler<T, C extends MetaData>` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, C metaData)`)
+  - template-specific `ImportMetadata` DTO + bean validation
+  - `PersistenceHandler<T, M extends ImportMetadata>` (`saveAll(List<T> rows, List<Integer> sourceRowNumbers, M metadata)`)
   - optional `DatabaseUniquenessChecker`
-  - `TemplateDefinition<T, C>` bean wiring (`metaDataClass` 포함)
+  - `ExcelImportDefinition<T, M>` bean wiring (`metadataClass` 포함)
   - include summary entity/repository where the template uses upload-level aggregate persistence
 
 ## Guardrails for Changes
@@ -55,6 +55,5 @@ When documents conflict, use this order:
 - Backward compatibility is not a goal here; prefer simplifying refactors even when they introduce breaking changes.
 - Proactively remove unused or dead code when identified.
 - Do not enforce style mandates not present in `README.md`.
-- If a broad policy from `CLAUDE.md` is unsupported by code/docs, treat it as optional guidance.
 - Keep documentation inventories (architecture/tests) synchronized with implemented classes/tests (e.g., summary repositories and contract tests).
 - After edits, run relevant tests before finalizing.

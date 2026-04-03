@@ -19,10 +19,10 @@ These files show the full import flow end-to-end.
 ## 2) Keep these current behavior facts in mind
 
 - Upload accepts `.xlsx` only. `.xls` is rejected in `ExcelUploadFileService`.
-- `metaData` is required for REST upload (`/api/excel/upload/aappcar`).
-- `metaData` is parsed strictly (`FAIL_ON_UNKNOWN_PROPERTIES`, coercion disabled).
+- `metadata` is required for REST upload (`/api/excel/upload/aappcar`).
+- `metadata` is parsed strictly (`FAIL_ON_UNKNOWN_PROPERTIES`, coercion disabled).
 - Server-managed fields are fixed by import metadata DTOs (for tariff: `AAppcarItemImportMetadata`): `companyId`, `customId`, stored `filePath`, and approval defaults.
-- `Metadata`는 `assignFilePath(String)` 계약을 제공하며, orchestrator가 저장된 업로드 경로를 주입합니다.
+- `ImportMetadata`는 `assignFilePath(String)` 계약을 제공하며, orchestrator가 저장된 업로드 경로를 주입합니다.
 - Security path uses filename sanitization, magic-byte validation, secure workbook open, row pre-count, parser row-limit early-exit.
 - Error reports preserve formatting, add `_ERRORS`, sanitize formula-like values, and store original filename in a `.meta` file.
 
@@ -48,15 +48,15 @@ These files show the full import flow end-to-end.
 ## 5) Read the sample import implementation
 
 - `src/main/java/com/foo/excel/imports/samples/aappcar/dto/AAppcarItemImportRow.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/config/AAppcarItemImportConfig.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/service/AAppcarItemPersistenceService.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/entity/AAppcarItem.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/entity/AAppcarEquip.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/repository/AAppcarItemRepository.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/persistence/repository/AAppcarEquipRepository.java`
-- `src/main/java/com/foo/excel/templates/samples/aappcar/service/AAppcarItemDatabaseUniquenessChecker.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/config/AAppcarItemImportConfig.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/service/AAppcarItemPersistenceService.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/persistence/entity/AAppcarItem.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/persistence/entity/AAppcarEquip.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/persistence/repository/AAppcarItemRepository.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/persistence/repository/AAppcarEquipRepository.java`
+- `src/main/java/com/foo/excel/imports/samples/aappcar/service/AAppcarItemImportPrecheck.java`
 
-Note: `AAppcarItemImportConfig` is the import wiring entry point for the sample module.
+Note: `AAppcarItemImportConfig` is the sample import wiring entry point.
 
 ## 6) Read the web layer
 
