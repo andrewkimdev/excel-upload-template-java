@@ -56,6 +56,14 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+tasks.register('generateAappcarManualTestFiles', JavaExec) {
+    group = 'verification'
+    description = 'Generates checked-in AAPPCAR manual E2E input files under docs/.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.foo.excel.manual.AAppcarManualE2eTestFileGenerator'
+    dependsOn tasks.named('testClasses')
+}
+
 checkstyle {
     toolVersion = '10.17.0'
     configFile = file('config/checkstyle/checkstyle.xml')

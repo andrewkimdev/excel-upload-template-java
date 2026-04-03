@@ -1,0 +1,2 @@
+This is not a real xlsx workbook.
+The file exists to verify magic-byte validation for manual E2E testing.

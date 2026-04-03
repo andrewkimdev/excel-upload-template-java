@@ -83,6 +83,18 @@
 04_summary/
 ```
 
+현재 저장소에는 수동 테스트용 입력 파일 기준본을 아래 위치에 체크인해 둔다.
+
+```text
+docs/aappcar-manual-e2e/01_test-files/
+```
+
+재생성이 필요하면 아래 명령을 사용한다.
+
+```bash
+./gradlew generateAappcarManualTestFiles
+```
+
 ### 4.1 파일 구분
 
 - 테스트용 입력 파일: 업로드에 사용할 수동 제작 Excel 파일
@@ -121,6 +133,18 @@
 
 ## 6. 입력 파일 설계 기준
 
+### 6.0 기준 원본 및 위치
+
+- 기준 원본은 체크인된 `TC-01_valid-upload_input.xlsx`이다.
+- 다른 `.xlsx` 시나리오 파일은 이 기준본을 복제한 뒤 필요한 셀만 수정한다.
+- 모든 입력 파일은 첫 번째 시트에만 업로드 대상 데이터를 둔다.
+- 엑셀 구조는 실제 런타임 계약을 따른다.
+  - 헤더 시작 행: 4행
+  - 데이터 시작 행: 7행
+  - `소요량` 다중 헤더 유지
+  - 마지막 데이터 아래 `※` 푸터 유지
+- A열은 장식용이므로 검증 기준으로 사용하지 않는다.
+
 각 입력 파일은 아래 설계 정보를 함께 기록한다.
 
 - 기준 원본 파일명
@@ -148,6 +172,23 @@
   - 수정 내용: `물품명`을 `WRONG_C`로 변경
 - `TC-07_missing-required-column_input.xlsx`
   - 수정 대상: 필수 컬럼 헤더 또는 필수 컬럼 구조 제거
+
+### 6.1 실제 파일 설계 확정안
+
+| 파일명 | 기준본 재사용 여부 | 실제 수정 내용 |
+|---|---|---|
+| `TC-01_valid-upload_input.xlsx` | 신규 기준본 | 유효한 데이터 2행 구성 |
+| `TC-02_invalid-extension_input.xls` | 별도 생성 | 유효한 내용이지만 확장자를 `.xls`로 생성 |
+| `TC-03_fake-xlsx_input.xlsx` | 별도 생성 | 실제 Excel이 아닌 일반 텍스트 파일을 `.xlsx`로 저장 |
+| `TC-04_valid-file_missing-metadata_input.xlsx` | `TC-01` 재사용 | 파일 수정 없음 |
+| `TC-05_valid-file_duplicate-metadata_input.xlsx` | `TC-01` 재사용 | 파일 수정 없음 |
+| `TC-06_wrong-header_input.xlsx` | `TC-01` 복제 | `C4` 값을 `물품명`에서 `WRONG_C`로 변경 |
+| `TC-07_missing-required-column_input.xlsx` | `TC-01` 복제 | `F4`, `G4`를 공란 처리 |
+| `TC-08_missing-required-cell_input.xlsx` | `TC-01` 복제 | `C7` 공란 처리 |
+| `TC-09_invalid-format_input.xlsx` | `TC-01` 복제 | `F7`을 `bad-hs-code`로 변경 |
+| `TC-10_duplicate-composite-key_input.xlsx` | `TC-01` 복제 | `C8/D8/F8`을 `C7/D7/F7`과 동일하게 변경 |
+| `TC-11_reuse-error-report-source_input.xlsx` | `TC-08` 재사용 | 파일 수정 없음 |
+| `TC-12_too-many-rows_input.xlsx` | 별도 생성 | 현재 저장소 기본 제한 기준 10,001개 유효 데이터 행 구성 |
 
 ## 7. 테스트 시나리오
 
