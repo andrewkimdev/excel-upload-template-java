@@ -55,7 +55,7 @@
 - 파일명은 수동 문서의 규칙을 그대로 따른다.
   - `TC-XX_<slug>_input.xlsx`
   - `TC-XX_<slug>_input.xls`
-- workbook 생성은 공통 helper로 관리해 헤더 구조, 병합, footer marker, 기본 데이터 구성을 재사용한다.
+- workbook 생성은 공통 helper로 관리해 헤더 구조, 병합, 선택적 footer/note row, 기본 데이터 구성을 재사용한다.
 - 생성된 입력 파일은 사람이 수동 테스트에 재사용할 수 있도록 별도 산출물 디렉터리에 저장한다.
 
 ### 5.3 결과 산출물 생성 방식

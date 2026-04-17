@@ -6,7 +6,7 @@ package com.foo.excel.service.contract;
  * @param resolvedSheetIndex 워크북 API에서 사용하는 내부 0-based 시트 인덱스
  * @param headerRow 헤더 시작 행 번호
  * @param dataStartRow 데이터 시작 행 번호
- * @param footerMarker 데이터 종료를 판단하는 푸터 마커
+ * @param footerMarker 매핑 컬럼 밖의 푸터/안내 행을 식별하는 선택적 마커
  * @param errorColumnName 오류 리포트에 사용할 컬럼명
  */
 public record ExcelSheetSpec(

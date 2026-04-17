@@ -118,7 +118,7 @@ Metadata-conflict precheck response shape:
 2. `ExcelUploadFileService` sanitizes the filename, stores the file, validates magic bytes, and rejects non-`.xlsx` uploads.
 3. `ExcelImportOrchestrator` runs import-level prechecks before parsing.
 4. `SecureExcelUtils.countRows(...)` performs a lightweight pre-count.
-5. `ExcelParserService` opens the workbook securely, resolves headers, parses rows, skips blanks, and stops at the footer marker `※`.
+5. `ExcelParserService` opens the workbook securely, resolves headers, parses rows with mapped-column values, and skips blanks or footer/note rows outside mapped columns.
 6. `ExcelValidationService` applies Bean Validation and within-file uniqueness rules.
 7. On failure, `ExcelErrorReportService` generates a format-preserving error workbook with `_ERRORS` and a downloadable `.meta` filename hint.
 8. On success, the import-specific `PersistenceHandler` saves the parsed rows.

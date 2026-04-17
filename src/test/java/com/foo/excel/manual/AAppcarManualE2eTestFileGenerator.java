@@ -196,7 +196,7 @@ public final class AAppcarManualE2eTestFileGenerator {
         - first sheet only
         - header row 4, data starts at row 7
         - grouped headers for `소요량`
-        - footer marker row after the last data row starts with `※`
+        - optional footer/comment row may start with `※`; parser does not require it
 
         Shared metadata defaults for manual test references:
 

@@ -50,14 +50,24 @@ class ExcelParserServiceTest {
   }
 
   @Test
-  void parse_footerMarker_stopsReading() throws IOException {
+  void parse_footerMarkerRow_skipped() throws IOException {
     Path file = createAAppcarItemFile(3, true, false);
 
     ExcelParserService.ParseResult<AAppcarItemImportRow> result =
         parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
 
-    // 데이터 3행 뒤 푸터가 오므로 3행만 읽음
     assertThat(result.rows()).hasSize(3);
+  }
+
+  @Test
+  void parse_footerMarkerRow_doesNotStopRowsBelow() throws IOException {
+    Path file = createAAppcarItemFileWithFooterBeforeMoreRows();
+
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
+
+    assertThat(result.rows()).hasSize(4);
+    assertThat(result.sourceRowNumbers()).containsExactly(7, 8, 10, 11);
   }
 
   @Test
@@ -69,6 +79,28 @@ class ExcelParserServiceTest {
 
     // 데이터 3행 + 빈 행 1개 삽입 = 3행만 파싱
     assertThat(result.rows()).hasSize(3);
+  }
+
+  @Test
+  void parse_unmappedNoteRows_skipped() throws IOException {
+    Path file = createAAppcarItemFileWithTrailingUnmappedNote();
+
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.sourceRowNumbers()).containsExactly(7);
+  }
+
+  @Test
+  void parse_footerMarkerInsideMappedValue_preservedAsData() throws IOException {
+    Path file = createAAppcarItemFileWithMappedMarkerValue();
+
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.rows().get(0).getGoodsDes()).contains("※");
   }
 
   @Test
@@ -365,6 +397,9 @@ class ExcelParserServiceTest {
   public static class BooleanDto {
     @ExcelColumn(label = "Active", column = "B")
     private Boolean active;
+
+    @ExcelColumn(label = "RowId", column = "C")
+    private String rowId;
   }
 
   @Data
@@ -375,6 +410,9 @@ class ExcelParserServiceTest {
 
     @ExcelColumn(label = "Active", column = "C", required = false)
     private Boolean active = true;
+
+    @ExcelColumn(label = "Marker", column = "D")
+    private String marker;
   }
 
   @Data
@@ -454,19 +492,7 @@ class ExcelParserServiceTest {
           currentRow++;
         }
         Row row = sheet.createRow(currentRow);
-        row.createCell(0).setCellValue(i + 1); // Column A
-        row.createCell(1).setCellValue(i + 1); // B열 - goodsSeqNo
-        row.createCell(2).setCellValue("TestItem" + (i + 1)); // C열 - goodsDes
-        row.createCell(3).setCellValue("Spec" + (i + 1)); // D열 - spec
-        row.createCell(4).setCellValue("Model" + (i + 1)); // E열 - modelDes
-        row.createCell(5).setCellValue("8481.80-200" + i); // F열 - hsno
-        row.createCell(7).setCellValue(8.0); // H열 - taxRate
-        row.createCell(8).setCellValue(100.0); // I열 - unitprice
-        row.createCell(9).setCellValue(10); // J열 - prodQty
-        row.createCell(11).setCellValue(5); // L열 - repairQty
-        row.createCell(13).setCellValue(50000.0); // N열 - importAmt
-        row.createCell(14).setCellValue("통과"); // O열 - approvalYn
-        row.createCell(16).setCellValue(100); // Q열 - importQty
+        populateAappcarItemRow(row, i + 1);
         currentRow++;
       }
 
@@ -481,6 +507,76 @@ class ExcelParserServiceTest {
       }
       return file;
     }
+  }
+
+  private Path createAAppcarItemFileWithFooterBeforeMoreRows() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      createTariffHeaderRows(sheet);
+
+      populateAappcarItemRow(sheet.createRow(6), 1);
+      populateAappcarItemRow(sheet.createRow(7), 2);
+      Row footerRow = sheet.createRow(8);
+      footerRow.createCell(0).setCellValue("※ 주의사항");
+      populateAappcarItemRow(sheet.createRow(9), 3);
+      populateAappcarItemRow(sheet.createRow(10), 4);
+
+      Path file = tempDir.resolve("tariff_footer_before_more_rows.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private Path createAAppcarItemFileWithTrailingUnmappedNote() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      createTariffHeaderRows(sheet);
+
+      populateAappcarItemRow(sheet.createRow(6), 1);
+      Row noteRow = sheet.createRow(7);
+      noteRow.createCell(0).setCellValue("업로드 전 확인하세요");
+
+      Path file = tempDir.resolve("tariff_trailing_unmapped_note.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private Path createAAppcarItemFileWithMappedMarkerValue() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      createTariffHeaderRows(sheet);
+
+      Row row = sheet.createRow(6);
+      populateAappcarItemRow(row, 1);
+      row.getCell(2).setCellValue("※ 표시 포함 품목");
+
+      Path file = tempDir.resolve("tariff_mapped_marker_value.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private void populateAappcarItemRow(Row row, int sequence) {
+    row.createCell(0).setCellValue(sequence); // Column A
+    row.createCell(1).setCellValue(sequence); // B열 - goodsSeqNo
+    row.createCell(2).setCellValue("TestItem" + sequence); // C열 - goodsDes
+    row.createCell(3).setCellValue("Spec" + sequence); // D열 - spec
+    row.createCell(4).setCellValue("Model" + sequence); // E열 - modelDes
+    row.createCell(5).setCellValue(String.format("8481.80-%04d", 2000 + sequence)); // F열 - hsno
+    row.createCell(7).setCellValue(8.0); // H열 - taxRate
+    row.createCell(8).setCellValue(100.0); // I열 - unitprice
+    row.createCell(9).setCellValue(10); // J열 - prodQty
+    row.createCell(11).setCellValue(5); // L열 - repairQty
+    row.createCell(13).setCellValue(50000.0); // N열 - importAmt
+    row.createCell(14).setCellValue("통과"); // O열 - approvalYn
+    row.createCell(16).setCellValue(100); // Q열 - importQty
   }
 
   private Path createFileWithMergedCells() throws IOException {
@@ -600,14 +696,17 @@ class ExcelParserServiceTest {
       Row headerRow = sheet.createRow(0);
       headerRow.createCell(0).setCellValue("Deco");
       headerRow.createCell(1).setCellValue("Active");
+      headerRow.createCell(2).setCellValue("RowId");
 
       Row dataRow1 = sheet.createRow(1);
       dataRow1.createCell(0).setCellValue(1);
       dataRow1.createCell(1).setCellValue("Y");
+      dataRow1.createCell(2).setCellValue("row-1");
 
       Row dataRow2 = sheet.createRow(2);
       dataRow2.createCell(0).setCellValue(2);
-      dataRow2.createCell(1).setCellValue(""); // 빈 값 -> false
+      dataRow2.createCell(1).setCellValue(""); // 빈 값 -> null
+      dataRow2.createCell(2).setCellValue("row-2");
 
       Path file = tempDir.resolve("boolean_test.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
@@ -625,9 +724,11 @@ class ExcelParserServiceTest {
       headerRow.createCell(0).setCellValue("Deco");
       headerRow.createCell(1).setCellValue("Name");
       headerRow.createCell(2).setCellValue("Active");
+      headerRow.createCell(3).setCellValue("Marker");
 
       Row dataRow = sheet.createRow(1);
       dataRow.createCell(0).setCellValue("skip");
+      dataRow.createCell(3).setCellValue("candidate");
       if (nameValue != null) {
         dataRow.createCell(1).setCellValue(nameValue);
       }

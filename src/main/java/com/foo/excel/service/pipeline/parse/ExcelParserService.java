@@ -334,14 +334,16 @@ public class ExcelParserService {
         continue;
       }
 
-      // 푸터 감지
-      if (isFooterRow(row, footerMarker, formattedCellCache)) {
-        log.debug("Footer marker found at row {}, stopping", i + 1);
-        break;
-      }
-
       // 빈 행 건너뛰기
       if (isBlankRow(row, formattedCellCache)) {
+        continue;
+      }
+
+      if (!hasMappedColumnValue(
+          sheet, i, columnMappings, mergedCellLookup, formattedCellCache)) {
+        if (isFooterRow(row, footerMarker, formattedCellCache)) {
+          log.debug("Footer marker row found at row {}, skipping", i + 1);
+        }
         continue;
       }
 
@@ -406,6 +408,27 @@ public class ExcelParserService {
     for (Cell cell : row) {
       String value = getCellStringValue(cell, formattedCellCache);
       if (value != null && value.contains(footerMarker)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean hasMappedColumnValue(
+      Sheet sheet,
+      int rowIndex,
+      List<ColumnMapping> columnMappings,
+      Map<CellRef, CellRef> mergedCellLookup,
+      Map<Cell, String> formattedCellCache) {
+    for (ColumnMapping mapping : columnMappings) {
+      Cell cell =
+          resolveEffectiveCell(
+              sheet,
+              rowIndex,
+              mapping.resolvedColumnIndex(),
+              mergedCellLookup,
+              formattedCellCache);
+      if (cell != null && !isBlankCellValue(cell, formattedCellCache)) {
         return true;
       }
     }
