@@ -101,7 +101,6 @@ public class ExcelParserService {
     int headerRowNum = sheetSpec.headerRow() - 1; // 0-based로 변환
     int dataStartRowNum = sheetSpec.dataStartRow() - 1;
     int resolvedSheetIndex = sheetSpec.resolvedSheetIndex();
-    String footerMarker = sheetSpec.footerMarker();
 
     // 보안: XXE 및 Zip Bomb 공격 방지를 위해 SecureExcelUtils 사용.
     // 설정된 제한과 보호 내용은 SecureExcelUtils를 참고.
@@ -126,7 +125,6 @@ public class ExcelParserService {
                 rowClass,
                 columnMappings,
                 dataStartRowNum,
-                footerMarker,
                 parseErrors,
                 sourceRowNumbers,
                 maxRows,
@@ -319,7 +317,6 @@ public class ExcelParserService {
       Class<T> rowClass,
       List<ColumnMapping> columnMappings,
       int dataStartRowNum,
-      String footerMarker,
       List<RowError> parseErrors,
       List<Integer> sourceRowNumbers,
       int maxRows,
@@ -341,15 +338,12 @@ public class ExcelParserService {
         continue;
       }
 
-      if (isMergedNoteRow(sheet, i, columnMappings, mergedCellLookup, formattedCellCache)) {
+      if (isNoteRow(sheet, i, columnMappings, mergedCellLookup, formattedCellCache)) {
         continue;
       }
 
       if (!hasMappedColumnValue(
           sheet, i, columnMappings, mergedCellLookup, formattedCellCache)) {
-        if (isFooterRow(row, footerMarker, formattedCellCache)) {
-          log.debug("Footer marker row found at row {}, skipping", i + 1);
-        }
         continue;
       }
 
@@ -407,20 +401,7 @@ public class ExcelParserService {
     return maxErrorRows > 0 && maxErrorRows != Integer.MAX_VALUE && errorRows >= maxErrorRows;
   }
 
-  private boolean isFooterRow(Row row, String footerMarker, Map<Cell, String> formattedCellCache) {
-    if (footerMarker == null || footerMarker.isEmpty()) {
-      return false;
-    }
-    for (Cell cell : row) {
-      String value = getCellStringValue(cell, formattedCellCache);
-      if (value != null && value.contains(footerMarker)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean isMergedNoteRow(
+  private boolean isNoteRow(
       Sheet sheet,
       int rowIndex,
       List<ColumnMapping> columnMappings,

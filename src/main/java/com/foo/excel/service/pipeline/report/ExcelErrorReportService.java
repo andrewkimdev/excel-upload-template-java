@@ -123,7 +123,7 @@ public class ExcelErrorReportService {
 
           boolean isDataSheet = (sheetIdx == dataSheetIndex);
           int errorColIndex = isDataSheet ? maxCol : -1;
-          int lastRowNum = srcSheet.getLastRowNum();
+          int lastRowNum = lastPhysicalRowNum(srcSheet);
 
           // 6. 모든 행을 위에서 아래로 스트림 복사(SXSSF: 순차 쓰기만 지원)
           for (int rowIdx = 0; rowIdx <= lastRowNum; rowIdx++) {
@@ -198,23 +198,7 @@ public class ExcelErrorReportService {
             applyImportMerges(
                 tgtSheet, sheetSpec, validationResult, errorColIndex, excelMergeRegions);
 
-            int disclaimerRowIdx = lastRowNum + 2;
-            Row disclaimerRow = tgtSheet.createRow(disclaimerRowIdx);
-            Cell disclaimerCell = disclaimerRow.createCell(0);
-            disclaimerCell.setCellValue(
-                "※ 본 파일은 오류 확인용으로 재생성되었습니다. " + "일부 서식 및 기능이 원본 파일과 다를 수 있습니다.");
-
-            CellStyle disclaimerStyle = sxssfWb.createCellStyle();
-            Font disclaimerFont = sxssfWb.createFont();
-            disclaimerFont.setItalic(true);
-            disclaimerFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
-            disclaimerStyle.setFont(disclaimerFont);
-            disclaimerCell.setCellStyle(disclaimerStyle);
-
-            if (errorColIndex > 0) {
-              tgtSheet.addMergedRegion(
-                  new CellRangeAddress(disclaimerRowIdx, disclaimerRowIdx, 0, errorColIndex - 1));
-            }
+            addDisclaimerRow(sxssfWb, tgtSheet, lastRowNum, errorColIndex);
           }
         }
 
@@ -228,6 +212,40 @@ public class ExcelErrorReportService {
         log.info("Error report generated: {}", errorFilePath);
         return errorFilePath;
       }
+    }
+  }
+
+  private int lastPhysicalRowNum(Sheet sheet) {
+    int lastRowNum = -1;
+    for (Row row : sheet) {
+      lastRowNum = Math.max(lastRowNum, row.getRowNum());
+    }
+    return lastRowNum;
+  }
+
+  private void addDisclaimerRow(
+      Workbook workbook, Sheet sheet, int lastRowNum, int errorColIndex) {
+    int disclaimerRowIdx = lastRowNum + 2;
+    if (disclaimerRowIdx > 1_048_575) {
+      log.warn("Skipping error report disclaimer because sheet is already at Excel's row limit");
+      return;
+    }
+
+    Row disclaimerRow = sheet.createRow(disclaimerRowIdx);
+    Cell disclaimerCell = disclaimerRow.createCell(0);
+    disclaimerCell.setCellValue(
+        "※ 본 파일은 오류 확인용으로 재생성되었습니다. " + "일부 서식 및 기능이 원본 파일과 다를 수 있습니다.");
+
+    CellStyle disclaimerStyle = workbook.createCellStyle();
+    Font disclaimerFont = workbook.createFont();
+    disclaimerFont.setItalic(true);
+    disclaimerFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+    disclaimerStyle.setFont(disclaimerFont);
+    disclaimerCell.setCellStyle(disclaimerStyle);
+
+    if (errorColIndex > 0) {
+      sheet.addMergedRegion(
+          new CellRangeAddress(disclaimerRowIdx, disclaimerRowIdx, 0, errorColIndex - 1));
     }
   }
 
