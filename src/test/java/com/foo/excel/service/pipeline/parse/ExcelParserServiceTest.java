@@ -129,6 +129,20 @@ class ExcelParserServiceTest {
   }
 
   @Test
+  void parse_multiRowHeaderWithExtraDetailAndMergedNote_acceptsNormalUploadShape()
+      throws IOException {
+    Path file = createAAppcarItemFileWithExtraHeaderDetailAndMergedNote();
+
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
+
+    assertThat(result.rows()).hasSize(2);
+    assertThat(result.rows().get(0).getGoodsSeqNo()).isEqualTo(1);
+    assertThat(result.rows().get(0).getProdQty()).isNotNull();
+    assertThat(result.rows().get(0).getRepairQty()).isNotNull();
+  }
+
+  @Test
   void parse_typeCoercion_string_trimmed() throws IOException {
     Path file = createAAppcarItemFile(1, false, false);
 
@@ -502,6 +516,31 @@ class ExcelParserServiceTest {
       }
 
       Path file = tempDir.resolve("tariff_test.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private Path createAAppcarItemFileWithExtraHeaderDetailAndMergedNote() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      createTariffHeaderRows(sheet);
+      sheet.getRow(3).getCell(1).setCellValue("순\n번");
+      sheet.getRow(4).getCell(9).setCellValue("제조용2)");
+      sheet.getRow(4).getCell(11).setCellValue("수리용3)");
+      sheet.getRow(5).createCell(9).setCellValue("(장비 1대당)");
+      sheet.getRow(5).createCell(11).setCellValue("(연간)");
+
+      populateAappcarItemRow(sheet.createRow(6), 1);
+      populateAappcarItemRow(sheet.createRow(7), 2);
+
+      Row noteRow = sheet.createRow(8);
+      noteRow.createCell(2).setCellValue("1) 정상 업로드 성공, DB 반영, 오류 리포트 미생성 확인");
+      sheet.addMergedRegion(new CellRangeAddress(8, 8, 2, 16));
+
+      Path file = tempDir.resolve("aappcar_actual_shape_with_note.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
         wb.write(os);
       }

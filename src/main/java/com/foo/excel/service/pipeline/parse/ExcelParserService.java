@@ -21,8 +21,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
@@ -253,7 +255,7 @@ public class ExcelParserService {
           annotation.ignoreHeaderWhitespace());
     }
 
-    if (actualSegments.size() != expectedSegments.size()) {
+    if (actualSegments.size() < expectedSegments.size()) {
       return false;
     }
 
@@ -339,6 +341,10 @@ public class ExcelParserService {
         continue;
       }
 
+      if (isMergedNoteRow(sheet, i, columnMappings, mergedCellLookup, formattedCellCache)) {
+        continue;
+      }
+
       if (!hasMappedColumnValue(
           sheet, i, columnMappings, mergedCellLookup, formattedCellCache)) {
         if (isFooterRow(row, footerMarker, formattedCellCache)) {
@@ -412,6 +418,39 @@ public class ExcelParserService {
       }
     }
     return false;
+  }
+
+  private boolean isMergedNoteRow(
+      Sheet sheet,
+      int rowIndex,
+      List<ColumnMapping> columnMappings,
+      Map<CellRef, CellRef> mergedCellLookup,
+      Map<Cell, String> formattedCellCache) {
+    if (columnMappings.isEmpty()) {
+      return false;
+    }
+
+    Set<String> nonBlankValues = new LinkedHashSet<>();
+    int nonBlankMappedCells = 0;
+    for (ColumnMapping mapping : columnMappings) {
+      Cell cell =
+          resolveEffectiveCell(
+              sheet,
+              rowIndex,
+              mapping.resolvedColumnIndex(),
+              mergedCellLookup,
+              formattedCellCache);
+      if (cell == null || isBlankCellValue(cell, formattedCellCache)) {
+        continue;
+      }
+      String value = getCellStringValue(cell, formattedCellCache);
+      if (value == null || value.isBlank()) {
+        continue;
+      }
+      nonBlankMappedCells++;
+      nonBlankValues.add(value.trim());
+    }
+    return nonBlankMappedCells > 1 && nonBlankValues.size() == 1;
   }
 
   private boolean hasMappedColumnValue(

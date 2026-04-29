@@ -31,7 +31,7 @@ import lombok.Data;
 public class AAppcarItemImportRow {
 
   // B열: 순번
-  @ExcelColumn(label = "순번", column = "B")
+  @ExcelColumn(label = "순번", column = "B", ignoreHeaderWhitespace = true)
   private Integer goodsSeqNo;
 
   // C열: 물품명

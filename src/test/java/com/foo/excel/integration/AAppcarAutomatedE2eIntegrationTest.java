@@ -155,7 +155,7 @@ class AAppcarAutomatedE2eIntegrationTest {
     ScenarioCase scenario =
         new ScenarioCase("TC-01", "valid-upload", "정상 업로드 신규 생성", "성공");
     Map<String, String> metadata = metadataValues("1");
-    byte[] inputBytes = createValidAAppcarItemXlsx(2);
+    byte[] inputBytes = createValidAAppcarItemXlsx(2, true);
     Path inputFile = writeInputFile(scenario, "xlsx", inputBytes);
 
     MvcResult pageResult = mockMvc.perform(get(PAGE_UPLOAD)).andReturn();
@@ -179,7 +179,7 @@ class AAppcarAutomatedE2eIntegrationTest {
     PageResponse successPage =
         uploadViaPage(
             "TC-01_valid-upload-page.xlsx",
-            createValidAAppcarItemXlsx(1),
+            createValidAAppcarItemXlsx(1, true),
             pageMetadata);
     assertThat(successPage.status()).isEqualTo(200);
     assertThat(successPage.html()).contains("업로드 결과", "데이터 업로드 완료", "처리 행 수");
@@ -193,7 +193,7 @@ class AAppcarAutomatedE2eIntegrationTest {
         false,
         null,
         "품목 2건 저장, 설비 메타데이터 1건 신규 반영",
-        "API 성공 및 GET/POST UI 렌더링 흐름 확인",
+        "API 성공 및 GET/POST UI 렌더링 흐름 확인, 말미 푸터 비고 행 무시 확인",
         true);
   }
 
@@ -777,9 +777,14 @@ class AAppcarAutomatedE2eIntegrationTest {
   }
 
   private byte[] createValidAAppcarItemXlsx(int dataRows) throws IOException {
+    return createValidAAppcarItemXlsx(dataRows, false);
+  }
+
+  private byte[] createValidAAppcarItemXlsx(int dataRows, boolean includeFooterRemark)
+      throws IOException {
     try (XSSFWorkbook workbook = new XSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Sheet1");
-      fillAAppcarItemSheet(sheet, dataRows);
+      fillAAppcarItemSheet(sheet, dataRows, includeFooterRemark);
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       workbook.write(output);
       return output.toByteArray();
@@ -789,7 +794,7 @@ class AAppcarAutomatedE2eIntegrationTest {
   private byte[] createValidAAppcarItemXls(int dataRows) throws IOException {
     try (HSSFWorkbook workbook = new HSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Sheet1");
-      fillAAppcarItemSheet(sheet, dataRows);
+      fillAAppcarItemSheet(sheet, dataRows, false);
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       workbook.write(output);
       return output.toByteArray();
@@ -803,7 +808,7 @@ class AAppcarAutomatedE2eIntegrationTest {
   private byte[] createWorkbook(WorkbookMutation mutation, int dataRows) throws IOException {
     try (XSSFWorkbook workbook = new XSSFWorkbook()) {
       Sheet sheet = workbook.createSheet("Sheet1");
-      fillAAppcarItemSheet(sheet, dataRows);
+      fillAAppcarItemSheet(sheet, dataRows, false);
       mutation.apply(workbook);
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       workbook.write(output);
@@ -812,6 +817,10 @@ class AAppcarAutomatedE2eIntegrationTest {
   }
 
   private void fillAAppcarItemSheet(Sheet sheet, int dataRows) {
+    fillAAppcarItemSheet(sheet, dataRows, false);
+  }
+
+  private void fillAAppcarItemSheet(Sheet sheet, int dataRows, boolean includeFooterRemark) {
     createHeaderRows(sheet);
     for (int i = 0; i < dataRows; i++) {
       Row row = sheet.createRow(6 + i);
@@ -828,6 +837,11 @@ class AAppcarAutomatedE2eIntegrationTest {
       row.createCell(13).setCellValue(50000.0);
       row.createCell(14).setCellValue("통과");
       row.createCell(16).setCellValue(100);
+    }
+
+    if (includeFooterRemark) {
+      Row footerRow = sheet.createRow(6 + dataRows);
+      footerRow.createCell(0).setCellValue("※ 비고: 작성 예시 끝");
     }
   }
 
