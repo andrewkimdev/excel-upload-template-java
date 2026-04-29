@@ -60,6 +60,17 @@ class ExcelParserServiceTest {
   }
 
   @Test
+  void parse_footerMarkerRowWithMappedCellValue_skipped() throws IOException {
+    Path file = createAAppcarItemFileWithFooterMarkerAndMappedCellValue();
+
+    ExcelParserService.ParseResult<AAppcarItemImportRow> result =
+        parserService.parse(file, AAppcarItemImportRow.class, tariffSheetSpec);
+
+    assertThat(result.rows()).hasSize(1);
+    assertThat(result.sourceRowNumbers()).containsExactly(7);
+  }
+
+  @Test
   void parse_footerMarkerRow_doesNotStopRowsBelow() throws IOException {
     Path file = createAAppcarItemFileWithFooterBeforeMoreRows();
 
@@ -561,6 +572,24 @@ class ExcelParserServiceTest {
       populateAappcarItemRow(sheet.createRow(10), 4);
 
       Path file = tempDir.resolve("tariff_footer_before_more_rows.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+      return file;
+    }
+  }
+
+  private Path createAAppcarItemFileWithFooterMarkerAndMappedCellValue() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      createTariffHeaderRows(sheet);
+
+      populateAappcarItemRow(sheet.createRow(6), 1);
+      Row footerRow = sheet.createRow(7);
+      footerRow.createCell(0).setCellValue("※ 최대 행 수 초과 차단 확인");
+      footerRow.createCell(5).setCellValue("Model");
+
+      Path file = tempDir.resolve("tariff_footer_marker_with_mapped_cell.xlsx");
       try (OutputStream os = Files.newOutputStream(file)) {
         wb.write(os);
       }

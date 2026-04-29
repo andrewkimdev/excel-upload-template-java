@@ -117,8 +117,8 @@ Metadata-conflict precheck response shape:
 1. `ExcelImportRequestService` checks upload size and parses `metadata` strictly.
 2. `ExcelUploadFileService` sanitizes the filename, stores the file, validates magic bytes, and rejects non-`.xlsx` uploads.
 3. `ExcelImportOrchestrator` runs import-level prechecks before parsing.
-4. `SecureExcelUtils.countRows(...)` performs a lightweight pre-count.
-5. `ExcelParserService` opens the workbook securely, resolves headers, parses rows with mapped-column values, and skips blanks or footer/note rows outside mapped columns.
+4. `SecureExcelUtils.countRows(...)` performs a lightweight pre-count of rows that contain cells, ignoring formatting-only worksheet rows.
+5. `ExcelParserService` opens the workbook securely, resolves headers, parses rows with mapped-column values, and skips blanks or footer/note rows, including rows whose first nonblank cell starts with `※`.
 6. `ExcelValidationService` applies Bean Validation and within-file uniqueness rules.
 7. On failure, `ExcelErrorReportService` generates a format-preserving error workbook with `_ERRORS` and a downloadable `.meta` filename hint.
 8. On success, the import-specific `PersistenceHandler` saves the parsed rows.
@@ -162,7 +162,7 @@ Built-in protections:
 - magic-byte validation
 - legacy `.xls` rejection and `.xlsx`-only acceptance
 - secure workbook opening
-- row pre-count and parser row-limit enforcement
+- cell-bearing row pre-count and parser row-limit enforcement
 - formula-injection sanitization in generated error reports
 - safe Korean messages for unexpected/system failures
 
@@ -207,6 +207,7 @@ Important properties from `application.properties`:
 Representative test coverage:
 
 - `AAppcarAutomatedE2eIntegrationTest`
+- `AAppcarActualSamplesE2eIntegrationTest`
 - `ExcelImportIntegrationTest`
 - `ExcelApiExceptionHandlerTest`
 - `ExcelUploadFileServiceTest`

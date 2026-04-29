@@ -72,6 +72,25 @@ class AAppcarActualSamplesE2eIntegrationTest {
   }
 
   @Test
+  void tc12_actualSample_maxRowsAccepted() throws Exception {
+    UploadResponse response = uploadFixtureContaining("TC-12_", "10K rows", "120");
+
+    assertSuccess(response, 10_000);
+  }
+
+  @Test
+  void tc12_actualSample_tooManyRowsRejected() throws Exception {
+    UploadResponse response = uploadFixtureContaining("TC-12_", "10K+1rows", "121");
+
+    assertThat(response.status()).isEqualTo(400);
+    assertThat(response.body().get("success")).isEqualTo(false);
+    assertThat(String.valueOf(response.body().get("message"))).contains("최대 행 수");
+    assertThat(response.body()).doesNotContainKey("downloadUrl");
+    assertThat(itemRepository.count()).isZero();
+    assertThat(equipRepository.count()).isZero();
+  }
+
+  @Test
   void tc13_actualSample_goodsDescriptionTooLong_generatesErrorReport() throws Exception {
     UploadResponse response = uploadFixture("TC-13_", "13");
 
@@ -144,6 +163,16 @@ class AAppcarActualSamplesE2eIntegrationTest {
 
   private UploadResponse uploadFixture(String filenamePrefix, String uploadSeq) throws Exception {
     Path fixture = fixtureStartingWith(filenamePrefix);
+    return uploadFixture(fixture, uploadSeq);
+  }
+
+  private UploadResponse uploadFixtureContaining(
+      String filenamePrefix, String filenamePart, String uploadSeq) throws Exception {
+    Path fixture = fixtureMatching(filenamePrefix, filenamePart);
+    return uploadFixture(fixture, uploadSeq);
+  }
+
+  private UploadResponse uploadFixture(Path fixture, String uploadSeq) throws Exception {
     byte[] fileBytes = Files.readAllBytes(fixture);
     MockMultipartFile file =
         new MockMultipartFile(
@@ -248,6 +277,19 @@ class AAppcarActualSamplesE2eIntegrationTest {
           .filter(Matcher::find)
           .map(matcher -> matcher.group(1))
           .collect(java.util.stream.Collectors.toSet());
+    }
+  }
+
+  private Path fixtureMatching(String prefix, String filenamePart) throws IOException {
+    try (Stream<Path> files = Files.list(ACTUAL_SAMPLES_DIR)) {
+      return files
+          .filter(path -> path.getFileName().toString().startsWith(prefix))
+          .filter(path -> path.getFileName().toString().contains(filenamePart))
+          .findFirst()
+          .orElseThrow(
+              () ->
+                  new IllegalStateException(
+                      "Missing fixture prefix/part: " + prefix + " / " + filenamePart));
     }
   }
 

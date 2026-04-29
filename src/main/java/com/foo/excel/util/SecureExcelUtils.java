@@ -214,13 +214,13 @@ public final class SecureExcelUtils {
   }
 
   /**
-   * 경량 StAX 스트리밍으로 xlsx 시트의 행 수를 센다.
+   * 경량 StAX 스트리밍으로 xlsx 시트의 셀이 있는 행 수를 센다.
    *
    * <p>전체 워크북 DOM을 로드하지 않으므로 파일 크기와 무관하게 상수 메모리를 사용한다.
    *
    * @param xlsxFile 행 수를 셀 xlsx 파일
    * @param sheetIndex 0-based 시트 인덱스
-   * @return 시트 XML 내 row 요소 개수
+   * @return 시트 XML 내 셀이 있는 row 요소 개수
    * @throws IOException 파일을 읽을 수 없거나 시트를 찾을 수 없는 경우
    */
   public static int countRows(Path xlsxFile, int sheetIndex) throws IOException {
@@ -232,7 +232,7 @@ public final class SecureExcelUtils {
       while (sheets.hasNext()) {
         try (InputStream sheetStream = sheets.next()) {
           if (currentSheet == sheetIndex) {
-            return countRowElements(sheetStream);
+            return countRowsWithCells(sheetStream);
           }
         }
         currentSheet++;
@@ -246,7 +246,7 @@ public final class SecureExcelUtils {
     }
   }
 
-  private static int countRowElements(InputStream sheetStream) throws IOException {
+  private static int countRowsWithCells(InputStream sheetStream) throws IOException {
     XMLStreamReader xmlReader = null;
     try {
       XMLInputFactory factory = XMLInputFactory.newInstance();
@@ -255,10 +255,24 @@ public final class SecureExcelUtils {
 
       xmlReader = factory.createXMLStreamReader(sheetStream);
       int rowCount = 0;
+      boolean insideRow = false;
+      boolean rowHasCell = false;
       while (xmlReader.hasNext()) {
-        if (xmlReader.next() == XMLStreamConstants.START_ELEMENT
+        int event = xmlReader.next();
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          if ("row".equals(xmlReader.getLocalName())) {
+            insideRow = true;
+            rowHasCell = false;
+          } else if (insideRow && "c".equals(xmlReader.getLocalName())) {
+            rowHasCell = true;
+          }
+        } else if (event == XMLStreamConstants.END_ELEMENT
             && "row".equals(xmlReader.getLocalName())) {
-          rowCount++;
+          if (rowHasCell) {
+            rowCount++;
+          }
+          insideRow = false;
+          rowHasCell = false;
         }
       }
       return rowCount;

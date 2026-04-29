@@ -338,6 +338,10 @@ public class ExcelParserService {
         continue;
       }
 
+      if (startsWithNoteMarker(row, formattedCellCache)) {
+        continue;
+      }
+
       if (isNoteRow(sheet, i, columnMappings, mergedCellLookup, formattedCellCache)) {
         continue;
       }
@@ -432,6 +436,17 @@ public class ExcelParserService {
       nonBlankValues.add(value.trim());
     }
     return nonBlankMappedCells > 1 && nonBlankValues.size() == 1;
+  }
+
+  private boolean startsWithNoteMarker(Row row, Map<Cell, String> formattedCellCache) {
+    for (Cell cell : row) {
+      if (cell == null || isBlankCellValue(cell, formattedCellCache)) {
+        continue;
+      }
+      String value = getCellStringValue(cell, formattedCellCache);
+      return value != null && value.trim().startsWith("※");
+    }
+    return false;
   }
 
   private boolean hasMappedColumnValue(

@@ -331,6 +331,22 @@ class SecureExcelUtilsTest {
   }
 
   @Test
+  void countRows_ignoresRowsWithoutCells() throws IOException {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Sheet1");
+      sheet.createRow(0);
+      sheet.createRow(1).createCell(0).setCellValue("value");
+      sheet.createRow(2);
+      Path file = tempDir.resolve("rows_with_empty_physical_rows.xlsx");
+      try (OutputStream os = Files.newOutputStream(file)) {
+        wb.write(os);
+      }
+
+      assertThat(SecureExcelUtils.countRows(file, 0)).isEqualTo(1);
+    }
+  }
+
+  @Test
   void countRows_selectsCorrectSheet() throws IOException {
     try (XSSFWorkbook wb = new XSSFWorkbook()) {
       // 시트 0: 3행
